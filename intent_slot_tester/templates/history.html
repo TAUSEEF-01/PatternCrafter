@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ app_title }} — History</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+<header><h1>{{ app_title }} — History</h1></header>
+<main>
+  <a class="secondary" href="{{ url_for('annotate') }}">← Back</a>
+  <ul class="history">
+  {% for r in rows %}
+    <li>
+      <div><strong>ID:</strong> {{ r["id"] }} • <strong>Intent:</strong> {{ r["intent"] }} • <small>{{ r["created_at"] }}</small></div>
+      <details><summary>Dialogue</summary><pre>{{ r["dialogue"] }}</pre></details>
+      <details><summary>Entities</summary><pre>{{ r["entities_json"] }}</pre></details>
+    </li>
+  {% else %}
+    <li>No annotations yet.</li>
+  {% endfor %}
+  </ul>
+</main>
+</body>
+</html>
