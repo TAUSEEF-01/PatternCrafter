@@ -1,0 +1,21 @@
+* { box-sizing: border-box; }
+body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; margin: 0; background: #fafafa; color: #222; }
+header { background: #111; color: #fff; padding: 16px 24px; }
+main { max-width: 920px; margin: 24px auto; padding: 0 16px; }
+.details { background: #fff; padding: 12px; border-radius: 10px; border: 1px solid #eee; }
+.controls textarea { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px; font-family: ui-monospace, Menlo, Consolas, monospace; }
+.panel { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 10px; }
+.intent label { margin-right: 10px; }
+.slot-btn { margin: 4px 6px 0 0; padding: 8px 10px; border: none; border-radius: 8px; background: #111; color: #fff; cursor: pointer; }
+.preview { white-space: pre-wrap; background: #fff; border: 1px solid #eee; padding: 10px; border-radius: 8px; min-height: 80px; margin-top: 10px; }
+.tag { padding: 1px 4px; border-radius: 4px; }
+.tag-person { background: #fde68a; }
+.tag-organization { background: #bae6fd; }
+.tag-location { background: #bbf7d0; }
+.tag-datetime { background: #e9d5ff; }
+.tag-quantity { background: #fecaca; }
+.actions { display: flex; gap: 10px; align-items: center; margin-top: 10px; }
+.secondary { display: inline-block; padding: 10px 14px; background: #eee; color: #333; text-decoration: none; border-radius: 8px; }
+.history { list-style: none; padding: 0; display: grid; gap: 12px; }
+.history li { background: #fff; border: 1px solid #eee; padding: 10px; border-radius: 10px; }
+pre { white-space: pre-wrap; }
