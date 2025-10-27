@@ -1,0 +1,26 @@
+import { NavLink } from "react-router-dom";
+
+export function NavTabs() {
+  return (
+    <div className="tabs">
+      <div className="tabs-wrap">
+        <div className="brand">Intent & Slot Tester</div>
+        <nav className="tabs-nav">
+          <NavLink
+            to="/"
+            end
+            className={({ isActive }) => (isActive ? "tab tab-active" : "tab")}
+          >
+            Annotate
+          </NavLink>
+          <NavLink
+            to="/history"
+            className={({ isActive }) => (isActive ? "tab tab-active" : "tab")}
+          >
+            History
+          </NavLink>
+        </nav>
+      </div>
+    </div>
+  );
+}

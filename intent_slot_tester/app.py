@@ -20,14 +20,17 @@ try:
     root = etree.fromstring(VIEW_XML.encode("utf-8"))
     for lab in root.xpath(".//ParagraphLabels//Label"):
         v = lab.get("value")
-        if v: entity_labels.append(v)
+        if v:
+            entity_labels.append(v)
     for opt in root.xpath(".//Choices//Choice"):
         v = opt.get("value")
-        if v: intent_choices.append(v)
+        if v:
+            intent_choices.append(v)
     para = root.xpath(".//Paragraphs")
     if para:
         v = para[0].get("value", "")
-        if v.startswith("$"): input_var = v[1:]
+        if v.startswith("$"):
+            input_var = v[1:]
 except Exception:
     entity_labels = ["Person", "Organization", "Location", "Datetime", "Quantity"]
     intent_choices = ["Greeting", "Customer request", "Small talk"]
@@ -46,22 +49,32 @@ CREATE TABLE IF NOT EXISTS annotations (
 );
 """
 
+
 def get_conn():
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     return conn
+
 
 def init_db():
     with closing(get_conn()) as conn:
         conn.executescript(SCHEMA)
         conn.commit()
 
+
 with app.app_context():
     init_db()
 
+
 @app.context_processor
 def inject_globals():
-    return dict(app_title=TITLE, details_html=DETAILS_HTML, entity_labels=entity_labels, intent_choices=intent_choices)
+    return dict(
+        app_title=TITLE,
+        details_html=DETAILS_HTML,
+        entity_labels=entity_labels,
+        intent_choices=intent_choices,
+    )
+
 
 @app.route("/", methods=["GET"])
 def annotate():
@@ -69,9 +82,12 @@ def annotate():
         "User: Hi there!",
         "Agent: Hello! How can I help you today?",
         "User: I want to book a flight from Dhaka to Singapore next Monday.",
-        "Agent: Sure—what time do you prefer?"
+        "Agent: Sure—what time do you prefer?",
     ]
-    return render_template("annotate.html", sample_dialogue="\\n".join(sample), input_var=input_var)
+    return render_template(
+        "annotate.html", sample_dialogue="\\n".join(sample), input_var=input_var
+    )
+
 
 @app.route("/save", methods=["POST"])
 def save():
@@ -82,16 +98,21 @@ def save():
     with closing(get_conn()) as conn:
         conn.execute(
             "INSERT INTO annotations (intent, dialogue, entities_json) VALUES (?,?,?)",
-            (intent, dialogue, json.dumps(entities, ensure_ascii=False))
+            (intent, dialogue, json.dumps(entities, ensure_ascii=False)),
         )
         conn.commit()
     return jsonify({"ok": True})
 
+
 @app.route("/history", methods=["GET"])
 def history():
     with closing(get_conn()) as conn:
-        rows = conn.execute("SELECT id, intent, dialogue, entities_json, created_at FROM annotations ORDER BY id DESC LIMIT 50").fetchall()
+        rows = conn.execute(
+            "SELECT id, intent, dialogue, entities_json, created_at FROM annotations ORDER BY id DESC LIMIT 50"
+        ).fetchall()
     return render_template("history.html", rows=rows)
 
+
 if __name__ == "__main__":
-    app.run(debug=True)
+    port = int(os.environ.get("PORT", "5175"))
+    app.run(debug=True, port=port)
