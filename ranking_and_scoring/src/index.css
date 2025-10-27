@@ -1,20 +1,21 @@
 :root {
-  font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: "Inter", "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont,
+    sans-serif;
   line-height: 1.5;
   font-weight: 400;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  color: #0f172a;
-  background-color: #f4f7fb;
-  --primary: #4267ff;
-  --surface: #ffffff;
-  --surface-alt: #f8fafc;
-  --heading: #0f172a;
-  --body: #1e293b;
-  --muted: #64748b;
-  --muted-strong: #475569;
+  color: #e9eefc;
+  background-color: #0b1020;
+  --primary: #6ea8fe;
+  --surface: #11182f; /* panel */
+  --surface-alt: #0e1430; /* slightly deeper */
+  --heading: #e9eefc;
+  --body: #d7e2ff;
+  --muted: #9aa3b2;
+  --muted-strong: #b4bfda;
   --success: #10b981;
 }
 
@@ -22,11 +23,32 @@ body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
-  background: #f4f7fb;
+  background: radial-gradient(
+      1200px 800px at 0% -10%,
+      rgba(167, 139, 250, 0.25),
+      transparent 60%
+    ),
+    linear-gradient(180deg, #0b1020, #0f152b);
+  color: var(--body);
 }
 
 #root {
   min-height: 100vh;
+}
+
+/* Accessibility */
+:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 3px;
+  border-radius: 8px;
+}
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 a {
