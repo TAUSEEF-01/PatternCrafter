@@ -130,28 +130,35 @@ export default function PortalApp() {
       <Route
         path="/"
         element={
-          <div>
+          <div className="shell">
             <Nav />
-            <section className="hero">
-              <div className="kicker">Welcome to</div>
-              <div className="title">PatternCrafter</div>
-              <p className="subtitle">
-                Craft, annotate, and evaluate conversational AI datasets and templates—all in one place.
-              </p>
-              <div className="row" style={{ marginTop: 12 }}>
-                <Link className="btn primary" to="/portal" aria-label="Enter portal">
-                  Enter Portal
-                </Link>
-                <a
-                  className="btn"
-                  href="https://github.com/TAUSEEF-01/PatternCrafter"
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  GitHub
-                </a>
-              </div>
-            </section>
+            <main className="main">
+              <section className="hero">
+                <div className="kicker">Welcome to</div>
+                <div className="title">PatternCrafter</div>
+                <p className="subtitle">
+                  Craft, annotate, and evaluate conversational AI datasets and
+                  templates—all in one place.
+                </p>
+                <div className="row" style={{ marginTop: 12 }}>
+                  <Link
+                    className="btn primary"
+                    to="/portal"
+                    aria-label="Enter portal"
+                  >
+                    Enter Portal
+                  </Link>
+                  <a
+                    className="btn"
+                    href="https://github.com/TAUSEEF-01/PatternCrafter"
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    GitHub
+                  </a>
+                </div>
+              </section>
+            </main>
             <Footer />
           </div>
         }
@@ -159,42 +166,44 @@ export default function PortalApp() {
       <Route
         path="/portal"
         element={
-          <div>
+          <div className="shell">
             <Nav />
-            <section className="hero">
-              <div className="kicker">Build, Label, and Evaluate</div>
-              <div className="title">PatternCrafter Portal</div>
-              <p className="subtitle">
-                A unified workspace to annotate conversational data, craft
-                ranking/scoring labels, and explore responses—all from a single
-                aesthetic interface.
-              </p>
-            </section>
-            <section className="grid">
-              {entries.map((e) => (
-                <div key={e.key} className="card">
-                  <h2>{e.name}</h2>
-                  <p>
-                    Open the module embedded in the portal or launch it in a
-                    separate tab.
-                  </p>
-                  <div className="row">
-                    <Link className="btn primary" to={e.path}>
-                      Open
-                    </Link>
-                    <a
-                      className="btn"
-                      href={e.url}
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      New tab
-                    </a>
+            <main className="main">
+              <section className="hero">
+                <div className="kicker">Build, Label, and Evaluate</div>
+                <div className="title">PatternCrafter Portal</div>
+                <p className="subtitle">
+                  A unified workspace to annotate conversational data, craft
+                  ranking/scoring labels, and explore responses—all from a
+                  single aesthetic interface.
+                </p>
+              </section>
+              <section className="grid">
+                {entries.map((e) => (
+                  <div key={e.key} className="card">
+                    <h2>{e.name}</h2>
+                    <p>
+                      Open the module embedded in the portal or launch it in a
+                      separate tab.
+                    </p>
+                    <div className="row">
+                      <Link className="btn primary" to={e.path}>
+                        Open
+                      </Link>
+                      <a
+                        className="btn"
+                        href={e.url}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        New tab
+                      </a>
+                    </div>
+                    <div className="meta">{e.url}</div>
                   </div>
-                  <div className="meta">{e.url}</div>
-                </div>
-              ))}
-            </section>
+                ))}
+              </section>
+            </main>
             <Footer />
           </div>
         }
@@ -229,38 +238,45 @@ export default function PortalApp() {
       <Route
         path="*"
         element={
-          <div>
+          <div className="shell">
             <Nav />
-            <section className="hero">
-              <div className="title">Page not found</div>
-              <p className="subtitle">
-                The page you’re looking for doesn’t exist. You can enter the portal or open a module below.
-              </p>
-            <div className="row" style={{ padding: "0 20px" }}>
-              <Link className="btn primary" to="/portal">Enter Portal</Link>
-              <Link className="btn" to="/">Landing</Link>
-            </div>
-            </section>
-            <section className="grid">
-              {entries.map((e) => (
-                <div key={e.key} className="card">
-                  <h2>{e.name}</h2>
-                  <div className="row">
-                    <Link className="btn primary" to={e.path}>
-                      Open
-                    </Link>
-                    <a
-                      className="btn"
-                      href={e.url}
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      New tab
-                    </a>
-                  </div>
+            <main className="main">
+              <section className="hero">
+                <div className="title">Page not found</div>
+                <p className="subtitle">
+                  The page you’re looking for doesn’t exist. You can enter the
+                  portal or open a module below.
+                </p>
+                <div className="row" style={{ padding: "0 20px" }}>
+                  <Link className="btn primary" to="/portal">
+                    Enter Portal
+                  </Link>
+                  <Link className="btn" to="/">
+                    Landing
+                  </Link>
                 </div>
-              ))}
-            </section>
+              </section>
+              <section className="grid">
+                {entries.map((e) => (
+                  <div key={e.key} className="card">
+                    <h2>{e.name}</h2>
+                    <div className="row">
+                      <Link className="btn primary" to={e.path}>
+                        Open
+                      </Link>
+                      <a
+                        className="btn"
+                        href={e.url}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        New tab
+                      </a>
+                    </div>
+                  </div>
+                ))}
+              </section>
+            </main>
             <Footer />
           </div>
         }

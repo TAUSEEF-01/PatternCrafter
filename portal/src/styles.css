@@ -165,31 +165,48 @@ body {
 .footer-wrap {
   max-width: 1120px;
   margin: 0 auto;
-  padding: 12px 20px;
+  padding: 8px 16px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
+  gap: 10px;
+  line-height: 1.2;
 }
 .foot-brand {
   font-weight: 700;
 }
 .foot-copy {
   color: var(--muted);
-  font-size: 12px;
+  font-size: 11px;
 }
 .foot-links a {
   color: var(--muted);
   text-decoration: none;
-  margin-left: 12px;
+  margin-left: 10px;
 }
 .foot-links a:hover {
   color: var(--fg);
 }
+@media (max-width: 640px) {
+  .footer-wrap {
+    flex-wrap: wrap;
+    row-gap: 6px;
+  }
+}
+
+/* Layout wrappers */
+.shell {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+.main {
+  flex: 1;
+}
 
 /* Iframe layout */
 .page {
-  height: 100vh;
+  min-height: 100vh;
   display: flex;
   flex-direction: column;
 }
