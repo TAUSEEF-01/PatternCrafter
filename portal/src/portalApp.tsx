@@ -190,16 +190,16 @@ export default function PortalApp() {
                       <Link className="btn primary" to={e.path}>
                         Open
                       </Link>
-                      <a
+                      {/* <a
                         className="btn"
                         href={e.url}
                         target="_blank"
                         rel="noreferrer"
                       >
                         New tab
-                      </a>
+                      </a> */}
                     </div>
-                    <div className="meta">{e.url}</div>
+                    {/* <div className="meta">{e.url}</div> */}
                   </div>
                 ))}
               </section>
