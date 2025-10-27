@@ -1,12 +1,12 @@
-import './App.css'
-import { BrowserRouter, Route, Routes } from 'react-router-dom'
-import { LabelingProvider } from './context/LabelingContext.jsx'
-import { LabelingWorkspace } from './pages/LabelingWorkspace.jsx'
-import { SummaryPage } from './pages/SummaryPage.jsx'
+import "./App.css";
+import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { LabelingProvider } from "./context/LabelingContext.jsx";
+import { LabelingWorkspace } from "./pages/LabelingWorkspace.jsx";
+import { SummaryPage } from "./pages/SummaryPage.jsx";
 
 function App() {
   return (
-    <BrowserRouter>
+    <BrowserRouter basename={import.meta.env.VITE_BASE_PATH || "/"}>
       <LabelingProvider>
         <div className="app-root">
           <Routes>
@@ -17,7 +17,7 @@ function App() {
         </div>
       </LabelingProvider>
     </BrowserRouter>
-  )
+  );
 }
 
-export default App
+export default App;
