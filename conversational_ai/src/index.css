@@ -21,10 +21,10 @@ body {
   min-height: 100vh;
   background: radial-gradient(
       1200px 800px at 0% -10%,
-      rgba(167, 139, 250, 0.15),
+      rgba(167, 139, 250, 0.25),
       transparent 60%
     ),
-    linear-gradient(180deg, #f8fafc, #eef2ff);
+    linear-gradient(180deg, #0b1020, #0f152b);
 }
 
 a {
@@ -159,6 +159,107 @@ a {
   transform: translateY(-6px);
   box-shadow: 0 26px 50px -32px rgba(15, 23, 42, 0.6);
   border-color: rgba(148, 163, 184, 0.28);
+}
+
+/* === Portal-match dark theme overrides (non-breaking) === */
+:root {
+  --pc-bg: #0b1020;
+  --pc-bg-soft: #0f152b;
+  --pc-panel: #11182f;
+  --pc-fg: #e9eefc;
+  --pc-muted: #9aa3b2;
+  --pc-accent: #6ea8fe;
+  --pc-accent2: #a78bfa;
+  --pc-border: #223155;
+}
+body {
+  color: var(--pc-fg);
+}
+
+.home .hero {
+  background: linear-gradient(
+    135deg,
+    rgba(110, 168, 254, 0.85),
+    rgba(167, 139, 250, 0.9)
+  );
+  color: var(--pc-fg);
+}
+
+.template-card {
+  background: #0e1430;
+  border: 1px solid var(--pc-border);
+  box-shadow: 0 18px 35px -25px rgba(0, 0, 0, 0.55);
+  color: var(--pc-fg);
+}
+.template-card:hover {
+  box-shadow: 0 26px 50px -32px rgba(0, 0, 0, 0.65);
+  border-color: rgba(34, 49, 85, 0.9);
+}
+.template-card__type {
+  color: var(--pc-muted);
+}
+.template-card__details dd {
+  color: var(--pc-muted);
+}
+
+.btn--primary {
+  background: linear-gradient(135deg, var(--pc-accent), var(--pc-accent2));
+  color: #0b1020;
+  box-shadow: 0 12px 24px rgba(110, 168, 254, 0.18);
+}
+.btn--ghost {
+  border-color: rgba(255, 255, 255, 0.18);
+  color: var(--pc-fg);
+  background: rgba(255, 255, 255, 0.04);
+}
+.workspace__details,
+.annotator,
+.label-palette,
+.token-board__tokens,
+.intent-selector,
+.response-options__item,
+.workspace__loading,
+.results__code {
+  border: 1px solid var(--pc-border);
+}
+.workspace__details,
+.annotator {
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.04),
+    rgba(255, 255, 255, 0.02)
+  );
+}
+.label-palette,
+.token-board__tokens,
+.intent-selector,
+.response-options__item,
+.workspace__loading {
+  background: #0e1430;
+  color: var(--pc-fg);
+}
+.dialogue-turn {
+  background: #0e1430;
+  border-color: var(--pc-border);
+}
+.dialogue-turn__text,
+.response-options__text {
+  color: var(--pc-fg);
+}
+.intent-selector__option {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: var(--pc-border);
+}
+.response-input textarea {
+  background: #0e1430;
+  color: var(--pc-fg);
+  border: 1px solid var(--pc-border);
+}
+.workspace__footer {
+  border-top: 1px solid var(--pc-border);
+}
+.error {
+  color: #f87171;
 }
 
 .template-card__stripe {
