@@ -19,9 +19,7 @@
     "build:ist": "npm run build --workspace=apps/intent_slot_tester",
     "install:all": "npm install --workspaces",
     "clean": "npm run clean --workspaces --if-present",
-    "lint": "npm run lint --workspaces --if-present",
-    "format": "prettier . --write",
-    "format:check": "prettier . --check"
+    "lint": "npm run lint --workspaces --if-present"
   },
   "repository": {
     "type": "git",
@@ -32,8 +30,5 @@
   "engines": {
     "node": ">=18.0.0",
     "npm": ">=9.0.0"
-  },
-  "devDependencies": {
-    "prettier": "^3.3.3"
   }
 }
