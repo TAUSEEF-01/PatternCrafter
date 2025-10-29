@@ -1,0 +1,4 @@
+# Ignore all generated app build outputs here; kept out of VCS
+*
+!.gitignore
+!.gitkeep
