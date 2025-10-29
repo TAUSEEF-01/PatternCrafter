@@ -1,0 +1,35 @@
+.empty-state {
+  padding: 3rem 2rem;
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px dashed rgba(148, 163, 184, 0.4);
+  display: grid;
+  justify-items: center;
+  gap: 0.85rem;
+  text-align: center;
+  color: var(--color-muted);
+}
+
+.empty-graphic {
+  display: inline-flex;
+  gap: 0.6rem;
+}
+
+.empty-graphic span {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #2563eb, #7c3aed);
+  opacity: 0.6;
+}
+
+.empty-state h3 {
+  margin: 0;
+  font-size: 1.2rem;
+  color: #0f172a;
+}
+
+.empty-state p {
+  margin: 0;
+  max-width: 32ch;
+}

@@ -1,0 +1,50 @@
+.error-state {
+  display: grid;
+  justify-items: center;
+  gap: 0.75rem;
+  padding: 2.75rem 2rem;
+  border-radius: var(--radius-md);
+  background: rgba(254, 242, 242, 0.85);
+  border: 1px solid rgba(248, 113, 113, 0.35);
+  box-shadow: var(--shadow-sm);
+  color: #991b1b;
+  text-align: center;
+}
+
+.error-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: 2px solid rgba(248, 113, 113, 0.8);
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  font-size: 1.5rem;
+}
+
+.error-state h3 {
+  margin: 0;
+  font-size: 1.25rem;
+  color: #7f1d1d;
+}
+
+.error-state p {
+  margin: 0;
+  color: rgba(68, 64, 60, 0.9);
+}
+
+.error-action {
+  margin-top: 0.5rem;
+  padding: 0.6rem 1.4rem;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #ef4444, #f97316);
+  color: white;
+  font-weight: 600;
+  box-shadow: 0 12px 30px rgba(239, 68, 68, 0.25);
+  transition: var(--transition);
+}
+
+.error-action:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 14px 36px rgba(239, 68, 68, 0.35);
+}
