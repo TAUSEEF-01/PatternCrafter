@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "node ./scripts/dev.mjs",
     "vite:dev": "vite",
+    "free-port": "powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/kill-port.ps1 5172",
     "prepare:apps": "node ./scripts/prepare-apps.mjs",
     "build": "npm run prepare:apps && tsc -b && vite build",
     "preview": "vite preview"
