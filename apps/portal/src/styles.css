@@ -65,7 +65,8 @@ body[data-theme='light'] .navbar {
 .navwrap {
   max-width: 1120px;
   margin: 0 auto;
-  padding: 12px 20px;
+  /* Reduced navbar vertical padding for a more compact height */
+  padding: 8px 20px;
   display: flex;
   align-items: center;
   gap: 16px;
@@ -84,7 +85,8 @@ body[data-theme='light'] .navbar {
   gap: 10px;
   align-items: center;
   flex-wrap: wrap;
-  padding: 6px;
+  /* Slightly tighter inner padding */
+  padding: 4px;
   border-radius: 14px;
   background: rgba(255, 255, 255, 0.06);
   border: 1px solid rgba(255, 255, 255, 0.12);
@@ -96,7 +98,8 @@ body[data-theme='light'] .nav {
 .nav a {
   color: var(--fg);
   text-decoration: none;
-  padding: 8px 12px;
+  /* Slightly reduced link padding */
+  padding: 6px 10px;
   border-radius: 10px;
   font-weight: 600;
   border: 1px solid transparent;
@@ -133,11 +136,47 @@ body[data-theme='light'] .nav a.active {
   align-items: center;
   gap: 10px;
 }
+.nav-actions a {
+  /* Style Login/Register as pill buttons */
+  color: #ffffff;
+  text-decoration: none;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.08);
+  font-weight: 700;
+  transition: background 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease,
+    border-color 0.2s ease;
+}
+.nav-actions a:hover {
+  background: rgba(255, 255, 255, 0.14);
+  border-color: rgba(255, 255, 255, 0.24);
+  transform: translateY(-1px);
+}
+body[data-theme='light'] .nav-actions a {
+  background: #ffffff;
+  color: var(--fg);
+  border: 1px solid var(--border);
+}
+body[data-theme='light'] .nav-actions a:hover {
+  background: #ffffff;
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.12);
+}
+.nav-actions a.active {
+  color: #0b1020;
+  background: linear-gradient(135deg, var(--brand-1), var(--brand-2));
+  border: 1px solid transparent;
+  box-shadow: 0 6px 20px rgba(37, 99, 235, 0.35), 0 2px 8px rgba(16, 185, 129, 0.25);
+}
+body[data-theme='light'] .nav-actions a.active {
+  color: #ffffff;
+}
 .nav-actions .btn {
   background: rgba(255, 255, 255, 0.06);
   border: 1px solid rgba(255, 255, 255, 0.12);
   color: #ffffff;
-  padding: 6px 10px;
+  /* Slightly tighter for compact navbar */
+  padding: 5px 10px;
   border-radius: 10px;
   transition: background 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease,
     border-color 0.2s ease;
@@ -160,7 +199,8 @@ body[data-theme='light'] .nav-actions .btn:hover {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 4px 8px;
+  /* Slightly tighter for compact navbar */
+  padding: 3px 8px;
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid var(--border);
