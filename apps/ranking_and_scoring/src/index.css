@@ -1,6 +1,5 @@
 :root {
-  font-family: "Inter", "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont,
-    sans-serif;
+  font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
   line-height: 1.5;
   font-weight: 400;
   font-synthesis: none;
@@ -25,10 +24,17 @@
   --warning: #f59e0b;
   --error: #ef4444;
   --shadow: rgba(0, 0, 0, 0.3);
+  /* Slightly elevated surface */
+  --surface-alt: #252b42;
+  /* Mappings used throughout App.css */
+  --primary: var(--accent-primary);
+  --heading: var(--text-primary);
+  --muted-strong: var(--text-secondary);
+  --body: var(--text-primary);
 }
 
 /* Light theme - Clean Blue/White */
-:root[data-theme="light"] {
+:root[data-theme='light'] {
   --bg-primary: #f8fafc;
   --bg-secondary: #f1f5f9;
   --bg-tertiary: #e2e8f0;
@@ -45,6 +51,12 @@
   --warning: #f59e0b;
   --error: #ef4444;
   --shadow: rgba(15, 23, 42, 0.1);
+  /* Mappings used throughout App.css */
+  --primary: var(--accent-primary);
+  --heading: var(--text-primary);
+  --muted-strong: var(--text-secondary);
+  --body: var(--text-primary);
+  --surface-alt: #f8fafc;
 }
 
 body {
@@ -57,37 +69,21 @@ body {
 }
 
 body::before {
-  content: "";
+  content: '';
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  background: radial-gradient(
-      circle at 20% 20%,
-      rgba(139, 92, 246, 0.15),
-      transparent 50%
-    ),
-    radial-gradient(
-      circle at 80% 80%,
-      rgba(99, 102, 241, 0.15),
-      transparent 50%
-    );
+  background: radial-gradient(circle at 20% 20%, rgba(139, 92, 246, 0.15), transparent 50%),
+    radial-gradient(circle at 80% 80%, rgba(99, 102, 241, 0.15), transparent 50%);
   pointer-events: none;
   z-index: 0;
 }
 
-body[data-theme="light"]::before {
-  background: radial-gradient(
-      circle at 20% 20%,
-      rgba(59, 130, 246, 0.08),
-      transparent 50%
-    ),
-    radial-gradient(
-      circle at 80% 80%,
-      rgba(99, 102, 241, 0.08),
-      transparent 50%
-    );
+body[data-theme='light']::before {
+  background: radial-gradient(circle at 20% 20%, rgba(59, 130, 246, 0.08), transparent 50%),
+    radial-gradient(circle at 80% 80%, rgba(99, 102, 241, 0.08), transparent 50%);
 }
 
 #root {
