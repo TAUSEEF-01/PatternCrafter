@@ -10,6 +10,7 @@ const defaultEndpoints = {
   // served statically by the portal after a prepare step
   conversationalAI: import.meta.env.VITE_CONVERSATIONAL_AI_URL || '/apps/ca/index.html',
   rankingAndScoring: import.meta.env.VITE_RANKING_SCORING_URL || '/apps/rs/index.html',
+  computerVision: import.meta.env.VITE_COMPUTER_VISION_URL || '/apps/cv/index.html',
   // Flask backend will be started by the portal dev script
   intentSlotTester: import.meta.env.VITE_INTENT_SLOT_URL || '/apps/ist/index.html',
 };
@@ -45,6 +46,12 @@ function Nav() {
             Ranking & Scoring
           </NavLink>
           <NavLink
+            to="/computer-vision"
+            className={({ isActive }) => (isActive ? 'active' : undefined)}
+          >
+            Computer Vision
+          </NavLink>
+          <NavLink
             to="/intent-slot-tester"
             className={({ isActive }) => (isActive ? 'active' : undefined)}
           >
@@ -53,7 +60,7 @@ function Nav() {
         </nav>
         <div className="nav-actions">
           <button className="btn" onClick={toggle} aria-label="Toggle theme">
-            {theme === 'dark' ? '☀️ Light' : '🌙 Dark'}
+            {theme === 'dark' ? 'Light mode' : 'Dark mode'}
           </button>
           {user ? (
             <div className="profile">
@@ -208,7 +215,7 @@ function IframePage({ src, title }: { src: string; title: string }) {
   return (
     <div className="page">
       <Nav />
-      {!ready && <div style={{ padding: 16 }}>Loading {title}…</div>}
+      {!ready && <div style={{ padding: 16 }}>Loading {title}...</div>}
       <iframe
         className="iframe"
         title={title}
@@ -241,6 +248,12 @@ export default function PortalApp() {
       url: defaultEndpoints.rankingAndScoring,
     },
     {
+      key: 'computerVision',
+      name: 'Computer Vision',
+      path: '/computer-vision',
+      url: defaultEndpoints.computerVision,
+    },
+    {
       key: 'intentSlotTester',
       name: 'Intent & Slot Tester',
       path: '/intent-slot-tester',
@@ -263,8 +276,8 @@ export default function PortalApp() {
                     <div className="kicker">Welcome to</div>
                     <div className="title">PatternCrafter</div>
                     <p className="subtitle">
-                      Craft, annotate, and evaluate conversational AI datasets and templates—all in
-                      one place.
+                      Craft, annotate, and evaluate conversational AI datasets and templates -- all
+                      in one place.
                     </p>
                     <div className="row" style={{ marginTop: 12 }}>
                       <Link className="btn primary" to="/portal" aria-label="Enter portal">
@@ -296,7 +309,7 @@ export default function PortalApp() {
                     <div className="title">PatternCrafter Portal</div>
                     <p className="subtitle">
                       A unified workspace to annotate conversational data, craft ranking/scoring
-                      labels, and explore responses—all from a single aesthetic interface.
+                      labels, and explore responses -- all from a single aesthetic interface.
                     </p>
                   </section>
                   <section className="grid">
@@ -339,6 +352,10 @@ export default function PortalApp() {
             element={
               <IframePage src={defaultEndpoints.rankingAndScoring} title="Ranking & Scoring" />
             }
+          />
+          <Route
+            path="/computer-vision"
+            element={<IframePage src={defaultEndpoints.computerVision} title="Computer Vision" />}
           />
           <Route
             path="/intent-slot-tester"
@@ -387,7 +404,7 @@ export default function PortalApp() {
                   <section className="hero">
                     <div className="title">Page not found</div>
                     <p className="subtitle">
-                      The page you’re looking for doesn’t exist. You can enter the portal or open a
+                      The page you're looking for doesn't exist. You can enter the portal or open a
                       module below.
                     </p>
                     <div className="row" style={{ padding: '0 20px' }}>

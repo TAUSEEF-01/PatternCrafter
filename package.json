@@ -12,11 +12,13 @@
     "dev:ca": "npm run dev --workspace=apps/conversational_ai",
     "dev:rs": "npm run dev --workspace=apps/ranking_and_scoring",
     "dev:ist": "npm run dev --workspace=apps/intent_slot_tester",
+    "dev:cv": "npm run dev --workspace=apps/computer_vision",
     "build": "npm run build --workspaces --if-present",
     "build:portal": "npm run build --workspace=apps/portal",
     "build:ca": "npm run build --workspace=apps/conversational_ai",
     "build:rs": "npm run build --workspace=apps/ranking_and_scoring",
     "build:ist": "npm run build --workspace=apps/intent_slot_tester",
+    "build:cv": "npm run build --workspace=apps/computer_vision",
     "install:all": "npm install --workspaces",
     "clean": "npm run clean --workspaces --if-present",
     "lint": "npm run lint --workspaces --if-present"

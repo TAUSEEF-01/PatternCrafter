@@ -26,6 +26,12 @@ const apps = [
     out: resolve(portal, "public", "apps", "ist"),
     basePath: "/apps/ist",
   },
+  {
+    name: "computer_vision",
+    path: resolve(root, "apps", "computer_vision"),
+    out: resolve(portal, "public", "apps", "cv"),
+    basePath: "/apps/cv",
+  },
 ];
 
 function run(cmd, cwd) {
