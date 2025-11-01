@@ -54,7 +54,7 @@ body[data-theme='light'] {
   top: 0;
   z-index: 20;
   backdrop-filter: saturate(140%) blur(6px);
-  background: linear-gradient(135deg, var(--brand-1), var(--brand-2));
+  background: '#AD49E1';
   border-bottom: 1px solid var(--border);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
 }
@@ -418,7 +418,7 @@ body[data-theme='light'] .card {
   background: rgba(255, 255, 255, 0.04);
 }
 .btn.primary {
-  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  background: '#EBD3F8';
   border-color: transparent;
 }
 .btn:hover {

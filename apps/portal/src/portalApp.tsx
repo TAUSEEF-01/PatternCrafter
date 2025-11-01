@@ -17,23 +17,23 @@ type AppKey = keyof typeof defaultEndpoints;
 // Animated Background Component
 function AnimatedBackground() {
   const { theme } = useTheme();
-  
+
   useEffect(() => {
     const canvas = document.getElementById('bg-canvas') as HTMLCanvasElement;
     if (!canvas) return;
-    
+
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
-    
+
     const resize = () => {
       canvas.width = window.innerWidth;
       canvas.height = window.innerHeight;
     };
     resize();
     window.addEventListener('resize', resize);
-    
+
     const isDark = theme === 'dark';
-    
+
     // Small particles
     const particles: Array<{
       x: number;
@@ -43,7 +43,7 @@ function AnimatedBackground() {
       size: number;
       opacity: number;
     }> = [];
-    
+
     const particleCount = 80;
     for (let i = 0; i < particleCount; i++) {
       particles.push({
@@ -55,47 +55,47 @@ function AnimatedBackground() {
         opacity: Math.random() * 0.5 + 0.3,
       });
     }
-    
+
     let animationId: number;
     let time = 0;
-    
+
     const animate = () => {
       time += 0.01;
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      
+
       // Draw particles
       particles.forEach((particle) => {
         particle.x += particle.vx;
         particle.y += particle.vy;
-        
+
         if (particle.x < 0) particle.x = canvas.width;
         if (particle.x > canvas.width) particle.x = 0;
         if (particle.y < 0) particle.y = canvas.height;
         if (particle.y > canvas.height) particle.y = 0;
-        
+
         ctx.beginPath();
         ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
         ctx.fillStyle = isDark
           ? `rgba(200, 200, 255, ${particle.opacity})`
           : `rgba(100, 100, 200, ${particle.opacity})`;
         ctx.fill();
-        
+
         ctx.shadowBlur = 10;
         ctx.shadowColor = isDark ? 'rgba(150, 150, 255, 0.5)' : 'rgba(100, 100, 200, 0.3)';
         ctx.fill();
         ctx.shadowBlur = 0;
       });
-      
+
       // Draw connections
       ctx.strokeStyle = isDark ? 'rgba(200, 200, 255, 0.15)' : 'rgba(100, 100, 200, 0.1)';
       ctx.lineWidth = 1;
-      
+
       for (let i = 0; i < particles.length; i++) {
         for (let j = i + 1; j < particles.length; j++) {
           const dx = particles[i].x - particles[j].x;
           const dy = particles[i].y - particles[j].y;
           const distance = Math.sqrt(dx * dx + dy * dy);
-          
+
           if (distance < 120) {
             ctx.beginPath();
             ctx.moveTo(particles[i].x, particles[i].y);
@@ -106,18 +106,18 @@ function AnimatedBackground() {
           }
         }
       }
-      
+
       animationId = requestAnimationFrame(animate);
     };
-    
+
     animate();
-    
+
     return () => {
       window.removeEventListener('resize', resize);
       cancelAnimationFrame(animationId);
     };
   }, [theme]);
-  
+
   return (
     <canvas
       id="bg-canvas"
@@ -140,36 +140,19 @@ function Nav() {
   const nav = useNavigate();
   const { theme, toggle } = useTheme();
   return (
-    <div className="navbar">
+    <div className="navbar" 
+    style={{
+      backgroundColor: '#7A1CAC', // your new color
+      color: '#EBD3F8', // text color
+    }}>
       <div className="navwrap">
         <NavLink to="/" className="brand" aria-label="PatternCrafter Home">
           PatternCrafter
         </NavLink>
         <div className="spacer" />
-        <nav className="nav">
-          <NavLink to="/portal" className={({ isActive }) => (isActive ? 'active' : undefined)}>
-            Portal
-          </NavLink>
-          <NavLink
-            to="/conversational-ai"
-            className={({ isActive }) => (isActive ? 'active' : undefined)}
-          >
-            Conversational AI
-          </NavLink>
-          <NavLink
-            to="/ranking-and-scoring"
-            className={({ isActive }) => (isActive ? 'active' : undefined)}
-          >
-            Ranking & Scoring
-          </NavLink>
-          <NavLink
-            to="/intent-slot-tester"
-            className={({ isActive }) => (isActive ? 'active' : undefined)}
-          >
-            Intent & Slot Tester
-          </NavLink>
-        </nav>
-        <div className="nav-actions">
+        <div className="nav-actions"
+        
+        >
           <button className="btn" onClick={toggle} aria-label="Toggle theme">
             {theme === 'dark' ? '☀️' : '🌙'}
           </button>
@@ -197,14 +180,6 @@ function Nav() {
                   <NavLink to="/profile" onClick={() => setOpen(false)}>
                     Profile
                   </NavLink>
-                  <button
-                    onClick={() => {
-                      setOpen(false);
-                      nav('/portal');
-                    }}
-                  >
-                    Portal
-                  </button>
                   <button
                     onClick={() => {
                       setOpen(false);
@@ -341,25 +316,25 @@ export default function PortalApp() {
     path: string;
     url: string;
   }> = [
-    {
-      key: 'conversationalAI',
-      name: 'Conversational AI',
-      path: '/conversational-ai',
-      url: defaultEndpoints.conversationalAI,
-    },
-    {
-      key: 'rankingAndScoring',
-      name: 'Ranking & Scoring',
-      path: '/ranking-and-scoring',
-      url: defaultEndpoints.rankingAndScoring,
-    },
-    {
-      key: 'intentSlotTester',
-      name: 'Intent & Slot Tester',
-      path: '/intent-slot-tester',
-      url: defaultEndpoints.intentSlotTester,
-    },
-  ];
+      {
+        key: 'conversationalAI',
+        name: 'Conversational AI',
+        path: '/conversational-ai',
+        url: defaultEndpoints.conversationalAI,
+      },
+      {
+        key: 'rankingAndScoring',
+        name: 'Ranking & Scoring',
+        path: '/ranking-and-scoring',
+        url: defaultEndpoints.rankingAndScoring,
+      },
+      {
+        key: 'intentSlotTester',
+        name: 'Intent & Slot Tester',
+        path: '/intent-slot-tester',
+        url: defaultEndpoints.intentSlotTester,
+      },
+    ];
 
   return (
     <ThemeProvider>
@@ -371,93 +346,69 @@ export default function PortalApp() {
             element={
               <div className="shell">
                 <Nav />
-                <main className="main" style={{ 
-                  minHeight: '100vh', 
-                  display: 'flex', 
-                  alignItems: 'center', 
+                <main className="main" style={{
+                  minHeight: '100vh',
+                  display: 'flex',
+                  alignItems: 'center',
                   justifyContent: 'center',
                   padding: '2rem'
                 }}>
-                  <section className="hero" style={{ 
-                    maxWidth: '900px', 
-                    textAlign: 'center',
-                    animation: 'fadeInUp 0.8s ease-out'
-                  }}>
-                    <div className="kicker" style={{
-                      fontSize: '1.1rem',
-                      fontWeight: '500',
-                      background: 'linear-gradient(135deg, #8b5cf6 0%, #ec4899 100%)',
-                      WebkitBackgroundClip: 'text',
-                      WebkitTextFillColor: 'transparent',
-                      backgroundClip: 'text',
-                      marginBottom: '1rem',
-                      letterSpacing: '0.05em'
+                  <div style={{ maxWidth: '1200px', width: '100%' }}>
+                    <section className="hero" style={{
+                      maxWidth: '900px',
+                      textAlign: 'center',
+                      margin: '0 auto 4rem',
+                      animation: 'fadeInUp 0.8s ease-out'
                     }}>
-                      Welcome to
-                    </div>
-                    <h1 className="title" style={{
-                      fontSize: 'clamp(3rem, 8vw, 5.5rem)',
-                      fontWeight: '800',
-                      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%)',
-                      WebkitBackgroundClip: 'text',
-                      WebkitTextFillColor: 'transparent',
-                      backgroundClip: 'text',
-                      marginBottom: '1.5rem',
-                      lineHeight: '1.1',
-                      letterSpacing: '-0.02em'
-                    }}>
-                      PatternCrafter
-                    </h1>
-                    <p className="subtitle" style={{
-                      fontSize: 'clamp(1.1rem, 2.5vw, 1.35rem)',
-                      lineHeight: '1.6',
-                      maxWidth: '700px',
-                      margin: '0 auto 2.5rem',
-                      opacity: '0.9'
-                    }}>
-                      Craft, annotate, and evaluate conversational AI datasets and templates—all in
-                      one powerful, unified workspace.
-                    </p>
-                    <div className="row" style={{ 
-                      marginTop: 12,
-                      gap: '1rem',
-                      justifyContent: 'center',
-                      flexWrap: 'wrap'
-                    }}>
-                      <Link 
-                        className="btn primary" 
-                        to="/portal" 
-                        aria-label="Enter portal"
-                        style={{
-                          fontSize: '1.1rem',
-                          padding: '0.9rem 2.2rem',
-                          fontWeight: '600',
-                          boxShadow: '0 10px 30px rgba(139, 92, 246, 0.3)',
-                          transform: 'translateY(0)',
-                          transition: 'all 0.3s ease'
-                        }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.transform = 'translateY(-2px)';
-                          e.currentTarget.style.boxShadow = '0 15px 40px rgba(139, 92, 246, 0.4)';
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.transform = 'translateY(0)';
-                          e.currentTarget.style.boxShadow = '0 10px 30px rgba(139, 92, 246, 0.3)';
-                        }}
-                      >
-                        Enter Portal →
-                      </Link>
+                      <div className="kicker" style={{
+                        fontSize: '1.1rem',
+                        fontWeight: '500',
+                        background: 'linear-gradient(135deg, #8b5cf6 0%, #ec4899 100%)',
+                        WebkitBackgroundClip: 'text',
+                        WebkitTextFillColor: 'transparent',
+                        backgroundClip: 'text',
+                        marginBottom: '1rem',
+                        letterSpacing: '0.05em'
+                      }}>
+                        Welcome to
+                      </div>
+                      <h1 className="title" style={{
+                        fontSize: 'clamp(3rem, 8vw, 5.5rem)',
+                        fontWeight: '800',
+                        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%)',
+                        WebkitBackgroundClip: 'text',
+                        WebkitTextFillColor: 'transparent',
+                        backgroundClip: 'text',
+                        marginBottom: '1.5rem',
+                        lineHeight: '1.1',
+                        letterSpacing: '-0.02em'
+                      }}>
+                        PatternCrafter
+                      </h1>
+                      <p className="subtitle" style={{
+                        fontSize: 'clamp(1.1rem, 2.5vw, 1.35rem)',
+                        lineHeight: '1.6',
+                        maxWidth: '700px',
+                        margin: '0 auto 2.5rem',
+                        opacity: '0.9'
+                      }}>
+                        Craft, annotate, and evaluate conversational AI datasets and templates—all in
+                        one powerful, unified workspace.
+                      </p>
                       <a
                         className="btn"
                         href="https://github.com/TAUSEEF-01/PatternCrafter"
                         target="_blank"
                         rel="noreferrer"
                         style={{
-                          fontSize: '1.1rem',
-                          padding: '0.9rem 2.2rem',
+                          fontSize: '1.05rem',
+                          padding: '0.85rem 2rem',
                           fontWeight: '600',
                           transform: 'translateY(0)',
-                          transition: 'all 0.3s ease'
+                          transition: 'all 0.3s ease',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '0.5rem'
                         }}
                         onMouseEnter={(e) => {
                           e.currentTarget.style.transform = 'translateY(-2px)';
@@ -466,10 +417,87 @@ export default function PortalApp() {
                           e.currentTarget.style.transform = 'translateY(0)';
                         }}
                       >
-                        View on GitHub
+                        ⭐ View on GitHub
                       </a>
-                    </div>
-                  </section>
+                    </section>
+
+                    <section style={{
+                      animation: 'fadeInUp 0.8s ease-out 0.2s backwards'
+                    }}>
+                      <h2 style={{
+                        fontSize: 'clamp(1.5rem, 3vw, 2rem)',
+                        fontWeight: '700',
+                        textAlign: 'center',
+                        marginBottom: '3rem',
+                        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                        WebkitBackgroundClip: 'text',
+                        WebkitTextFillColor: 'transparent',
+                        backgroundClip: 'text'
+                      }}>
+                        Choose Your Module
+                      </h2>
+                      <div className="grid">
+                        {entries.map((e, index) => (
+                          <div
+                            key={e.key}
+                            className="card"
+                            style={{
+                              transition: 'all 0.3s ease',
+                              cursor: 'pointer',
+                              animation: `fadeInUp 0.8s ease-out ${0.3 + index * 0.1}s backwards`
+                            }}
+                            onMouseEnter={(el) => {
+                              el.currentTarget.style.transform = 'translateY(-8px)';
+                              el.currentTarget.style.boxShadow = '0 20px 40px rgba(0,0,0,0.15)';
+                            }}
+                            onMouseLeave={(el) => {
+                              el.currentTarget.style.transform = 'translateY(0)';
+                              el.currentTarget.style.boxShadow = '';
+                            }}
+                          >
+                            <h3 style={{
+                              fontSize: '1.5rem',
+                              fontWeight: '700',
+                              marginBottom: '0.8rem',
+                              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                              WebkitBackgroundClip: 'text',
+                              WebkitTextFillColor: 'transparent',
+                              backgroundClip: 'text'
+                            }}>
+                              {e.name}
+                            </h3>
+                            <p style={{
+                              fontSize: '1rem',
+                              lineHeight: '1.6',
+                              marginBottom: '1.5rem',
+                              opacity: '0.85'
+                            }}>
+                              {e.key === 'conversationalAI' &&
+                                'Build and annotate conversational AI datasets with powerful labeling tools.'}
+                              {e.key === 'rankingAndScoring' &&
+                                'Create ranking and scoring labels for model evaluation and comparison.'}
+                              {e.key === 'intentSlotTester' &&
+                                'Test and validate intent classification and slot filling capabilities.'}
+                            </p>
+                            <div className="row">
+                              <Link
+                                className="btn primary"
+                                to={e.path}
+                                style={{
+                                  backgroundColor: '#EBD3F8', // button color
+                                  color: '#2E073F',            // text color
+                                  transition: 'all 0.3s ease',
+                                  flex: 1
+                                }}
+                              >
+                                Launch Module
+                              </Link>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </section>
+                  </div>
                 </main>
                 <Footer />
                 <style>{`
@@ -492,25 +520,95 @@ export default function PortalApp() {
             element={
               <div className="shell">
                 <Nav />
-                <main className="main">
-                  <section className="hero">
-                    <div className="kicker">Build, Label, and Evaluate</div>
-                    <div className="title">PatternCrafter Portal</div>
-                    <p className="subtitle">
+                <main className="main" style={{ padding: '4rem 2rem' }}>
+                  <section className="hero" style={{
+                    textAlign: 'center',
+                    marginBottom: '4rem',
+                    animation: 'fadeInUp 0.8s ease-out'
+                  }}>
+                    <div className="kicker" style={{
+                      fontSize: '1rem',
+                      fontWeight: '500',
+                      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                      WebkitBackgroundClip: 'text',
+                      WebkitTextFillColor: 'transparent',
+                      backgroundClip: 'text',
+                      marginBottom: '0.8rem',
+                      letterSpacing: '0.08em',
+                      textTransform: 'uppercase'
+                    }}>
+                      Build, Label, and Evaluate
+                    </div>
+                    <h1 className="title" style={{
+                      fontSize: 'clamp(2.5rem, 6vw, 4rem)',
+                      fontWeight: '800',
+                      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%)',
+                      WebkitBackgroundClip: 'text',
+                      WebkitTextFillColor: 'transparent',
+                      backgroundClip: 'text',
+                      marginBottom: '1.2rem',
+                      lineHeight: '1.1',
+                      letterSpacing: '-0.02em'
+                    }}>
+                      PatternCrafter Portal
+                    </h1>
+                    <p className="subtitle" style={{
+                      fontSize: 'clamp(1.05rem, 2.2vw, 1.25rem)',
+                      lineHeight: '1.6',
+                      maxWidth: '750px',
+                      margin: '0 auto',
+                      opacity: '0.9'
+                    }}>
                       A unified workspace to annotate conversational data, craft ranking/scoring
                       labels, and explore responses—all from a single aesthetic interface.
                     </p>
                   </section>
                   <section className="grid">
                     {entries.map((e) => (
-                      <div key={e.key} className="card">
-                        <h2>{e.name}</h2>
-                        <p>
+                      <div
+                        key={e.key}
+                        className="card"
+                        style={{
+                          transition: 'all 0.3s ease',
+                          cursor: 'pointer'
+                        }}
+                        onMouseEnter={(el) => {
+                          el.currentTarget.style.transform = 'translateY(-8px)';
+                          el.currentTarget.style.boxShadow = '0 20px 40px rgba(0,0,0,0.15)';
+                        }}
+                        onMouseLeave={(el) => {
+                          el.currentTarget.style.transform = 'translateY(0)';
+                          el.currentTarget.style.boxShadow = '';
+                        }}
+                      >
+                        <h2 style={{
+                          fontSize: '1.5rem',
+                          fontWeight: '700',
+                          marginBottom: '0.8rem',
+                          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                          WebkitBackgroundClip: 'text',
+                          WebkitTextFillColor: 'transparent',
+                          backgroundClip: 'text'
+                        }}>
+                          {e.name}
+                        </h2>
+                        <p style={{
+                          fontSize: '1rem',
+                          lineHeight: '1.6',
+                          marginBottom: '1.5rem',
+                          opacity: '0.85'
+                        }}>
                           Open the module embedded in the portal or launch it in a separate tab.
                         </p>
                         <div className="row">
-                          <Link className="btn primary" to={e.path}>
-                            Open
+                          <Link
+                            className="btn primary"
+                            to={e.path}
+                            style={{
+                              transition: 'all 0.3s ease'
+                            }}
+                          >
+                            Open Module →
                           </Link>
                         </div>
                       </div>
@@ -518,6 +616,18 @@ export default function PortalApp() {
                   </section>
                 </main>
                 <Footer />
+                <style>{`
+                  @keyframes fadeInUp {
+                    from {
+                      opacity: 0;
+                      transform: translateY(30px);
+                    }
+                    to {
+                      opacity: 1;
+                      transform: translateY(0);
+                    }
+                  }
+                `}</style>
               </div>
             }
           />
@@ -576,32 +686,122 @@ export default function PortalApp() {
             element={
               <div className="shell">
                 <Nav />
-                <main className="main">
-                  <section className="hero">
-                    <div className="title">Page not found</div>
-                    <p className="subtitle">
-                      The page you're looking for doesn't exist. You can enter the portal or open a
-                      module below.
+                <main className="main" style={{
+                  minHeight: '100vh',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  padding: '2rem'
+                }}>
+                  <section className="hero" style={{
+                    maxWidth: '800px',
+                    textAlign: 'center',
+                    animation: 'fadeInUp 0.8s ease-out'
+                  }}>
+                    <h1 className="title" style={{
+                      fontSize: 'clamp(3rem, 8vw, 5rem)',
+                      fontWeight: '800',
+                      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                      WebkitBackgroundClip: 'text',
+                      WebkitTextFillColor: 'transparent',
+                      backgroundClip: 'text',
+                      marginBottom: '1.5rem',
+                      lineHeight: '1.1',
+                      letterSpacing: '-0.02em'
+                    }}>
+                      404
+                    </h1>
+                    <h2 style={{
+                      fontSize: 'clamp(1.8rem, 4vw, 2.5rem)',
+                      fontWeight: '700',
+                      marginBottom: '1rem'
+                    }}>
+                      Page not found
+                    </h2>
+                    <p className="subtitle" style={{
+                      fontSize: 'clamp(1.05rem, 2.2vw, 1.2rem)',
+                      lineHeight: '1.6',
+                      marginBottom: '2.5rem',
+                      opacity: '0.9'
+                    }}>
+                      The page you're looking for doesn't exist. You can enter the portal or explore
+                      our modules below.
                     </p>
-                    <div className="row" style={{ padding: '0 20px' }}>
-                      <Link className="btn primary" to="/portal">
-                        Enter Portal
+                    <div className="row" style={{
+                      padding: '0 20px',
+                      gap: '1rem',
+                      justifyContent: 'center',
+                      flexWrap: 'wrap',
+                      marginBottom: '3rem'
+                    }}>
+                      <Link
+                        className="btn primary"
+                        to="/portal"
+                        style={{
+                          fontSize: '1.05rem',
+                          padding: '0.85rem 2rem',
+                          fontWeight: '600',
+                          transition: 'all 0.3s ease'
+                        }}
+                      >
+                        Enter Portal →
                       </Link>
-                      <Link className="btn" to="/">
-                        Landing
+                      <Link
+                        className="btn"
+                        to="/"
+                        style={{
+                          fontSize: '1.05rem',
+                          padding: '0.85rem 2rem',
+                          fontWeight: '600',
+                          transition: 'all 0.3s ease'
+                        }}
+                      >
+                        Go Home
                       </Link>
                     </div>
                   </section>
-                  <section className="grid">
+                  <section className="grid" style={{ marginTop: '2rem' }}>
                     {entries.map((e) => (
-                      <div key={e.key} className="card">
-                        <h2>{e.name}</h2>
-                        <div className="row">
-                          <Link className="btn primary" to={e.path}>
-                            Open
+                      <div
+                        key={e.key}
+                        className="card"
+                        style={{
+                          transition: 'all 0.3s ease'
+                        }}
+                        onMouseEnter={(el) => {
+                          el.currentTarget.style.transform = 'translateY(-5px)';
+                        }}
+                        onMouseLeave={(el) => {
+                          el.currentTarget.style.transform = 'translateY(0)';
+                        }}
+                      >
+                        <h2 style={{
+                          fontSize: '1.3rem',
+                          fontWeight: '700',
+                          marginBottom: '0.8rem',
+                          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                          WebkitBackgroundClip: 'text',
+                          WebkitTextFillColor: 'transparent',
+                          backgroundClip: 'text'
+                        }}>
+                          {e.name}
+                        </h2>
+                        <div className="row" style={{ gap: '0.8rem' }}>
+                          <Link
+                            className="btn primary"
+                            to={e.path}
+                            style={{ fontSize: '0.95rem' }}
+                          >
+                            Open →
                           </Link>
-                          <a className="btn" href={e.url} target="_blank" rel="noreferrer">
-                            New tab
+                          <a
+                            className="btn"
+                            href={e.url}
+                            target="_blank"
+                            rel="noreferrer"
+                            style={{ fontSize: '0.95rem' }}
+                          >
+                            New Tab ↗
                           </a>
                         </div>
                       </div>
@@ -609,6 +809,18 @@ export default function PortalApp() {
                   </section>
                 </main>
                 <Footer />
+                <style>{`
+                  @keyframes fadeInUp {
+                    from {
+                      opacity: 0;
+                      transform: translateY(30px);
+                    }
+                    to {
+                      opacity: 1;
+                      transform: translateY(0);
+                    }
+                  }
+                `}</style>
               </div>
             }
           />
