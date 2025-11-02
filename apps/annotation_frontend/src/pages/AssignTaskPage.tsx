@@ -7,6 +7,7 @@ export default function AssignTaskPage() {
   const { taskId } = useParams();
   const [task, setTask] = useState<Task | null>(null);
   const [annotatorId, setAnnotatorId] = useState('');
+  const [annotators, setAnnotators] = useState<{ id: string; name: string; email: string }[]>([]);
   const [qaId, setQaId] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -14,7 +15,19 @@ export default function AssignTaskPage() {
   useEffect(() => {
     if (!taskId) return;
     apiFetch<Task>(`/tasks/${taskId}`)
-      .then(setTask)
+      .then(async (t) => {
+        setTask(t);
+        // Load project annotators for assignment dropdown
+        try {
+          const list = await apiFetch<{ id: string; name: string; email: string }[]>(
+            `/projects/${t.project_id}/annotators`
+          );
+          setAnnotators(list);
+        } catch (e: any) {
+          // don't hard fail UI; show error banner
+          setError((prev) => prev || e?.message || 'Failed to load project annotators');
+        }
+      })
       .catch((e) => setError(String(e)));
   }, [taskId]);
 
@@ -48,12 +61,21 @@ export default function AssignTaskPage() {
       )}
 
       <form onSubmit={submit} className="bg-white p-4 rounded shadow space-y-3">
-        <input
-          className="w-full border rounded px-3 py-2"
-          placeholder="Annotator User ID"
-          value={annotatorId}
-          onChange={(e) => setAnnotatorId(e.target.value)}
-        />
+        <div>
+          <label className="block text-sm mb-1">Annotator</label>
+          <select
+            className="w-full border rounded px-3 py-2"
+            value={annotatorId}
+            onChange={(e) => setAnnotatorId(e.target.value)}
+          >
+            <option value="">— Select Annotator —</option>
+            {annotators.map((a) => (
+              <option key={a.id} value={a.id}>
+                {a.name} ({a.email})
+              </option>
+            ))}
+          </select>
+        </div>
         <input
           className="w-full border rounded px-3 py-2"
           placeholder="QA User ID"

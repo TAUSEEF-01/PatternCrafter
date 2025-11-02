@@ -344,6 +344,52 @@ async def list_project_invites(
     return [as_response(InviteResponse, inv) for inv in invites]
 
 
+# List annotators who are working on this project
+@router.get(
+    "/projects/{project_id}/annotators",
+    response_model=List[UserResponse],
+    response_model_by_alias=False,
+)
+async def list_project_annotators(
+    project_id: str, current_user: UserInDB = Depends(get_current_user)
+):
+    """List annotators who have accepted invites (present in project_working)."""
+    if not ObjectId.is_valid(project_id):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid project ID"
+        )
+
+    project = await database.projects_collection.find_one({"_id": ObjectId(project_id)})
+    if not project:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Project not found"
+        )
+
+    if current_user.role not in ["admin", "manager"] or (
+        current_user.role == "manager" and project["manager_id"] != current_user.id
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to list annotators for this project",
+        )
+
+    pw = await database.project_working_collection.find_one(
+        {"project_id": ObjectId(project_id)}
+    )
+    annotator_ids = [
+        a.get("annotator_id")
+        for a in (pw.get("annotator_assignments", []) if pw else [])
+        if a.get("annotator_id") is not None
+    ]
+    if not annotator_ids:
+        return []
+
+    users = await database.users_collection.find(
+        {"_id": {"$in": annotator_ids}}
+    ).to_list(None)
+    return [as_response(UserResponse, u) for u in users]
+
+
 # Task endpoints
 @router.post(
     "/projects/{project_id}/tasks",
@@ -603,6 +649,17 @@ async def assign_task(
     await database.tasks_collection.update_one(
         {"_id": ObjectId(task_id)}, {"$set": update}
     )
+    # If annotator was assigned, update project_working to include this task under that annotator
+    if payload.annotator_id:
+        await database.project_working_collection.update_one(
+            {
+                "project_id": task["project_id"],
+                "annotator_assignments.annotator_id": ObjectId(payload.annotator_id),
+            },
+            {
+                "$addToSet": {"annotator_assignments.$.task_ids": ObjectId(task_id)},
+            },
+        )
     return {"message": "Task assignment updated"}
 
 
