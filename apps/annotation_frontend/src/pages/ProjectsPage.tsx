@@ -24,12 +24,25 @@ export default function ProjectsPage() {
   const [category, setCategory] = useState(CATEGORIES[0].value);
   const [error, setError] = useState<string | null>(null);
   const { user } = useAuth();
+  const [acceptedProjectIds, setAcceptedProjectIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     apiFetch<Project[]>('/projects')
       .then(setProjects)
       .catch((e) => setError(String(e)));
-  }, []);
+    // For annotators, fetch invites to know which projects they can open
+    if (user?.role === 'annotator') {
+      apiFetch<Array<{ id: string; project_id: string; accepted_status: boolean }>>('/invites')
+        .then((invites) => {
+          const accepted = new Set<string>();
+          invites.forEach((inv) => {
+            if (inv.accepted_status && inv.project_id) accepted.add(inv.project_id);
+          });
+          setAcceptedProjectIds(accepted);
+        })
+        .catch(() => {});
+    }
+  }, [user?.role]);
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
@@ -94,7 +107,17 @@ export default function ProjectsPage() {
                 </Link>
               </div>
             ) : (
-              <div className="mt-2 text-xs text-gray-400">Signaled: names/details only</div>
+              <div className="mt-2">
+                {acceptedProjectIds.has(p.id) ? (
+                  <Link className="text-blue-600 hover:underline text-sm" to={`/projects/${p.id}`}>
+                    Open
+                  </Link>
+                ) : (
+                  <div className="text-xs text-gray-400">
+                    Invited projects will be openable here
+                  </div>
+                )}
+              </div>
             )}
           </li>
         ))}

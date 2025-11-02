@@ -540,6 +540,63 @@ async def get_project_tasks(
 
 
 @router.get(
+    "/projects/{project_id}/my-tasks",
+    response_model=List[TaskResponse],
+    response_model_by_alias=False,
+)
+async def get_my_project_tasks(
+    project_id: str, current_user: UserInDB = Depends(get_current_user)
+):
+    """Get tasks in a project that are assigned to the current annotator.
+
+    Only available to annotators who have accepted an invite (or been added to project_working).
+    """
+    if current_user.role != "annotator":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only annotators can view their assigned tasks",
+        )
+
+    if not ObjectId.is_valid(project_id):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid project ID"
+        )
+
+    # Ensure project exists
+    project = await database.projects_collection.find_one({"_id": ObjectId(project_id)})
+    if not project:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Project not found"
+        )
+
+    # Check annotator is a member (accepted invite or present in project_working)
+    invite = await database.invites_collection.find_one(
+        {
+            "project_id": ObjectId(project_id),
+            "user_id": current_user.id,
+            "accepted_status": True,
+        }
+    )
+    if not invite:
+        pw = await database.project_working_collection.find_one(
+            {
+                "project_id": ObjectId(project_id),
+                "annotator_assignments.annotator_id": current_user.id,
+            }
+        )
+        if not pw:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Not authorized to view tasks for this project",
+            )
+
+    tasks = await database.tasks_collection.find(
+        {"project_id": ObjectId(project_id), "assigned_annotator_id": current_user.id}
+    ).to_list(None)
+    return [as_response(TaskResponse, task) for task in tasks]
+
+
+@router.get(
     "/tasks/{task_id}", response_model=TaskResponse, response_model_by_alias=False
 )
 async def get_task(task_id: str, current_user: UserInDB = Depends(get_current_user)):
