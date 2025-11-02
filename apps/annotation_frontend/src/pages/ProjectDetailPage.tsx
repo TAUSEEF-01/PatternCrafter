@@ -51,7 +51,12 @@ export default function ProjectDetailPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-semibold">Project</h1>
-          {project && <div className="text-gray-600 text-sm">Category: {project.category}</div>}
+          {project && (
+            <div className="text-gray-600 text-sm space-y-1">
+              <div>Name: {project.details}</div>
+              <div>Category: {project.category}</div>
+            </div>
+          )}
         </div>
         <Link className="text-blue-600 hover:underline" to="/projects">
           Back

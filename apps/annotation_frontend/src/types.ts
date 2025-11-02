@@ -2,7 +2,8 @@ export type Id = string;
 
 export type Project = {
   id: Id;
-  details: any;
+  // Backend expects `details` as a simple string (e.g., project name/description)
+  details: string;
   category: string;
 };
 

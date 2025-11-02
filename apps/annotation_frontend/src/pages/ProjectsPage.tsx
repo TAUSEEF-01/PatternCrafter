@@ -3,19 +3,24 @@ import { apiFetch } from '@/api/client';
 import { Link } from 'react-router-dom';
 import { Project } from '@/types';
 
-const CATEGORIES = [
-  'LLM_RESPONSE_GRADING',
-  'RESPONSE_SELECTION',
-  'TEXT_CLASSIFICATION',
-  'NER',
-  'IMAGE_CLASSIFICATION',
-  'OBJECT_DETECTION',
+// Backend expects enum VALUES (snake_case), not enum NAMES.
+const CATEGORIES: { value: string; label: string }[] = [
+  { value: 'generative_ai_llm_response_grading', label: 'LLM Response Grading' },
+  { value: 'generative_ai_chatbot_assessment', label: 'Chatbot Model Assessment' },
+  { value: 'conversational_ai_response_selection', label: 'Response Selection' },
+  { value: 'text_classification', label: 'Text Classification' },
+  { value: 'image_classification', label: 'Image Classification' },
+  { value: 'object_detection', label: 'Object Detection' },
+  { value: 'named_entity_recognition', label: 'Named Entity Recognition (NER)' },
+  { value: 'sentiment_analysis', label: 'Sentiment Analysis' },
+  { value: 'text_summarization', label: 'Text Summarization' },
+  { value: 'qa_evaluation', label: 'QA Evaluation' },
 ];
 
 export default function ProjectsPage() {
   const [projects, setProjects] = useState<Project[]>([]);
-  const [details, setDetails] = useState('');
-  const [category, setCategory] = useState(CATEGORIES[0]);
+  const [name, setName] = useState('');
+  const [category, setCategory] = useState(CATEGORIES[0].value);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -27,13 +32,10 @@ export default function ProjectsPage() {
   const submit = async (e: FormEvent) => {
     e.preventDefault();
     try {
-      const body = {
-        details: details ? JSON.parse(details) : {},
-        category,
-      };
+      const body = { details: name.trim(), category };
       const p = await apiFetch<Project>('/projects', { method: 'POST', body });
       setProjects((prev) => [p, ...prev]);
-      setDetails('');
+      setName('');
     } catch (e: any) {
       setError(e?.message || 'Failed to create project');
     }
@@ -45,6 +47,16 @@ export default function ProjectsPage() {
 
       <form onSubmit={submit} className="bg-white p-4 rounded shadow space-y-3">
         <div className="flex items-center gap-3">
+          <label className="w-40">Name</label>
+          <input
+            className="border rounded px-3 py-2 w-full"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="e.g., Project A"
+            required
+          />
+        </div>
+        <div className="flex items-center gap-3">
           <label className="w-40">Category</label>
           <select
             className="border rounded px-3 py-2"
@@ -52,20 +64,11 @@ export default function ProjectsPage() {
             onChange={(e) => setCategory(e.target.value)}
           >
             {CATEGORIES.map((c) => (
-              <option key={c} value={c}>
-                {c}
+              <option key={c.value} value={c.value}>
+                {c.label}
               </option>
             ))}
           </select>
-        </div>
-        <div>
-          <label className="block mb-1">Details (JSON)</label>
-          <textarea
-            className="w-full border rounded p-2 h-28 font-mono"
-            value={details}
-            onChange={(e) => setDetails(e.target.value)}
-            placeholder='{"name":"Project A"}'
-          />
         </div>
         <button className="bg-blue-600 text-white rounded px-4 py-2">Create Project</button>
       </form>
@@ -75,9 +78,7 @@ export default function ProjectsPage() {
       <ul className="grid sm:grid-cols-2 gap-4">
         {projects.map((p) => (
           <li key={p.id} className="bg-white p-4 rounded shadow">
-            <div className="font-semibold">
-              {(p.details && (p.details.name || p.details.title)) || p.id}
-            </div>
+            <div className="font-semibold">{p.details || p.id}</div>
             <div className="text-sm text-gray-500">Category: {p.category}</div>
             <Link
               className="inline-block mt-2 text-blue-600 hover:underline"

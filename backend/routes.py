@@ -56,8 +56,27 @@ ANNOTATION_MODEL_BY_CATEGORY = {
 }
 
 
+# Generic helpers to convert Mongo docs with ObjectIds into response-friendly dicts
+def _stringify_object_ids(value):
+    if isinstance(value, ObjectId):
+        return str(value)
+    if isinstance(value, list):
+        return [_stringify_object_ids(v) for v in value]
+    if isinstance(value, dict):
+        return {k: _stringify_object_ids(v) for k, v in value.items()}
+    return value
+
+
+def as_response(model_cls, doc: Dict[str, Any]):
+    """Return an instance of model_cls with all ObjectIds converted to strings and aliases preserved."""
+    data = _stringify_object_ids(doc)
+    return model_cls(**data)
+
+
 # Authentication endpoints
-@router.post("/auth/register", response_model=UserResponse)
+@router.post(
+    "/auth/register", response_model=UserResponse, response_model_by_alias=False
+)
 async def register_user(user: UserCreate):
     """Register a new user"""
     # Check if user already exists
@@ -87,7 +106,7 @@ async def register_user(user: UserCreate):
 
     # Get created user
     created_user = await database.users_collection.find_one({"_id": result.inserted_id})
-    return UserResponse(**created_user)
+    return as_response(UserResponse, created_user)
 
 
 @router.post("/auth/login", response_model=Token)
@@ -105,7 +124,7 @@ async def login(login_request: LoginRequest):
     return {"access_token": access_token, "token_type": "bearer"}
 
 
-@router.get("/auth/me", response_model=UserResponse)
+@router.get("/auth/me", response_model=UserResponse, response_model_by_alias=False)
 async def get_current_user_info(current_user: UserInDB = Depends(get_current_user)):
     """Get current user information"""
     # Use by_alias to provide `_id` and coerce ObjectId to string for response model
@@ -119,7 +138,7 @@ async def get_current_user_info(current_user: UserInDB = Depends(get_current_use
 
 
 # User endpoints
-@router.get("/users", response_model=List[UserResponse])
+@router.get("/users", response_model=List[UserResponse], response_model_by_alias=False)
 async def get_users(
     role: Optional[str] = None, current_user: UserInDB = Depends(get_current_user)
 ):
@@ -134,10 +153,12 @@ async def get_users(
         query["role"] = role
 
     users = await database.users_collection.find(query).to_list(None)
-    return [UserResponse(**user) for user in users]
+    return [as_response(UserResponse, user) for user in users]
 
 
-@router.get("/users/{user_id}", response_model=UserResponse)
+@router.get(
+    "/users/{user_id}", response_model=UserResponse, response_model_by_alias=False
+)
 async def get_user(user_id: str, current_user: UserInDB = Depends(get_current_user)):
     """Get user by ID"""
     if not ObjectId.is_valid(user_id):
@@ -151,11 +172,11 @@ async def get_user(user_id: str, current_user: UserInDB = Depends(get_current_us
             status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
         )
 
-    return UserResponse(**user)
+    return as_response(UserResponse, user)
 
 
 # Project endpoints
-@router.post("/projects", response_model=ProjectResponse)
+@router.post("/projects", response_model=ProjectResponse, response_model_by_alias=False)
 async def create_project(
     project: ProjectCreate, current_user: UserInDB = Depends(get_current_user)
 ):
@@ -179,10 +200,12 @@ async def create_project(
         {"_id": result.inserted_id}
     )
 
-    return ProjectResponse(**created_project)
+    return as_response(ProjectResponse, created_project)
 
 
-@router.get("/projects", response_model=List[ProjectResponse])
+@router.get(
+    "/projects", response_model=List[ProjectResponse], response_model_by_alias=False
+)
 async def get_projects(current_user: UserInDB = Depends(get_current_user)):
     """Get projects based on user role"""
     if current_user.role == "manager":
@@ -203,10 +226,14 @@ async def get_projects(current_user: UserInDB = Depends(get_current_user)):
             {"_id": {"$in": project_ids}}
         ).to_list(None)
 
-    return [ProjectResponse(**project) for project in projects]
+    return [as_response(ProjectResponse, project) for project in projects]
 
 
-@router.get("/projects/{project_id}", response_model=ProjectResponse)
+@router.get(
+    "/projects/{project_id}",
+    response_model=ProjectResponse,
+    response_model_by_alias=False,
+)
 async def get_project(
     project_id: str, current_user: UserInDB = Depends(get_current_user)
 ):
@@ -243,11 +270,15 @@ async def get_project(
                 detail="Not authorized to view this project",
             )
 
-    return ProjectResponse(**project)
+    return as_response(ProjectResponse, project)
 
 
 # Task endpoints
-@router.post("/projects/{project_id}/tasks", response_model=TaskResponse)
+@router.post(
+    "/projects/{project_id}/tasks",
+    response_model=TaskResponse,
+    response_model_by_alias=False,
+)
 async def create_task(
     project_id: str,
     task: TaskCreate,
@@ -325,10 +356,14 @@ async def create_task(
     )
 
     created_task = await database.tasks_collection.find_one({"_id": result.inserted_id})
-    return TaskResponse(**created_task)
+    return as_response(TaskResponse, created_task)
 
 
-@router.get("/projects/{project_id}/tasks", response_model=List[TaskResponse])
+@router.get(
+    "/projects/{project_id}/tasks",
+    response_model=List[TaskResponse],
+    response_model_by_alias=False,
+)
 async def get_project_tasks(
     project_id: str, current_user: UserInDB = Depends(get_current_user)
 ):
@@ -368,10 +403,12 @@ async def get_project_tasks(
     tasks = await database.tasks_collection.find(
         {"project_id": ObjectId(project_id)}
     ).to_list(None)
-    return [TaskResponse(**task) for task in tasks]
+    return [as_response(TaskResponse, task) for task in tasks]
 
 
-@router.get("/tasks/{task_id}", response_model=TaskResponse)
+@router.get(
+    "/tasks/{task_id}", response_model=TaskResponse, response_model_by_alias=False
+)
 async def get_task(task_id: str, current_user: UserInDB = Depends(get_current_user)):
     """Get single task by ID if user has access"""
     if not ObjectId.is_valid(task_id):
@@ -386,13 +423,13 @@ async def get_task(task_id: str, current_user: UserInDB = Depends(get_current_us
     # Permission: must be admin, project manager, or invited annotator
     project = await database.projects_collection.find_one({"_id": task["project_id"]})
     if current_user.role == "admin":
-        return TaskResponse(**task)
+        return as_response(TaskResponse, task)
     if (
         current_user.role == "manager"
         and project
         and project["manager_id"] == current_user.id
     ):
-        return TaskResponse(**task)
+        return as_response(TaskResponse, task)
     if current_user.role == "annotator":
         invite = await database.invites_collection.find_one(
             {
@@ -402,7 +439,7 @@ async def get_task(task_id: str, current_user: UserInDB = Depends(get_current_us
             }
         )
         if invite:
-            return TaskResponse(**task)
+            return as_response(TaskResponse, task)
     raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized")
 
 
@@ -588,7 +625,11 @@ async def submit_qa(
 
 
 # Invite endpoints
-@router.post("/projects/{project_id}/invites", response_model=InviteResponse)
+@router.post(
+    "/projects/{project_id}/invites",
+    response_model=InviteResponse,
+    response_model_by_alias=False,
+)
 async def create_invite(
     project_id: str,
     invite: InviteCreate,
@@ -644,16 +685,18 @@ async def create_invite(
         {"_id": result.inserted_id}
     )
 
-    return InviteResponse(**created_invite)
+    return as_response(InviteResponse, created_invite)
 
 
-@router.get("/invites", response_model=List[InviteResponse])
+@router.get(
+    "/invites", response_model=List[InviteResponse], response_model_by_alias=False
+)
 async def get_user_invites(current_user: UserInDB = Depends(get_current_user)):
     """Get invites for current user"""
     invites = await database.invites_collection.find(
         {"user_id": current_user.id}
     ).to_list(None)
-    return [InviteResponse(**invite) for invite in invites]
+    return [as_response(InviteResponse, invite) for invite in invites]
 
 
 @router.put("/invites/{invite_id}/accept")
