@@ -18,6 +18,17 @@ export default function ProfilePage() {
   const [skillsText, setSkillsText] = useState('');
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
+  const [invites, setInvites] = useState<
+    {
+      id: string;
+      project_id: string;
+      accepted_status: boolean;
+      invited_at?: string;
+      accepted_at?: string | null;
+    }[]
+  >([]);
+  const [invitesError, setInvitesError] = useState<string | null>(null);
+  const [invBusy, setInvBusy] = useState<string | null>(null);
 
   useEffect(() => {
     async function load() {
@@ -31,6 +42,18 @@ export default function ProfilePage() {
     }
     load();
   }, []);
+
+  useEffect(() => {
+    async function loadInvites() {
+      try {
+        const list = await apiFetch<any[]>('/invites');
+        setInvites(list);
+      } catch (e: any) {
+        setInvitesError(e?.message || 'Failed to load invites');
+      }
+    }
+    if (user) loadInvites();
+  }, [user]);
 
   const saveSkills = async () => {
     if (!me) return;
@@ -51,6 +74,23 @@ export default function ProfilePage() {
       setMsg(e?.message || 'Failed to update skills');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const acceptInvite = async (id: string) => {
+    setInvBusy(id);
+    setInvitesError(null);
+    try {
+      await apiFetch(`/invites/${id}/accept`, { method: 'PUT' });
+      setInvites((prev) =>
+        prev.map((i) =>
+          i.id === id ? { ...i, accepted_status: true, accepted_at: new Date().toISOString() } : i
+        )
+      );
+    } catch (e: any) {
+      setInvitesError(e?.message || 'Failed to accept invite');
+    } finally {
+      setInvBusy(null);
     }
   };
 
@@ -91,6 +131,44 @@ export default function ProfilePage() {
             {saving ? 'Saving...' : 'Save Skills'}
           </button>
           {msg && <div className="text-sm text-gray-600">{msg}</div>}
+        </div>
+      )}
+
+      {me?.role === 'annotator' && (
+        <div className="bg-white p-4 rounded shadow space-y-3">
+          <h2 className="font-semibold text-lg">My Invites</h2>
+          {invitesError && <div className="text-red-600 text-sm">{invitesError}</div>}
+          <ul className="space-y-2">
+            {invites.map((inv) => (
+              <li key={inv.id} className="border rounded p-3 flex items-center justify-between">
+                <div>
+                  <div className="text-sm text-gray-500">Project: {inv.project_id}</div>
+                  <div className="text-sm text-gray-500">
+                    Invited: {inv.invited_at ? new Date(inv.invited_at).toLocaleString() : '-'}
+                  </div>
+                  <div className="text-sm">
+                    Status:{' '}
+                    {inv.accepted_status
+                      ? `Accepted at ${
+                          inv.accepted_at ? new Date(inv.accepted_at).toLocaleString() : ''
+                        }`
+                      : 'Pending'}
+                  </div>
+                </div>
+                {!inv.accepted_status ? (
+                  <button
+                    disabled={invBusy === inv.id}
+                    onClick={() => acceptInvite(inv.id)}
+                    className="px-3 py-1 rounded bg-blue-600 text-white disabled:opacity-60"
+                  >
+                    {invBusy === inv.id ? 'Accepting...' : 'Accept'}
+                  </button>
+                ) : (
+                  <span className="text-gray-500 text-sm">Accepted</span>
+                )}
+              </li>
+            ))}
+          </ul>
         </div>
       )}
     </div>

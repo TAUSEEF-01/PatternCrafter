@@ -72,9 +72,7 @@ export default function App() {
             path="/invites"
             element={
               <RequireAuth>
-                <RequireNonAnnotator>
-                  <InvitesPage />
-                </RequireNonAnnotator>
+                <InvitesPage />
               </RequireAuth>
             }
           />

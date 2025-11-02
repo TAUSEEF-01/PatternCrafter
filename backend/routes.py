@@ -568,6 +568,19 @@ async def assign_task(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Invalid annotator_id",
             )
+        # Validate that annotator belongs to project_working for this project
+        pw = await database.project_working_collection.find_one(
+            {"project_id": task["project_id"]}
+        )
+        allowed_annotators = set(
+            a.get("annotator_id")
+            for a in (pw.get("annotator_assignments", []) if pw else [])
+        )
+        if ObjectId(payload.annotator_id) not in allowed_annotators:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Annotator is not part of this project (invite not accepted)",
+            )
         update["assigned_annotator_id"] = ObjectId(payload.annotator_id)
         # Set annotator_started_at if not present
         if not task.get("annotator_started_at"):
@@ -817,6 +830,36 @@ async def accept_invite(
         {"_id": ObjectId(invite_id)},
         {"$set": {"accepted_status": True, "accepted_at": datetime.utcnow()}},
     )
+
+    # Ensure annotator is added to project_working for this project
+    project_id = invite["project_id"]
+    # Find existing project_working doc
+    pw = await database.project_working_collection.find_one({"project_id": project_id})
+
+    annotator_entry = {
+        "annotator_id": current_user.id,
+        "task_ids": [],
+        "assigned_at": datetime.utcnow(),
+    }
+
+    if pw is None:
+        # Create new project_working document for this project
+        await database.project_working_collection.insert_one(
+            {
+                "project_id": project_id,
+                "annotator_assignments": [annotator_entry],
+                "created_at": datetime.utcnow(),
+            }
+        )
+    else:
+        # Add annotator if not already present
+        existing = pw.get("annotator_assignments", [])
+        already = any(a.get("annotator_id") == current_user.id for a in existing)
+        if not already:
+            await database.project_working_collection.update_one(
+                {"_id": pw["_id"]},
+                {"$push": {"annotator_assignments": annotator_entry}},
+            )
 
     return {"message": "Invite accepted successfully"}
 
