@@ -97,6 +97,24 @@ async def update_my_skills(
     return as_response(UserResponse, updated)
 
 
+# List annotators (manager/admin only)
+@router.get(
+    "/annotators", response_model=List[UserResponse], response_model_by_alias=False
+)
+async def list_annotators(current_user: UserInDB = Depends(get_current_user)):
+    """List all annotators with their skills (accessible to managers and admins)."""
+    if current_user.role not in ["admin", "manager"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to list annotators",
+        )
+
+    annotators = await database.users_collection.find({"role": "annotator"}).to_list(
+        None
+    )
+    return [as_response(UserResponse, u) for u in annotators]
+
+
 # Authentication endpoints
 @router.post(
     "/auth/register", response_model=UserResponse, response_model_by_alias=False
@@ -289,6 +307,41 @@ async def get_project(
             )
 
     return as_response(ProjectResponse, project)
+
+
+# Project invites listing for managers/admins
+@router.get(
+    "/projects/{project_id}/invites",
+    response_model=List[InviteResponse],
+    response_model_by_alias=False,
+)
+async def list_project_invites(
+    project_id: str, current_user: UserInDB = Depends(get_current_user)
+):
+    """List all invites for a project (only admin or the project's manager)."""
+    if not ObjectId.is_valid(project_id):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid project ID"
+        )
+
+    project = await database.projects_collection.find_one({"_id": ObjectId(project_id)})
+    if not project:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Project not found"
+        )
+
+    if current_user.role not in ["admin", "manager"] or (
+        current_user.role == "manager" and project["manager_id"] != current_user.id
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to view invites for this project",
+        )
+
+    invites = await database.invites_collection.find(
+        {"project_id": ObjectId(project_id)}
+    ).to_list(None)
+    return [as_response(InviteResponse, inv) for inv in invites]
 
 
 # Task endpoints
@@ -766,3 +819,34 @@ async def accept_invite(
     )
 
     return {"message": "Invite accepted successfully"}
+
+
+@router.delete("/invites/{invite_id}")
+async def delete_invite(
+    invite_id: str, current_user: UserInDB = Depends(get_current_user)
+):
+    """Cancel/delete an invite (admin or project's manager)."""
+    if not ObjectId.is_valid(invite_id):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid invite ID"
+        )
+
+    invite = await database.invites_collection.find_one({"_id": ObjectId(invite_id)})
+    if not invite:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Invite not found"
+        )
+
+    project = await database.projects_collection.find_one({"_id": invite["project_id"]})
+    if current_user.role not in ["admin", "manager"] or (
+        current_user.role == "manager"
+        and project
+        and project["manager_id"] != current_user.id
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to cancel this invite",
+        )
+
+    await database.invites_collection.delete_one({"_id": ObjectId(invite_id)})
+    return {"message": "Invite canceled"}

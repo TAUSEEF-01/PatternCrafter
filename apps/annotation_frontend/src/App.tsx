@@ -10,6 +10,7 @@ import TaskAnnotatePage from '@/pages/TaskAnnotatePage';
 import TaskQAPage from '@/pages/TaskQAPage';
 import AssignTaskPage from '@/pages/AssignTaskPage';
 import ProfilePage from '@/pages/ProfilePage';
+import ProjectInvitesPage from '@/pages/ProjectInvitesPage';
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -54,6 +55,16 @@ export default function App() {
             element={
               <RequireAuth>
                 <ProjectDetailPage />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/projects/:projectId/invites"
+            element={
+              <RequireAuth>
+                <RequireNonAnnotator>
+                  <ProjectInvitesPage />
+                </RequireNonAnnotator>
               </RequireAuth>
             }
           />

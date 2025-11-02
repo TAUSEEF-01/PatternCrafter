@@ -85,12 +85,14 @@ export default function ProjectsPage() {
             <div className="font-semibold">{p.details || p.id}</div>
             <div className="text-sm text-gray-500">Category: {p.category}</div>
             {user?.role === 'manager' || user?.role === 'admin' ? (
-              <Link
-                className="inline-block mt-2 text-blue-600 hover:underline"
-                to={`/projects/${p.id}`}
-              >
-                Open
-              </Link>
+              <div className="mt-2 flex gap-4">
+                <Link className="text-blue-600 hover:underline" to={`/projects/${p.id}`}>
+                  Open
+                </Link>
+                <Link className="text-blue-600 hover:underline" to={`/projects/${p.id}/invites`}>
+                  Manage Invites
+                </Link>
+              </div>
             ) : (
               <div className="mt-2 text-xs text-gray-400">Signaled: names/details only</div>
             )}
