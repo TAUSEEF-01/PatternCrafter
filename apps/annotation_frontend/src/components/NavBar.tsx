@@ -15,8 +15,13 @@ export default function NavBar() {
               <Link className="hover:underline" to="/projects">
                 Projects
               </Link>
-              <Link className="hover:underline" to="/invites">
-                Invites
+              {user.role !== 'annotator' && (
+                <Link className="hover:underline" to="/invites">
+                  Invites
+                </Link>
+              )}
+              <Link className="hover:underline" to="/profile">
+                Profile
               </Link>
               <span className="text-sm text-gray-500">
                 {user.name} ({user.role})

@@ -7,6 +7,7 @@ from datetime import datetime
 import database
 from schemas import *
 from auth import get_password_hash, verify_password, create_access_token, verify_token
+from pydantic import BaseModel
 
 router = APIRouter()
 security = HTTPBearer()
@@ -71,6 +72,29 @@ def as_response(model_cls, doc: Dict[str, Any]):
     """Return an instance of model_cls with all ObjectIds converted to strings and aliases preserved."""
     data = _stringify_object_ids(doc)
     return model_cls(**data)
+
+
+class UpdateSkillsRequest(BaseModel):
+    skills: List[str]
+
+
+@router.put(
+    "/users/me/skills", response_model=UserResponse, response_model_by_alias=False
+)
+async def update_my_skills(
+    payload: UpdateSkillsRequest, current_user: UserInDB = Depends(get_current_user)
+):
+    """Annotator updates their skills list."""
+    if current_user.role != "annotator":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only annotators can update skills",
+        )
+    await database.users_collection.update_one(
+        {"_id": current_user.id}, {"$set": {"skills": payload.skills}}
+    )
+    updated = await database.users_collection.find_one({"_id": current_user.id})
+    return as_response(UserResponse, updated)
 
 
 # Authentication endpoints
@@ -217,14 +241,8 @@ async def get_projects(current_user: UserInDB = Depends(get_current_user)):
         # Admins see all projects
         projects = await database.projects_collection.find().to_list(None)
     else:
-        # Annotators see projects they're invited to
-        invites = await database.invites_collection.find(
-            {"user_id": current_user.id, "accepted_status": True}
-        ).to_list(None)
-        project_ids = [invite["project_id"] for invite in invites]
-        projects = await database.projects_collection.find(
-            {"_id": {"$in": project_ids}}
-        ).to_list(None)
+        # Annotators see all available projects (names/details/category, list only)
+        projects = await database.projects_collection.find().to_list(None)
 
     return [as_response(ProjectResponse, project) for project in projects]
 
@@ -308,15 +326,31 @@ async def create_task(
             detail="Only managers and admins can create tasks",
         )
 
-    # Enforce task category matches project category (optional but recommended)
-    if str(project.get("category")) != str(task.category):
+    # Enforce task category matches project category (compare enum value vs stored string)
+    project_cat = project.get("category")
+    incoming_cat_value = (
+        task.category.value
+        if isinstance(task.category, TaskCategory)
+        else str(task.category)
+    )
+    if str(project_cat) != str(incoming_cat_value):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Task category must match project's category",
         )
 
     # Validate task_data based on category
-    model = DATA_MODEL_BY_CATEGORY.get(task.category)
+    # Resolve the proper enum for validation lookup
+    try:
+        cat_enum = (
+            task.category
+            if isinstance(task.category, TaskCategory)
+            else TaskCategory(str(task.category))
+        )
+    except Exception:
+        cat_enum = None
+
+    model = DATA_MODEL_BY_CATEGORY.get(cat_enum) if cat_enum else None
     task_data: Dict[str, Any]
     if model is not None:
         try:
@@ -332,7 +366,7 @@ async def create_task(
 
     task_dict = {
         "project_id": ObjectId(project_id),
-        "category": task.category,
+        "category": incoming_cat_value,
         "task_data": task_data,
         "annotation": None,
         "qa_annotation": None,

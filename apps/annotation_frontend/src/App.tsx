@@ -9,11 +9,18 @@ import InvitesPage from '@/pages/InvitesPage';
 import TaskAnnotatePage from '@/pages/TaskAnnotatePage';
 import TaskQAPage from '@/pages/TaskQAPage';
 import AssignTaskPage from '@/pages/AssignTaskPage';
+import ProfilePage from '@/pages/ProfilePage';
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
   if (loading) return <div className="p-6">Loading...</div>;
   if (!user) return <Navigate to="/login" replace />;
+  return <>{children}</>;
+}
+
+function RequireNonAnnotator({ children }: { children: React.ReactNode }) {
+  const { user } = useAuth();
+  if (user?.role === 'annotator') return <Navigate to="/projects" replace />;
   return <>{children}</>;
 }
 
@@ -54,7 +61,17 @@ export default function App() {
             path="/invites"
             element={
               <RequireAuth>
-                <InvitesPage />
+                <RequireNonAnnotator>
+                  <InvitesPage />
+                </RequireNonAnnotator>
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/profile"
+            element={
+              <RequireAuth>
+                <ProfilePage />
               </RequireAuth>
             }
           />
