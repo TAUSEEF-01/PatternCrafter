@@ -1,25 +1,45 @@
-from pydantic import BaseModel, Field, EmailStr
+from pydantic import (
+    BaseModel,
+    Field,
+    EmailStr,
+    GetCoreSchemaHandler,
+    GetJsonSchemaHandler,
+)
 from typing import Optional, List, Literal, Dict, Any, Union
 from datetime import datetime
 from bson import ObjectId
 from enum import Enum
+from pydantic_core import core_schema
 
 
-# Custom ObjectId handler for Pydantic
+# Custom ObjectId handler compatible with Pydantic v2
 class PyObjectId(ObjectId):
     @classmethod
-    def __get_validators__(cls):
-        yield cls.validate
+    def __get_pydantic_core_schema__(
+        cls, _source_type, _handler: GetCoreSchemaHandler
+    ) -> core_schema.CoreSchema:
+        # Use a plain validator; handle both str and ObjectId inputs
+        return core_schema.no_info_plain_validator_function(cls.validate)
 
     @classmethod
     def validate(cls, v):
-        if not ObjectId.is_valid(v):
-            raise ValueError("Invalid ObjectId")
-        return ObjectId(v)
+        # Accept already-constructed ObjectId
+        if isinstance(v, ObjectId):
+            return v
+        # Accept strings (and bytes) that are valid ObjectId values
+        if isinstance(v, (str, bytes)):
+            s = v.decode() if isinstance(v, bytes) else v
+            if ObjectId.is_valid(s):
+                return ObjectId(s)
+        raise ValueError("Invalid ObjectId")
 
     @classmethod
-    def __get_pydantic_json_schema__(cls, field_schema):
-        field_schema.update(type="string")
+    def __get_pydantic_json_schema__(
+        cls, core_schema_: core_schema.CoreSchema, handler: GetJsonSchemaHandler
+    ) -> Dict[str, Any]:
+        json_schema = handler(core_schema_)
+        json_schema.update(type="string")
+        return json_schema
 
 
 # Task Category Enums

@@ -29,6 +29,7 @@ async def connect_to_mongo():
     global invites_collection, manager_projects_collection
     global project_working_collection, annotator_tasks_collection
 
+    print(f"Connecting to MongoDB at {MONGODB_URL}...")
     client = AsyncIOMotorClient(MONGODB_URL)
     database = client[DATABASE_NAME]
 
@@ -41,8 +42,12 @@ async def connect_to_mongo():
     project_working_collection = database.get_collection("project_working")
     annotator_tasks_collection = database.get_collection("annotator_tasks")
 
+    print("MongoDB connected successfully!")
+    print(f"Collections initialized: users_collection={users_collection is not None}")
+
     # Create indexes for better performance
     await create_indexes()
+    print("Indexes created successfully!")
 
 
 async def close_mongo_connection():

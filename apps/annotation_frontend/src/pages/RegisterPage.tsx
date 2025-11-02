@@ -5,8 +5,10 @@ import { useNavigate } from 'react-router-dom';
 export default function RegisterPage() {
   const { register } = useAuth();
   const nav = useNavigate();
-  const [username, setUsername] = useState('');
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [role, setRole] = useState<'annotator' | 'manager'>('annotator');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -15,7 +17,7 @@ export default function RegisterPage() {
     setLoading(true);
     setError(null);
     try {
-      await register(username, password);
+      await register(name, email, password, role);
       nav('/projects');
     } catch (e: any) {
       setError(e?.message || 'Register failed');
@@ -31,9 +33,18 @@ export default function RegisterPage() {
       <form onSubmit={onSubmit} className="space-y-3">
         <input
           className="w-full border rounded px-3 py-2"
-          placeholder="Username"
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
+          placeholder="Name"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          required
+        />
+        <input
+          className="w-full border rounded px-3 py-2"
+          type="email"
+          placeholder="Email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          required
         />
         <input
           className="w-full border rounded px-3 py-2"
@@ -41,7 +52,16 @@ export default function RegisterPage() {
           placeholder="Password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
+          required
         />
+        <select
+          className="w-full border rounded px-3 py-2"
+          value={role}
+          onChange={(e) => setRole(e.target.value as 'annotator' | 'manager')}
+        >
+          <option value="annotator">Annotator</option>
+          <option value="manager">Manager</option>
+        </select>
         <button
           disabled={loading}
           className="w-full bg-blue-600 text-white rounded py-2 disabled:opacity-60"

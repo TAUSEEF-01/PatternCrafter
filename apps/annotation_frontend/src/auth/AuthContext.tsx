@@ -3,16 +3,17 @@ import { apiFetch } from '@/api/client';
 
 type User = {
   id: string;
-  username: string;
-  role?: string;
+  name: string;
+  email: string;
+  role: string;
 };
 
 type AuthContextType = {
   user: User | null;
   token: string | null;
   loading: boolean;
-  login: (username: string, password: string) => Promise<void>;
-  register: (username: string, password: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<void>;
+  register: (name: string, email: string, password: string, role: string) => Promise<void>;
   logout: () => void;
 };
 
@@ -41,10 +42,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     loadMe();
   }, [token]);
 
-  const login = async (username: string, password: string) => {
+  const login = async (email: string, password: string) => {
     const res = await apiFetch<{ access_token: string }>('/auth/login', {
       method: 'POST',
-      body: { username, password },
+      body: { email, password },
       noAuth: true,
     });
     localStorage.setItem('token', res.access_token);
@@ -53,13 +54,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(me);
   };
 
-  const register = async (username: string, password: string) => {
+  const register = async (name: string, email: string, password: string, role: string) => {
     await apiFetch('/auth/register', {
       method: 'POST',
-      body: { username, password },
+      body: { name, email, password, role },
       noAuth: true,
     });
-    await login(username, password);
+    await login(email, password);
   };
 
   const logout = () => {

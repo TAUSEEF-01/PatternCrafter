@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom';
 export default function LoginPage() {
   const { login } = useAuth();
   const nav = useNavigate();
-  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -15,7 +15,7 @@ export default function LoginPage() {
     setLoading(true);
     setError(null);
     try {
-      await login(username, password);
+      await login(email, password);
       nav('/projects');
     } catch (e: any) {
       setError(e?.message || 'Login failed');
@@ -31,9 +31,11 @@ export default function LoginPage() {
       <form onSubmit={onSubmit} className="space-y-3">
         <input
           className="w-full border rounded px-3 py-2"
-          placeholder="Username"
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
+          type="email"
+          placeholder="Email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          required
         />
         <input
           className="w-full border rounded px-3 py-2"
@@ -41,6 +43,7 @@ export default function LoginPage() {
           placeholder="Password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
+          required
         />
         <button
           disabled={loading}

@@ -4,15 +4,7 @@ from typing import List, Optional, Dict, Any
 from bson import ObjectId
 from datetime import datetime
 
-from database import (
-    users_collection,
-    projects_collection,
-    tasks_collection,
-    invites_collection,
-    manager_projects_collection,
-    project_working_collection,
-    annotator_tasks_collection,
-)
+import database
 from schemas import *
 from auth import get_password_hash, verify_password, create_access_token, verify_token
 
@@ -33,7 +25,7 @@ async def get_current_user(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    user = await users_collection.find_one({"email": email})
+    user = await database.users_collection.find_one({"email": email})
     if user is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found"
@@ -69,7 +61,7 @@ ANNOTATION_MODEL_BY_CATEGORY = {
 async def register_user(user: UserCreate):
     """Register a new user"""
     # Check if user already exists
-    existing_user = await users_collection.find_one({"email": user.email})
+    existing_user = await database.users_collection.find_one({"email": user.email})
     if existing_user:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Email already registered"
@@ -91,17 +83,17 @@ async def register_user(user: UserCreate):
         user_dict["skills"] = []
 
     # Insert user
-    result = await users_collection.insert_one(user_dict)
+    result = await database.users_collection.insert_one(user_dict)
 
     # Get created user
-    created_user = await users_collection.find_one({"_id": result.inserted_id})
+    created_user = await database.users_collection.find_one({"_id": result.inserted_id})
     return UserResponse(**created_user)
 
 
 @router.post("/auth/login", response_model=Token)
 async def login(login_request: LoginRequest):
     """Login user and return access token"""
-    user = await users_collection.find_one({"email": login_request.email})
+    user = await database.users_collection.find_one({"email": login_request.email})
     if not user or not verify_password(login_request.password, user["hashed_password"]):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -116,7 +108,14 @@ async def login(login_request: LoginRequest):
 @router.get("/auth/me", response_model=UserResponse)
 async def get_current_user_info(current_user: UserInDB = Depends(get_current_user)):
     """Get current user information"""
-    return UserResponse(**current_user.dict())
+    # Use by_alias to provide `_id` and coerce ObjectId to string for response model
+    data = current_user.model_dump(by_alias=True)
+    _id = data.get("_id", current_user.id)
+    if isinstance(_id, ObjectId):
+        data["_id"] = str(_id)
+    else:
+        data["_id"] = str(current_user.id)
+    return UserResponse(**data)
 
 
 # User endpoints
@@ -134,7 +133,7 @@ async def get_users(
     if role:
         query["role"] = role
 
-    users = await users_collection.find(query).to_list(None)
+    users = await database.users_collection.find(query).to_list(None)
     return [UserResponse(**user) for user in users]
 
 
@@ -146,7 +145,7 @@ async def get_user(user_id: str, current_user: UserInDB = Depends(get_current_us
             status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid user ID"
         )
 
-    user = await users_collection.find_one({"_id": ObjectId(user_id)})
+    user = await database.users_collection.find_one({"_id": ObjectId(user_id)})
     if not user:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
@@ -175,8 +174,10 @@ async def create_project(
         "created_at": datetime.utcnow(),
     }
 
-    result = await projects_collection.insert_one(project_dict)
-    created_project = await projects_collection.find_one({"_id": result.inserted_id})
+    result = await database.projects_collection.insert_one(project_dict)
+    created_project = await database.projects_collection.find_one(
+        {"_id": result.inserted_id}
+    )
 
     return ProjectResponse(**created_project)
 
@@ -186,19 +187,19 @@ async def get_projects(current_user: UserInDB = Depends(get_current_user)):
     """Get projects based on user role"""
     if current_user.role == "manager":
         # Managers see their own projects
-        projects = await projects_collection.find(
+        projects = await database.projects_collection.find(
             {"manager_id": current_user.id}
         ).to_list(None)
     elif current_user.role == "admin":
         # Admins see all projects
-        projects = await projects_collection.find().to_list(None)
+        projects = await database.projects_collection.find().to_list(None)
     else:
         # Annotators see projects they're invited to
-        invites = await invites_collection.find(
+        invites = await database.invites_collection.find(
             {"user_id": current_user.id, "accepted_status": True}
         ).to_list(None)
         project_ids = [invite["project_id"] for invite in invites]
-        projects = await projects_collection.find(
+        projects = await database.projects_collection.find(
             {"_id": {"$in": project_ids}}
         ).to_list(None)
 
@@ -215,7 +216,7 @@ async def get_project(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid project ID"
         )
 
-    project = await projects_collection.find_one({"_id": ObjectId(project_id)})
+    project = await database.projects_collection.find_one({"_id": ObjectId(project_id)})
     if not project:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Project not found"
@@ -229,7 +230,7 @@ async def get_project(
         )
     elif current_user.role == "annotator":
         # Check if annotator is invited to this project
-        invite = await invites_collection.find_one(
+        invite = await database.invites_collection.find_one(
             {
                 "project_id": ObjectId(project_id),
                 "user_id": current_user.id,
@@ -259,7 +260,7 @@ async def create_task(
         )
 
     # Check if project exists and user has permission
-    project = await projects_collection.find_one({"_id": ObjectId(project_id)})
+    project = await database.projects_collection.find_one({"_id": ObjectId(project_id)})
     if not project:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Project not found"
@@ -316,14 +317,14 @@ async def create_task(
         "qa_completed_at": None,
     }
 
-    result = await tasks_collection.insert_one(task_dict)
+    result = await database.tasks_collection.insert_one(task_dict)
 
     # Update project with new task ID
-    await projects_collection.update_one(
+    await database.projects_collection.update_one(
         {"_id": ObjectId(project_id)}, {"$push": {"task_ids": result.inserted_id}}
     )
 
-    created_task = await tasks_collection.find_one({"_id": result.inserted_id})
+    created_task = await database.tasks_collection.find_one({"_id": result.inserted_id})
     return TaskResponse(**created_task)
 
 
@@ -338,7 +339,7 @@ async def get_project_tasks(
         )
 
     # Check if project exists and user has permission
-    project = await projects_collection.find_one({"_id": ObjectId(project_id)})
+    project = await database.projects_collection.find_one({"_id": ObjectId(project_id)})
     if not project:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Project not found"
@@ -351,7 +352,7 @@ async def get_project_tasks(
             detail="Not authorized to view tasks for this project",
         )
     elif current_user.role == "annotator":
-        invite = await invites_collection.find_one(
+        invite = await database.invites_collection.find_one(
             {
                 "project_id": ObjectId(project_id),
                 "user_id": current_user.id,
@@ -364,9 +365,9 @@ async def get_project_tasks(
                 detail="Not authorized to view tasks for this project",
             )
 
-    tasks = await tasks_collection.find({"project_id": ObjectId(project_id)}).to_list(
-        None
-    )
+    tasks = await database.tasks_collection.find(
+        {"project_id": ObjectId(project_id)}
+    ).to_list(None)
     return [TaskResponse(**task) for task in tasks]
 
 
@@ -377,13 +378,13 @@ async def get_task(task_id: str, current_user: UserInDB = Depends(get_current_us
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid task ID"
         )
-    task = await tasks_collection.find_one({"_id": ObjectId(task_id)})
+    task = await database.tasks_collection.find_one({"_id": ObjectId(task_id)})
     if not task:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Task not found"
         )
     # Permission: must be admin, project manager, or invited annotator
-    project = await projects_collection.find_one({"_id": task["project_id"]})
+    project = await database.projects_collection.find_one({"_id": task["project_id"]})
     if current_user.role == "admin":
         return TaskResponse(**task)
     if (
@@ -393,7 +394,7 @@ async def get_task(task_id: str, current_user: UserInDB = Depends(get_current_us
     ):
         return TaskResponse(**task)
     if current_user.role == "annotator":
-        invite = await invites_collection.find_one(
+        invite = await database.invites_collection.find_one(
             {
                 "project_id": task["project_id"],
                 "user_id": current_user.id,
@@ -418,14 +419,14 @@ async def assign_task(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid task ID"
         )
 
-    task = await tasks_collection.find_one({"_id": ObjectId(task_id)})
+    task = await database.tasks_collection.find_one({"_id": ObjectId(task_id)})
     if not task:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Task not found"
         )
 
     # Only admins or the project's manager can assign
-    project = await projects_collection.find_one({"_id": task["project_id"]})
+    project = await database.projects_collection.find_one({"_id": task["project_id"]})
     if current_user.role not in ["admin", "manager"] or (
         current_user.role == "manager"
         and project
@@ -462,7 +463,9 @@ async def assign_task(
             status_code=status.HTTP_400_BAD_REQUEST, detail="No assignment provided"
         )
 
-    await tasks_collection.update_one({"_id": ObjectId(task_id)}, {"$set": update})
+    await database.tasks_collection.update_one(
+        {"_id": ObjectId(task_id)}, {"$set": update}
+    )
     return {"message": "Task assignment updated"}
 
 
@@ -479,7 +482,7 @@ async def submit_annotation(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid task ID"
         )
 
-    task = await tasks_collection.find_one({"_id": ObjectId(task_id)})
+    task = await database.tasks_collection.find_one({"_id": ObjectId(task_id)})
     if not task:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Task not found"
@@ -490,7 +493,9 @@ async def submit_annotation(
     if current_user.role in ["admin"]:
         allowed = True
     elif current_user.role == "manager":
-        project = await projects_collection.find_one({"_id": task["project_id"]})
+        project = await database.projects_collection.find_one(
+            {"_id": task["project_id"]}
+        )
         allowed = project and project["manager_id"] == current_user.id
     elif current_user.role == "annotator":
         allowed = task.get("assigned_annotator_id") == current_user.id
@@ -526,7 +531,9 @@ async def submit_annotation(
         "annotator_completed_at": datetime.utcnow(),
     }
 
-    await tasks_collection.update_one({"_id": ObjectId(task_id)}, {"$set": updates})
+    await database.tasks_collection.update_one(
+        {"_id": ObjectId(task_id)}, {"$set": updates}
+    )
     return {"message": "Annotation submitted"}
 
 
@@ -543,7 +550,7 @@ async def submit_qa(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid task ID"
         )
 
-    task = await tasks_collection.find_one({"_id": ObjectId(task_id)})
+    task = await database.tasks_collection.find_one({"_id": ObjectId(task_id)})
     if not task:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Task not found"
@@ -554,7 +561,9 @@ async def submit_qa(
     if current_user.role in ["admin"]:
         allowed = True
     elif current_user.role == "manager":
-        project = await projects_collection.find_one({"_id": task["project_id"]})
+        project = await database.projects_collection.find_one(
+            {"_id": task["project_id"]}
+        )
         allowed = project and project["manager_id"] == current_user.id
     elif current_user.role == "annotator":
         allowed = task.get("assigned_qa_id") == current_user.id
@@ -572,7 +581,9 @@ async def submit_qa(
         "qa_completed_at": datetime.utcnow(),
     }
 
-    await tasks_collection.update_one({"_id": ObjectId(task_id)}, {"$set": updates})
+    await database.tasks_collection.update_one(
+        {"_id": ObjectId(task_id)}, {"$set": updates}
+    )
     return {"message": "QA submitted"}
 
 
@@ -591,7 +602,7 @@ async def create_invite(
         )
 
     # Check if project exists and user is the manager
-    project = await projects_collection.find_one({"_id": ObjectId(project_id)})
+    project = await database.projects_collection.find_one({"_id": ObjectId(project_id)})
     if not project:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Project not found"
@@ -604,14 +615,14 @@ async def create_invite(
         )
 
     # Check if user exists
-    user = await users_collection.find_one({"_id": ObjectId(invite.user_id)})
+    user = await database.users_collection.find_one({"_id": ObjectId(invite.user_id)})
     if not user:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
         )
 
     # Check if invite already exists
-    existing_invite = await invites_collection.find_one(
+    existing_invite = await database.invites_collection.find_one(
         {"project_id": ObjectId(project_id), "user_id": ObjectId(invite.user_id)}
     )
     if existing_invite:
@@ -628,8 +639,10 @@ async def create_invite(
         "accepted_at": None,
     }
 
-    result = await invites_collection.insert_one(invite_dict)
-    created_invite = await invites_collection.find_one({"_id": result.inserted_id})
+    result = await database.invites_collection.insert_one(invite_dict)
+    created_invite = await database.invites_collection.find_one(
+        {"_id": result.inserted_id}
+    )
 
     return InviteResponse(**created_invite)
 
@@ -637,7 +650,9 @@ async def create_invite(
 @router.get("/invites", response_model=List[InviteResponse])
 async def get_user_invites(current_user: UserInDB = Depends(get_current_user)):
     """Get invites for current user"""
-    invites = await invites_collection.find({"user_id": current_user.id}).to_list(None)
+    invites = await database.invites_collection.find(
+        {"user_id": current_user.id}
+    ).to_list(None)
     return [InviteResponse(**invite) for invite in invites]
 
 
@@ -651,7 +666,7 @@ async def accept_invite(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid invite ID"
         )
 
-    invite = await invites_collection.find_one({"_id": ObjectId(invite_id)})
+    invite = await database.invites_collection.find_one({"_id": ObjectId(invite_id)})
     if not invite:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Invite not found"
@@ -668,7 +683,7 @@ async def accept_invite(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Invite already accepted"
         )
 
-    await invites_collection.update_one(
+    await database.invites_collection.update_one(
         {"_id": ObjectId(invite_id)},
         {"$set": {"accepted_status": True, "accepted_at": datetime.utcnow()}},
     )

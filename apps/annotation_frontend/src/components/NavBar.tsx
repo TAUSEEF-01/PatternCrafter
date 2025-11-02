@@ -19,8 +19,7 @@ export default function NavBar() {
                 Invites
               </Link>
               <span className="text-sm text-gray-500">
-                {user.username}
-                {user.role ? ` (${user.role})` : ''}
+                {user.name} ({user.role})
               </span>
               <button className="px-3 py-1 rounded bg-gray-100 hover:bg-gray-200" onClick={logout}>
                 Logout
