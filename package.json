@@ -8,6 +8,7 @@
   ],
   "scripts": {
     "dev": "npm run dev --workspace=apps/portal",
+    "dev:api": "python -m uvicorn apps.backend.app.main:app --reload --port 8000",
     "dev:portal": "npm run dev --workspace=apps/portal",
     "dev:ca": "npm run dev --workspace=apps/conversational_ai",
     "dev:rs": "npm run dev --workspace=apps/ranking_and_scoring",
