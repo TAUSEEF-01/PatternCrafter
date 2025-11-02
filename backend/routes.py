@@ -591,7 +591,11 @@ async def get_my_project_tasks(
             )
 
     tasks = await database.tasks_collection.find(
-        {"project_id": ObjectId(project_id), "assigned_annotator_id": current_user.id}
+        {
+            "project_id": ObjectId(project_id),
+            "assigned_annotator_id": current_user.id,
+            "completed_status.annotator_part": False,
+        }
     ).to_list(None)
     return [as_response(TaskResponse, task) for task in tasks]
 
@@ -764,17 +768,37 @@ async def submit_annotation(
         else task["category"]
     )
     ann_model = ANNOTATION_MODEL_BY_CATEGORY.get(category)
-    annotation_dict: Dict[str, Any]
+    annotation_dict: Dict[str, Any] = payload.annotation
+    # Be tolerant: attempt coercions/mapping for common lightweight payloads
     if ann_model is not None:
+        # Heuristics for LLM grading: accept {label:"good"} or {score: 4}
+        if category == TaskCategory.LLM_RESPONSE_GRADING:
+            if "rating" not in annotation_dict:
+                # Map common fields to rating
+                if "score" in annotation_dict and isinstance(annotation_dict["score"], (int, float, str)):
+                    try:
+                        annotation_dict["rating"] = int(annotation_dict["score"])
+                    except Exception:
+                        pass
+                if "value" in annotation_dict and "rating" not in annotation_dict:
+                    try:
+                        annotation_dict["rating"] = int(annotation_dict["value"])
+                    except Exception:
+                        pass
+                if "label" in annotation_dict and "rating" not in annotation_dict:
+                    label = str(annotation_dict["label"]).strip().lower()
+                    mapping = {"excellent": 5, "great": 5, "good": 4, "average": 3, "ok": 3, "poor": 2, "bad": 1}
+                    if label.isdigit():
+                        annotation_dict["rating"] = int(label)
+                    elif label in mapping:
+                        annotation_dict["rating"] = mapping[label]
+
+        # Now validate; if still invalid, fallback to storing raw annotation
         try:
-            annotation_dict = ann_model(**payload.annotation).model_dump()
-        except Exception as e:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Invalid annotation for category {category}: {e}",
-            )
-    else:
-        annotation_dict = payload.annotation
+            annotation_dict = ann_model(**annotation_dict).model_dump()
+        except Exception:
+            # Store as-is without strict validation to avoid blocking annotators
+            annotation_dict = payload.annotation
 
     updates = {
         "annotation": annotation_dict,
@@ -785,6 +809,17 @@ async def submit_annotation(
     await database.tasks_collection.update_one(
         {"_id": ObjectId(task_id)}, {"$set": updates}
     )
+
+    # After submission: remove this task from project_working assigned task list for the annotator
+    if task.get("assigned_annotator_id"):
+        await database.project_working_collection.update_one(
+            {
+                "project_id": task["project_id"],
+                "annotator_assignments.annotator_id": task["assigned_annotator_id"],
+            },
+            {"$pull": {"annotator_assignments.$.task_ids": ObjectId(task_id)}},
+        )
+
     return {"message": "Annotation submitted"}
 
 
