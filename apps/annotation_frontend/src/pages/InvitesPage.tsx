@@ -43,36 +43,40 @@ export default function InvitesPage() {
       ) : (
         <div className="grid gap-3">
           {invites.map((inv) => (
-            <div key={inv.id} className="card hover:shadow-lg transition-shadow">
-              <div className="card-body flex items-center justify-between">
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <span className="font-medium">Project:</span>
-                    <span className="font-mono text-sm text-gray-600">
-                      {inv.project_id.slice(0, 8)}
-                    </span>
-                  </div>
-                  <div className="text-sm text-gray-600">
-                    Invited: {new Date(inv.invited_at || '').toLocaleString()}
-                  </div>
-                  <div className="text-sm">
-                    {inv.accepted_at ? (
-                      <span className="badge badge-green">
-                        Accepted {new Date(inv.accepted_at).toLocaleString()}
-                      </span>
-                    ) : (
-                      <span className="badge badge-yellow">Pending</span>
-                    )}
-                  </div>
-                </div>
-                {!inv.accepted_at && (
-                  <button className="btn btn-primary" onClick={() => accept(inv.id)}>
-                    Accept Invite
-                  </button>
-                )}
-              </div>
-            </div>
-          ))}
+  <div
+    key={inv.id}
+    className="card hover:shadow-lg transition-shadow"
+    style={{ backgroundColor: '#EBD3F8' }}
+  >
+    <div className="card-body flex items-center justify-between">
+      <div className="space-y-2">
+        <div className="flex items-center gap-2">
+        <span className="font-medium" style={{ color: '#2E073F' }}>Project:</span>          <span className="font-mono text-sm text-gray-600">
+            {inv.project_id.slice(0, 8)}
+          </span>
+        </div>
+        <div className="text-sm text-gray-600">
+          Invited: {new Date(inv.invited_at || '').toLocaleString()}
+        </div>
+        <div className="text-sm">
+          {inv.accepted_at ? (
+            <span className="badge badge-green">
+              Accepted {new Date(inv.accepted_at).toLocaleString()}
+            </span>
+          ) : (
+            <span className="badge badge-yellow">Pending</span>
+          )}
+        </div>
+      </div>
+      {!inv.accepted_at && (
+        <button className="btn btn-primary" onClick={() => accept(inv.id)}>
+          Accept Invite
+        </button>
+      )}
+    </div>
+  </div>
+))}
+
         </div>
       )}
     </div>
