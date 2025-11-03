@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link as RRLink } from 'react-router-dom';
 import { apiFetch } from '@/api/client';
 import { useAuth } from '@/auth/AuthContext';
+
+const Link = RRLink as unknown as any;
 
 // Minimal types
 interface Annotator {
@@ -87,59 +89,84 @@ export default function ProjectInvitesPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Manage Invites</h1>
-        <Link className="text-blue-600 hover:underline" to={`/projects/${projectId}`}>
-          Back to Project
+        <div>
+          <h1>Manage Invites</h1>
+          <p className="muted mt-1">Invite annotators to collaborate on this project</p>
+        </div>
+        <Link className="btn btn-ghost" to={`/projects/${projectId}`}>
+          ← Back to Project
         </Link>
       </div>
-      {error && <div className="text-red-600 text-sm">{error}</div>}
-      <div className="bg-white rounded shadow overflow-hidden">
-        <table className="min-w-full text-sm">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="text-left p-3">Annotator</th>
-              <th className="text-left p-3">Email</th>
-              <th className="text-left p-3">Skills</th>
-              <th className="text-left p-3">Status</th>
-              <th className="text-left p-3">Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            {annotators.map((a) => {
-              const inv = inviteMap.get(a.id);
-              const status = !inv ? 'Not invited' : inv.accepted_status ? 'Accepted' : 'Pending';
-              return (
-                <tr key={a.id} className="border-t">
-                  <td className="p-3">{a.name}</td>
-                  <td className="p-3">{a.email}</td>
-                  <td className="p-3">{(a.skills || []).join(', ')}</td>
-                  <td className="p-3">{status}</td>
-                  <td className="p-3">
-                    {!inv && (
-                      <button
-                        disabled={busy === a.id}
-                        className="px-3 py-1 rounded bg-blue-600 text-white disabled:opacity-60"
-                        onClick={() => doInvite(a.id)}
-                      >
-                        {busy === a.id ? 'Inviting...' : 'Invite'}
-                      </button>
-                    )}
-                    {inv && !inv.accepted_status && (
-                      <button
-                        disabled={busy === inv.id}
-                        className="px-3 py-1 rounded bg-red-600 text-white disabled:opacity-60"
-                        onClick={() => cancelInvite(inv.id)}
-                      >
-                        {busy === inv.id ? 'Canceling...' : 'Cancel Invite'}
-                      </button>
-                    )}
-                    {inv && inv.accepted_status && <span className="text-gray-500">—</span>}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+      {error && (
+        <div className="rounded-md bg-red-50 border border-red-200 p-3 text-sm text-red-700">
+          {error}
+        </div>
+      )}
+      <div className="card overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="table">
+            <thead>
+              <tr>
+                <th>Annotator</th>
+                <th>Email</th>
+                <th>Skills</th>
+                <th>Status</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {annotators.map((a) => {
+                const inv = inviteMap.get(a.id);
+                const status = !inv ? 'Not invited' : inv.accepted_status ? 'Accepted' : 'Pending';
+                return (
+                  <tr key={a.id}>
+                    <td className="font-medium">{a.name}</td>
+                    <td className="text-gray-600">{a.email}</td>
+                    <td>
+                      <div className="flex flex-wrap gap-1">
+                        {(a.skills || []).map((skill, i) => (
+                          <span key={i} className="badge text-xs">
+                            {skill}
+                          </span>
+                        ))}
+                      </div>
+                    </td>
+                    <td>
+                      {!inv ? (
+                        <span className="badge">Not invited</span>
+                      ) : inv.accepted_status ? (
+                        <span className="badge badge-green">Accepted</span>
+                      ) : (
+                        <span className="badge badge-yellow">Pending</span>
+                      )}
+                    </td>
+                    <td>
+                      {!inv && (
+                        <button
+                          disabled={busy === a.id}
+                          className="btn btn-primary btn-sm"
+                          onClick={() => doInvite(a.id)}
+                        >
+                          {busy === a.id ? 'Inviting...' : 'Invite'}
+                        </button>
+                      )}
+                      {inv && !inv.accepted_status && (
+                        <button
+                          disabled={busy === inv.id}
+                          className="btn btn-outline btn-sm text-red-600 border-red-300 hover:bg-red-50"
+                          onClick={() => cancelInvite(inv.id)}
+                        >
+                          {busy === inv.id ? 'Canceling...' : 'Cancel'}
+                        </button>
+                      )}
+                      {inv && inv.accepted_status && <span className="text-gray-400">—</span>}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );

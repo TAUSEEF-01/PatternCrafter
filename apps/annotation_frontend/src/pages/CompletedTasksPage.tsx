@@ -81,101 +81,122 @@ export default function CompletedTasksPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold">Completed Tasks</h1>
+          <h1>Completed Tasks</h1>
           {project && (
-            <div className="text-gray-600 text-sm space-y-1">
-              <div>Project: {project.details}</div>
-              <div>Category: {project.category}</div>
+            <div className="muted mt-1 space-y-0.5">
+              <div>{project.details}</div>
+              <span className="badge badge-primary">{project.category}</span>
             </div>
           )}
         </div>
         <div className="flex items-center gap-3">
           {projectId && (
-            <Link className="text-blue-600 hover:underline" to={`/projects/${projectId}`}>
-              Back to Project
+            <Link className="btn btn-ghost" to={`/projects/${projectId}`}>
+              ← Back to Project
             </Link>
           )}
         </div>
       </div>
 
-      <div className="bg-white p-4 rounded shadow flex items-end gap-3">
-        <div>
-          <label className="block text-sm mb-1">Filter by Annotator ID</label>
+      <div className="toolbar">
+        <div className="flex-1">
+          <label className="label">Filter by Annotator ID</label>
           <input
-            className="border rounded px-2 py-1 w-80"
+            className="input w-full max-w-xs"
             placeholder="annotator user id (optional)"
             value={annotatorId}
             onChange={(e) => updateAnnotatorId(e.target.value)}
           />
         </div>
-        <button className="px-3 py-2 border rounded" onClick={() => loadTasks()} disabled={loading}>
+        <button className="btn btn-outline" onClick={() => loadTasks()} disabled={loading}>
           {loading ? 'Loading…' : 'Refresh'}
         </button>
-        <div className="flex-1" />
-        <button className="px-3 py-2 border rounded" onClick={() => download('csv')}>
+        <button className="btn btn-outline" onClick={() => download('csv')}>
           Download CSV
         </button>
-        <button className="px-3 py-2 border rounded" onClick={() => download('json')}>
+        <button className="btn btn-outline" onClick={() => download('json')}>
           Download JSON
         </button>
       </div>
 
-      {error && <div className="text-red-600 text-sm">{error}</div>}
+      {error && (
+        <div className="rounded-md bg-red-50 border border-red-200 p-3 text-sm text-red-700">
+          {error}
+        </div>
+      )}
 
-      <div className="grid gap-3">
+      <div className="space-y-4">
         {tasks.length === 0 && !loading && (
-          <div className="text-gray-600">No completed tasks found.</div>
+          <div className="card">
+            <div className="card-body text-center py-12">
+              <p className="muted">No completed tasks found</p>
+            </div>
+          </div>
         )}
         {tasks.map((t) => (
-          <div key={t.id} className="bg-white p-4 rounded shadow">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="font-semibold">Task {t.id.slice(0, 8)}</div>
-                <div className="text-sm text-gray-600">Category: {t.category}</div>
-                <div className="text-xs text-gray-600 mt-1">
-                  Annotator: {t.assigned_annotator_id || '—'} | QA: {t.assigned_qa_id || '—'}
+          <div key={t.id} className="card">
+            <div className="card-body">
+              <div className="flex items-start justify-between mb-4">
+                <div>
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="font-semibold text-base">Task {t.id.slice(0, 8)}</span>
+                    <span className="badge badge-primary">{t.category}</span>
+                    <span className="badge badge-green">Completed</span>
+                  </div>
+                  <div className="text-sm text-gray-600 space-y-1">
+                    <div>
+                      Annotator: {t.assigned_annotator_id || '—'} | QA: {t.assigned_qa_id || '—'}
+                    </div>
+                    <div>
+                      Annotator Completed: {t.annotator_completed_at || '—'} | QA Completed:{' '}
+                      {t.qa_completed_at || '—'}
+                    </div>
+                  </div>
                 </div>
-                <div className="text-xs text-gray-600">
-                  Annotator Completed: {t.annotator_completed_at || '—'} | QA Completed:{' '}
-                  {t.qa_completed_at || '—'}
+                <div className="flex items-center gap-2">
+                  <Link className="btn btn-outline btn-sm" to={`/tasks/${t.id}/qa`}>
+                    View QA
+                  </Link>
+                  <Link className="btn btn-outline btn-sm" to={`/tasks/${t.id}/annotate`}>
+                    View Annotation
+                  </Link>
                 </div>
               </div>
-              <div className="flex items-center gap-3">
-                <Link className="text-blue-600 hover:underline" to={`/tasks/${t.id}/qa`}>
-                  View QA
-                </Link>
-                <Link className="text-blue-600 hover:underline" to={`/tasks/${t.id}/annotate`}>
-                  View Annotation
-                </Link>
-              </div>
+              <details className="mt-3">
+                <summary className="cursor-pointer text-sm font-medium text-gray-700 hover:text-gray-900">
+                  Task Data
+                </summary>
+                <pre className="bg-gray-50 border border-gray-200 rounded-lg p-3 mt-2 text-xs font-mono overflow-auto scrollbar-thin max-h-64">
+                  {JSON.stringify(t.task_data, null, 2)}
+                </pre>
+              </details>
+              {t.annotation && (
+                <details className="mt-3">
+                  <summary className="cursor-pointer text-sm font-medium text-gray-700 hover:text-gray-900">
+                    Annotation
+                  </summary>
+                  <pre className="bg-gray-50 border border-gray-200 rounded-lg p-3 mt-2 text-xs font-mono overflow-auto scrollbar-thin max-h-64">
+                    {JSON.stringify(t.annotation, null, 2)}
+                  </pre>
+                </details>
+              )}
+              {t.qa_annotation && (
+                <details className="mt-3">
+                  <summary className="cursor-pointer text-sm font-medium text-gray-700 hover:text-gray-900">
+                    QA Annotation
+                  </summary>
+                  <pre className="bg-gray-50 border border-gray-200 rounded-lg p-3 mt-2 text-xs font-mono overflow-auto scrollbar-thin max-h-64">
+                    {JSON.stringify(t.qa_annotation, null, 2)}
+                  </pre>
+                </details>
+              )}
+              {t.qa_feedback && (
+                <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-md">
+                  <span className="text-sm font-medium text-blue-900">QA Feedback:</span>{' '}
+                  <span className="text-sm text-blue-800">{t.qa_feedback}</span>
+                </div>
+              )}
             </div>
-            <details className="mt-3">
-              <summary className="cursor-pointer text-sm text-gray-700">Task Data</summary>
-              <pre className="bg-gray-50 p-2 rounded mt-2 text-sm overflow-auto">
-                {JSON.stringify(t.task_data, null, 2)}
-              </pre>
-            </details>
-            {t.annotation && (
-              <details className="mt-3">
-                <summary className="cursor-pointer text-sm text-gray-700">Annotation</summary>
-                <pre className="bg-gray-50 p-2 rounded mt-2 text-sm overflow-auto">
-                  {JSON.stringify(t.annotation, null, 2)}
-                </pre>
-              </details>
-            )}
-            {t.qa_annotation && (
-              <details className="mt-3">
-                <summary className="cursor-pointer text-sm text-gray-700">QA Annotation</summary>
-                <pre className="bg-gray-50 p-2 rounded mt-2 text-sm overflow-auto">
-                  {JSON.stringify(t.qa_annotation, null, 2)}
-                </pre>
-              </details>
-            )}
-            {t.qa_feedback && (
-              <div className="mt-3 text-sm">
-                <span className="font-medium">QA Feedback:</span> {t.qa_feedback}
-              </div>
-            )}
           </div>
         ))}
       </div>

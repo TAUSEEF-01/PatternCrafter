@@ -1,41 +1,85 @@
-import { Link } from 'react-router-dom';
+import { Link as RRLink, NavLink as RRNavLink } from 'react-router-dom';
 import { useAuth } from '@/auth/AuthContext';
 
 export default function NavBar() {
   const { user, logout } = useAuth();
+  const Link = RRLink as unknown as any;
+  const NavLink = RRNavLink as unknown as any;
   return (
-    <nav className="bg-white border-b border-gray-200 sticky top-0 z-10">
-      <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
-        <Link to="/" className="font-semibold text-lg">
-          Annotation
+    <nav className="sticky top-0 z-20 bg-white/90 backdrop-blur border-b border-gray-200">
+      <div className="container-app py-3 flex items-center justify-between">
+        <Link to="/" className="flex items-center gap-2 font-semibold text-lg">
+          <span className="inline-block h-6 w-6 rounded bg-primary-600" />
+          <span>PatternCrafter</span>
         </Link>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-6">
           {user ? (
             <>
-              <Link className="hover:underline" to="/projects">
+              <NavLink
+                className={({ isActive }: any) =>
+                  `text-sm ${
+                    isActive ? 'text-gray-900 font-semibold' : 'text-gray-600 hover:text-gray-900'
+                  }`
+                }
+                to="/projects"
+              >
                 Projects
-              </Link>
-              <Link className="hover:underline" to="/invites">
+              </NavLink>
+              <NavLink
+                className={({ isActive }: any) =>
+                  `text-sm ${
+                    isActive ? 'text-gray-900 font-semibold' : 'text-gray-600 hover:text-gray-900'
+                  }`
+                }
+                to="/invites"
+              >
                 Invites
-              </Link>
-              <Link className="hover:underline" to="/profile">
+              </NavLink>
+              <NavLink
+                className={({ isActive }: any) =>
+                  `text-sm ${
+                    isActive ? 'text-gray-900 font-semibold' : 'text-gray-600 hover:text-gray-900'
+                  }`
+                }
+                to="/profile"
+              >
                 Profile
-              </Link>
-              <span className="text-sm text-gray-500">
-                {user.name} ({user.role})
-              </span>
-              <button className="px-3 py-1 rounded bg-gray-100 hover:bg-gray-200" onClick={logout}>
+              </NavLink>
+              <div className="hidden sm:flex items-center gap-2 text-sm text-gray-600">
+                <div className="h-7 w-7 rounded-full bg-gray-100 flex items-center justify-center text-xs font-semibold">
+                  {user.name?.[0]?.toUpperCase() || '?'}
+                </div>
+                <span className="hidden md:inline">{user.name}</span>
+                <span className="px-2 py-0.5 rounded-full bg-gray-100 text-gray-700 text-xs">
+                  {user.role}
+                </span>
+              </div>
+              <button className="btn btn-outline" onClick={logout}>
                 Logout
               </button>
             </>
           ) : (
             <>
-              <Link className="hover:underline" to="/login">
+              <NavLink
+                className={({ isActive }: any) =>
+                  `text-sm ${
+                    isActive ? 'text-gray-900 font-semibold' : 'text-gray-600 hover:text-gray-900'
+                  }`
+                }
+                to="/login"
+              >
                 Login
-              </Link>
-              <Link className="hover:underline" to="/register">
+              </NavLink>
+              <NavLink
+                className={({ isActive }: any) =>
+                  `text-sm ${
+                    isActive ? 'text-gray-900 font-semibold' : 'text-gray-600 hover:text-gray-900'
+                  }`
+                }
+                to="/register"
+              >
                 Register
-              </Link>
+              </NavLink>
             </>
           )}
         </div>

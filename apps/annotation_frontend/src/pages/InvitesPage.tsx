@@ -24,35 +24,57 @@ export default function InvitesPage() {
   };
 
   return (
-    <div className="space-y-4">
-      <h1 className="text-2xl font-semibold">Invites</h1>
-      {error && <div className="text-red-600 text-sm">{error}</div>}
-      <ul className="space-y-2">
-        {invites.map((inv) => (
-          <li
-            key={inv.id}
-            className="bg-white p-4 rounded shadow flex items-center justify-between"
-          >
-            <div>
-              <div className="text-sm text-gray-500">Project: {inv.project_id}</div>
-              <div className="text-sm text-gray-500">
-                Invited: {new Date(inv.invited_at || '').toLocaleString()}
-              </div>
-              <div className="text-sm">
-                Accepted: {inv.accepted_at ? new Date(inv.accepted_at).toLocaleString() : 'Pending'}
+    <div className="space-y-6">
+      <div>
+        <h1>Project Invites</h1>
+        <p className="muted mt-1">Review and accept project invitations</p>
+      </div>
+      {error && (
+        <div className="rounded-md bg-red-50 border border-red-200 p-3 text-sm text-red-700">
+          {error}
+        </div>
+      )}
+      {invites.length === 0 ? (
+        <div className="card">
+          <div className="card-body text-center py-12">
+            <p className="muted">No invites yet</p>
+          </div>
+        </div>
+      ) : (
+        <div className="grid gap-3">
+          {invites.map((inv) => (
+            <div key={inv.id} className="card hover:shadow-lg transition-shadow">
+              <div className="card-body flex items-center justify-between">
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium">Project:</span>
+                    <span className="font-mono text-sm text-gray-600">
+                      {inv.project_id.slice(0, 8)}
+                    </span>
+                  </div>
+                  <div className="text-sm text-gray-600">
+                    Invited: {new Date(inv.invited_at || '').toLocaleString()}
+                  </div>
+                  <div className="text-sm">
+                    {inv.accepted_at ? (
+                      <span className="badge badge-green">
+                        Accepted {new Date(inv.accepted_at).toLocaleString()}
+                      </span>
+                    ) : (
+                      <span className="badge badge-yellow">Pending</span>
+                    )}
+                  </div>
+                </div>
+                {!inv.accepted_at && (
+                  <button className="btn btn-primary" onClick={() => accept(inv.id)}>
+                    Accept Invite
+                  </button>
+                )}
               </div>
             </div>
-            {!inv.accepted_at && (
-              <button
-                className="bg-blue-600 text-white rounded px-3 py-1"
-                onClick={() => accept(inv.id)}
-              >
-                Accept
-              </button>
-            )}
-          </li>
-        ))}
-      </ul>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

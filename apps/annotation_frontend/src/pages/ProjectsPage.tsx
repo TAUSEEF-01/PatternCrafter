@@ -1,8 +1,10 @@
 import { FormEvent, useEffect, useState } from 'react';
 import { apiFetch } from '@/api/client';
-import { Link } from 'react-router-dom';
+import { Link as RRLink } from 'react-router-dom';
 import { Project } from '@/types';
 import { useAuth } from '@/auth/AuthContext';
+
+const Link = RRLink as unknown as any;
 
 // Backend expects enum VALUES (snake_case), not enum NAMES.
 const CATEGORIES: { value: string; label: string }[] = [
@@ -58,70 +60,108 @@ export default function ProjectsPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-semibold">Projects</h1>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1>Projects</h1>
+          <p className="muted mt-1">Manage your annotation projects</p>
+        </div>
+      </div>
 
       {user?.role === 'manager' && (
-        <form onSubmit={submit} className="bg-white p-4 rounded shadow space-y-3">
-          <div className="flex items-center gap-3">
-            <label className="w-40">Name</label>
-            <input
-              className="border rounded px-3 py-2 w-full"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="e.g., Project A"
-              required
-            />
+        <div className="card">
+          <div className="card-body">
+            <h2 className="card-title mb-4">Create New Project</h2>
+            <form onSubmit={submit} className="space-y-4">
+              <div>
+                <label className="label">Project Name</label>
+                <input
+                  className="input"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="e.g., Q3 Sentiment Analysis"
+                  required
+                />
+              </div>
+              <div>
+                <label className="label">Category</label>
+                <select
+                  className="select"
+                  value={category}
+                  onChange={(e) => setCategory(e.target.value)}
+                >
+                  {CATEGORIES.map((c) => (
+                    <option key={c.value} value={c.value}>
+                      {c.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <button type="submit" className="btn btn-primary">
+                Create Project
+              </button>
+            </form>
           </div>
-          <div className="flex items-center gap-3">
-            <label className="w-40">Category</label>
-            <select
-              className="border rounded px-3 py-2"
-              value={category}
-              onChange={(e) => setCategory(e.target.value)}
-            >
-              {CATEGORIES.map((c) => (
-                <option key={c.value} value={c.value}>
-                  {c.label}
-                </option>
-              ))}
-            </select>
-          </div>
-          <button className="bg-blue-600 text-white rounded px-4 py-2">Create Project</button>
-        </form>
+        </div>
       )}
 
-      {error && <div className="text-red-600 text-sm">{error}</div>}
+      {error && (
+        <div className="rounded-md bg-red-50 border border-red-200 p-3 text-sm text-red-700">
+          {error}
+        </div>
+      )}
 
-      <ul className="grid sm:grid-cols-2 gap-4">
-        {projects.map((p) => (
-          <li key={p.id} className="bg-white p-4 rounded shadow">
-            <div className="font-semibold">{p.details || p.id}</div>
-            <div className="text-sm text-gray-500">Category: {p.category}</div>
-            {user?.role === 'manager' || user?.role === 'admin' ? (
-              <div className="mt-2 flex gap-4">
-                <Link className="text-blue-600 hover:underline" to={`/projects/${p.id}`}>
-                  Open
-                </Link>
-                <Link className="text-blue-600 hover:underline" to={`/projects/${p.id}/invites`}>
-                  Manage Invites
-                </Link>
-              </div>
-            ) : (
-              <div className="mt-2">
-                {acceptedProjectIds.has(p.id) ? (
-                  <Link className="text-blue-600 hover:underline text-sm" to={`/projects/${p.id}`}>
-                    Open
-                  </Link>
+      {projects.length === 0 ? (
+        <div className="card">
+          <div className="card-body text-center py-12">
+            <div className="text-gray-400 text-lg mb-2">No projects yet</div>
+            <p className="muted">
+              {user?.role === 'manager'
+                ? 'Create a new project to get started'
+                : "You'll see projects here once you're invited"}
+            </p>
+          </div>
+        </div>
+      ) : (
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {projects.map((p) => (
+            <div key={p.id} className="card hover:shadow-lg transition-shadow">
+              <div className="card-body">
+                <h3 className="font-semibold text-base mb-1">{p.details || p.id}</h3>
+                <span className="badge badge-primary mb-3 w-fit">{p.category}</span>
+                {user?.role === 'manager' || user?.role === 'admin' ? (
+                  <div className="flex gap-3 mt-auto">
+                    <Link
+                      className="text-sm text-primary-600 hover:text-primary-700 font-medium"
+                      to={`/projects/${p.id}`}
+                    >
+                      Open →
+                    </Link>
+                    <Link
+                      className="text-sm text-gray-600 hover:text-gray-900"
+                      to={`/projects/${p.id}/invites`}
+                    >
+                      Invites
+                    </Link>
+                  </div>
                 ) : (
-                  <div className="text-xs text-gray-400">
-                    Invited projects will be openable here
+                  <div className="mt-auto">
+                    {acceptedProjectIds.has(p.id) ? (
+                      <Link
+                        className="text-sm text-primary-600 hover:text-primary-700 font-medium"
+                        to={`/projects/${p.id}`}
+                      >
+                        Open →
+                      </Link>
+                    ) : (
+                      <div className="text-xs text-gray-400">Pending invite</div>
+                    )}
                   </div>
                 )}
               </div>
-            )}
-          </li>
-        ))}
-      </ul>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

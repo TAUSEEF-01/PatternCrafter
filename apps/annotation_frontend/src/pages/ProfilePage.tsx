@@ -98,77 +98,109 @@ export default function ProfilePage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-semibold">Profile</h1>
+      <div>
+        <h1>Profile</h1>
+        <p className="muted mt-1">Manage your account information and preferences</p>
+      </div>
 
-      <div className="bg-white p-4 rounded shadow space-y-2">
-        <div>
-          <span className="text-gray-500">Name:</span> {me?.name}
-        </div>
-        <div>
-          <span className="text-gray-500">Email:</span> {me?.email}
-        </div>
-        <div>
-          <span className="text-gray-500">Role:</span> {me?.role}
+      <div className="card">
+        <div className="card-body">
+          <h2 className="card-title mb-4">Account Information</h2>
+          <div className="space-y-3">
+            <div className="flex items-center gap-3">
+              <span className="text-gray-600 w-20">Name:</span>
+              <span className="font-medium">{me?.name}</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <span className="text-gray-600 w-20">Email:</span>
+              <span className="font-medium">{me?.email}</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <span className="text-gray-600 w-20">Role:</span>
+              <span className="badge badge-primary">{me?.role}</span>
+            </div>
+          </div>
         </div>
       </div>
 
       {me?.role === 'annotator' && (
-        <div className="bg-white p-4 rounded shadow space-y-3">
-          <div>
-            <label className="block mb-1 font-medium">Skills (comma separated)</label>
-            <input
-              className="w-full border rounded px-3 py-2"
-              value={skillsText}
-              onChange={(e) => setSkillsText(e.target.value)}
-              placeholder="e.g., NLP, Text Classification, Bengali, QA"
-            />
+        <div className="card">
+          <div className="card-body space-y-4">
+            <h2 className="card-title">Skills & Expertise</h2>
+            <div>
+              <label className="label">Skills (comma separated)</label>
+              <input
+                className="input"
+                value={skillsText}
+                onChange={(e) => setSkillsText(e.target.value)}
+                placeholder="e.g., NLP, Text Classification, Bengali, QA"
+              />
+            </div>
+            <div className="flex items-center gap-3">
+              <button disabled={saving} onClick={saveSkills} className="btn btn-primary">
+                {saving ? 'Saving...' : 'Save Skills'}
+              </button>
+              {msg && <span className="text-sm text-gray-600">{msg}</span>}
+            </div>
           </div>
-          <button
-            disabled={saving}
-            onClick={saveSkills}
-            className="bg-blue-600 text-white rounded px-4 py-2 disabled:opacity-60"
-          >
-            {saving ? 'Saving...' : 'Save Skills'}
-          </button>
-          {msg && <div className="text-sm text-gray-600">{msg}</div>}
         </div>
       )}
 
       {me?.role === 'annotator' && (
-        <div className="bg-white p-4 rounded shadow space-y-3">
-          <h2 className="font-semibold text-lg">My Invites</h2>
-          {invitesError && <div className="text-red-600 text-sm">{invitesError}</div>}
-          <ul className="space-y-2">
-            {invites.map((inv) => (
-              <li key={inv.id} className="border rounded p-3 flex items-center justify-between">
-                <div>
-                  <div className="text-sm text-gray-500">Project: {inv.project_id}</div>
-                  <div className="text-sm text-gray-500">
-                    Invited: {inv.invited_at ? new Date(inv.invited_at).toLocaleString() : '-'}
-                  </div>
-                  <div className="text-sm">
-                    Status:{' '}
-                    {inv.accepted_status
-                      ? `Accepted at ${
-                          inv.accepted_at ? new Date(inv.accepted_at).toLocaleString() : ''
-                        }`
-                      : 'Pending'}
-                  </div>
-                </div>
-                {!inv.accepted_status ? (
-                  <button
-                    disabled={invBusy === inv.id}
-                    onClick={() => acceptInvite(inv.id)}
-                    className="px-3 py-1 rounded bg-blue-600 text-white disabled:opacity-60"
+        <div className="card">
+          <div className="card-body space-y-4">
+            <h2 className="card-title">My Invites</h2>
+            {invitesError && (
+              <div className="rounded-md bg-red-50 border border-red-200 p-3 text-sm text-red-700">
+                {invitesError}
+              </div>
+            )}
+            {invites.length === 0 ? (
+              <p className="muted text-center py-8">No invites yet</p>
+            ) : (
+              <div className="space-y-3">
+                {invites.map((inv) => (
+                  <div
+                    key={inv.id}
+                    className="border border-gray-200 rounded-lg p-4 flex items-center justify-between"
                   >
-                    {invBusy === inv.id ? 'Accepting...' : 'Accept'}
-                  </button>
-                ) : (
-                  <span className="text-gray-500 text-sm">Accepted</span>
-                )}
-              </li>
-            ))}
-          </ul>
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium">Project:</span>
+                        <span className="text-sm font-mono text-gray-600">
+                          {inv.project_id.slice(0, 8)}
+                        </span>
+                      </div>
+                      <div className="text-sm text-gray-600">
+                        Invited: {inv.invited_at ? new Date(inv.invited_at).toLocaleString() : '-'}
+                      </div>
+                      <div className="text-sm">
+                        {inv.accepted_status ? (
+                          <span className="badge badge-green">
+                            Accepted{' '}
+                            {inv.accepted_at ? new Date(inv.accepted_at).toLocaleString() : ''}
+                          </span>
+                        ) : (
+                          <span className="badge badge-yellow">Pending</span>
+                        )}
+                      </div>
+                    </div>
+                    {!inv.accepted_status ? (
+                      <button
+                        disabled={invBusy === inv.id}
+                        onClick={() => acceptInvite(inv.id)}
+                        className="btn btn-primary btn-sm"
+                      >
+                        {invBusy === inv.id ? 'Accepting...' : 'Accept'}
+                      </button>
+                    ) : (
+                      <span className="text-gray-400 text-sm">✓ Accepted</span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>

@@ -32,43 +32,73 @@ export default function TaskQAPage() {
   };
 
   return (
-    <div className="space-y-4">
-      <h1 className="text-2xl font-semibold">QA Task</h1>
-      {error && <div className="text-red-600 text-sm">{error}</div>}
-      {success && <div className="text-green-600 text-sm">{success}</div>}
+    <div className="space-y-6">
+      <div>
+        <h1>QA Review</h1>
+        <p className="muted mt-1">Review the annotation and provide quality assurance feedback</p>
+      </div>
+      {error && (
+        <div className="rounded-md bg-red-50 border border-red-200 p-3 text-sm text-red-700">
+          {error}
+        </div>
+      )}
+      {success && (
+        <div className="rounded-md bg-green-50 border border-green-200 p-3 text-sm text-green-700">
+          {success}
+        </div>
+      )}
       {task && (
-        <div className="bg-white p-4 rounded shadow space-y-2">
-          <div className="text-sm text-gray-500">Task: {task.id}</div>
-          <div className="text-sm text-gray-500">Category: {task.category}</div>
-          <div>
-            <div className="font-medium mb-1">Task Data</div>
-            <JsonView data={task.task_data} />
-          </div>
-          {task.annotation && (
+        <div className="card">
+          <div className="card-body space-y-4">
             <div>
-              <div className="font-medium mb-1">Annotator Annotation</div>
-              <JsonView data={task.annotation} />
+              <h2 className="card-title mb-2">Task Information</h2>
+              <div className="flex items-center gap-2 text-sm">
+                <span className="font-mono text-gray-600">{task.id.slice(0, 8)}</span>
+                <span className="badge badge-primary">{task.category}</span>
+              </div>
             </div>
-          )}
+            <div>
+              <h3 className="font-medium mb-2">Task Data</h3>
+              <JsonView data={task.task_data} />
+            </div>
+            {task.annotation && (
+              <div>
+                <h3 className="font-medium mb-2">Annotator Annotation</h3>
+                <JsonView data={task.annotation} />
+              </div>
+            )}
+          </div>
         </div>
       )}
 
-      <form onSubmit={submit} className="bg-white p-4 rounded shadow space-y-3">
-        <label className="block mb-1">QA Annotation (JSON)</label>
-        <textarea
-          className="w-full border rounded p-2 h-40 font-mono"
-          value={qa}
-          onChange={(e) => setQa(e.target.value)}
-          placeholder='{"decision":"approve"}'
-        />
-        <input
-          className="w-full border rounded px-3 py-2"
-          placeholder="Feedback (optional)"
-          value={feedback}
-          onChange={(e) => setFeedback(e.target.value)}
-        />
-        <button className="bg-blue-600 text-white rounded px-4 py-2">Submit QA</button>
-      </form>
+      <div className="card">
+        <div className="card-body">
+          <h2 className="card-title mb-4">Submit QA Review</h2>
+          <form onSubmit={submit} className="space-y-4">
+            <div>
+              <label className="label">QA Annotation (JSON format)</label>
+              <textarea
+                className="textarea font-mono text-sm h-40"
+                value={qa}
+                onChange={(e) => setQa(e.target.value)}
+                placeholder='{"decision": "approve", "quality_score": 5}'
+              />
+            </div>
+            <div>
+              <label className="label">Feedback (optional)</label>
+              <input
+                className="input"
+                placeholder="Provide feedback for the annotator"
+                value={feedback}
+                onChange={(e) => setFeedback(e.target.value)}
+              />
+            </div>
+            <button type="submit" className="btn btn-primary">
+              Submit QA Review
+            </button>
+          </form>
+        </div>
+      </div>
     </div>
   );
 }

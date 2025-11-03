@@ -167,372 +167,406 @@ export default function ProjectDetailPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold">Project</h1>
+          <h1>Project Details</h1>
           {project && (
-            <div className="text-gray-600 text-sm space-y-1">
-              <div>Name: {project.details}</div>
-              <div>Category: {project.category}</div>
+            <div className="muted mt-1 space-y-0.5">
+              <div>{project.details}</div>
+              <span className="badge badge-primary">{project.category}</span>
             </div>
           )}
         </div>
         <div className="flex items-center gap-4">
           {user?.role !== 'annotator' && projectId && (
-            <LinkFix
-              className="text-blue-600 hover:underline"
-              to={`/projects/${projectId}/completed`}
-            >
+            <LinkFix className="btn btn-outline" to={`/projects/${projectId}/completed`}>
               Completed Tasks
             </LinkFix>
           )}
-          <LinkFix className="text-blue-600 hover:underline" to="/projects">
-            Back
+          <LinkFix className="btn btn-ghost" to="/projects">
+            ← Back
           </LinkFix>
         </div>
       </div>
 
       {user?.role !== 'annotator' && (
-        <div className="bg-white p-4 rounded shadow space-y-4">
-          <h2 className="font-semibold">Create Task ({category})</h2>
+        <div className="card">
+          <div className="card-body space-y-4">
+            <h2 className="card-title">Create Task</h2>
+            <div className="badge badge-primary w-fit">{category}</div>
 
-          {/* Category-specific forms */}
-          {category === 'generative_ai_llm_response_grading' && (
-            <div className="space-y-3">
-              <div>
-                <label className="block mb-1 font-medium">Document</label>
-                <textarea
-                  className="w-full border rounded p-2 h-28"
-                  value={llm_document}
-                  onChange={(e) => setLLMDocument(e.target.value)}
-                  placeholder="Paste text; enable split to make paragraphs"
-                />
-                <label className="inline-flex items-center gap-2 mt-2 text-sm">
-                  <input
-                    type="checkbox"
-                    checked={llm_split}
-                    onChange={(e) => setLLMSplit(e.target.checked)}
-                  />
-                  Split by blank lines into paragraphs
-                </label>
-              </div>
-              <div>
-                <label className="block mb-1 font-medium">Summary</label>
-                <textarea
-                  className="w-full border rounded p-2 h-20"
-                  value={llm_summary}
-                  onChange={(e) => setLLMSummary(e.target.value)}
-                />
-              </div>
-              <div className="grid sm:grid-cols-2 gap-3">
+            {/* Category-specific forms */}
+            {category === 'generative_ai_llm_response_grading' && (
+              <div className="space-y-3">
                 <div>
-                  <label className="block mb-1">Prompt (optional)</label>
-                  <input
-                    className="w-full border rounded px-2 py-1"
-                    value={llm_prompt}
-                    onChange={(e) => setLLMPrompt(e.target.value)}
+                  <label className="block mb-1 font-medium">Document</label>
+                  <textarea
+                    className="w-full border rounded p-2 h-28"
+                    value={llm_document}
+                    onChange={(e) => setLLMDocument(e.target.value)}
+                    placeholder="Paste text; enable split to make paragraphs"
                   />
-                </div>
-                <div>
-                  <label className="block mb-1">Model Name (optional)</label>
-                  <input
-                    className="w-full border rounded px-2 py-1"
-                    value={llm_model}
-                    onChange={(e) => setLLMModel(e.target.value)}
-                  />
-                </div>
-              </div>
-            </div>
-          )}
-
-          {category === 'generative_ai_chatbot_assessment' && (
-            <div className="space-y-3">
-              <div className="space-y-2">
-                <div className="font-medium">Messages</div>
-                {chat_messages.map((m, i) => (
-                  <div key={i} className="flex items-start gap-2">
-                    <select
-                      className="border rounded px-2 py-1"
-                      value={m.role}
-                      onChange={(e) => {
-                        const v = e.target.value as Role;
-                        setChatMessages((prev) =>
-                          prev.map((mm, idx) => (idx === i ? { ...mm, role: v } : mm))
-                        );
-                      }}
-                    >
-                      <option value="user">user</option>
-                      <option value="assistant">assistant</option>
-                    </select>
-                    <textarea
-                      className="flex-1 border rounded p-2 h-20"
-                      value={m.content}
-                      onChange={(e) =>
-                        setChatMessages((prev) =>
-                          prev.map((mm, idx) =>
-                            idx === i ? { ...mm, content: e.target.value } : mm
-                          )
-                        )
-                      }
-                    />
-                    <button
-                      type="button"
-                      className="px-2 py-1 text-sm border rounded"
-                      onClick={() => setChatMessages((prev) => prev.filter((_, idx) => idx !== i))}
-                    >
-                      Remove
-                    </button>
-                  </div>
-                ))}
-                <button
-                  type="button"
-                  className="px-3 py-1 text-sm border rounded"
-                  onClick={() =>
-                    setChatMessages((prev) => [...prev, { role: 'user', content: '' }])
-                  }
-                >
-                  + Add Message
-                </button>
-              </div>
-              <div className="grid sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block mb-1">Model Name (optional)</label>
-                  <input
-                    className="w-full border rounded px-2 py-1"
-                    value={chat_model}
-                    onChange={(e) => setChatModel(e.target.value)}
-                  />
-                </div>
-                <div>
-                  <label className="block mb-1">Assessment Title</label>
-                  <input
-                    className="w-full border rounded px-2 py-1"
-                    value={chat_title}
-                    onChange={(e) => setChatTitle(e.target.value)}
-                  />
-                </div>
-              </div>
-            </div>
-          )}
-
-          {category === 'conversational_ai_response_selection' && (
-            <div className="space-y-3">
-              <div className="space-y-2">
-                <div className="font-medium">Dialogue</div>
-                {rs_dialogue.map((m, i) => (
-                  <div key={i} className="flex items-start gap-2">
-                    <select
-                      className="border rounded px-2 py-1"
-                      value={m.role}
-                      onChange={(e) => {
-                        const v = e.target.value as Role;
-                        setRsDialogue((prev) =>
-                          prev.map((mm, idx) => (idx === i ? { ...mm, role: v } : mm))
-                        );
-                      }}
-                    >
-                      <option value="user">user</option>
-                      <option value="assistant">assistant</option>
-                    </select>
-                    <textarea
-                      className="flex-1 border rounded p-2 h-20"
-                      value={m.content}
-                      onChange={(e) =>
-                        setRsDialogue((prev) =>
-                          prev.map((mm, idx) =>
-                            idx === i ? { ...mm, content: e.target.value } : mm
-                          )
-                        )
-                      }
-                    />
-                    <button
-                      type="button"
-                      className="px-2 py-1 text-sm border rounded"
-                      onClick={() => setRsDialogue((prev) => prev.filter((_, idx) => idx !== i))}
-                    >
-                      Remove
-                    </button>
-                  </div>
-                ))}
-                <button
-                  type="button"
-                  className="px-3 py-1 text-sm border rounded"
-                  onClick={() => setRsDialogue((prev) => [...prev, { role: 'user', content: '' }])}
-                >
-                  + Add Message
-                </button>
-              </div>
-              <div className="space-y-2">
-                <div className="font-medium">Response Options</div>
-                {rs_options.map((o, i) => (
-                  <div key={i} className="flex items-center gap-2">
+                  <label className="inline-flex items-center gap-2 mt-2 text-sm">
                     <input
-                      className="flex-1 border rounded px-2 py-1"
-                      value={o}
-                      onChange={(e) =>
-                        setRsOptions((prev) =>
-                          prev.map((oo, idx) => (idx === i ? e.target.value : oo))
-                        )
-                      }
-                      placeholder={`Option ${i + 1}`}
+                      type="checkbox"
+                      checked={llm_split}
+                      onChange={(e) => setLLMSplit(e.target.checked)}
                     />
-                    <button
-                      type="button"
-                      className="px-2 py-1 text-sm border rounded"
-                      onClick={() => setRsOptions((prev) => prev.filter((_, idx) => idx !== i))}
-                    >
-                      Remove
-                    </button>
+                    Split by blank lines into paragraphs
+                  </label>
+                </div>
+                <div>
+                  <label className="block mb-1 font-medium">Summary</label>
+                  <textarea
+                    className="w-full border rounded p-2 h-20"
+                    value={llm_summary}
+                    onChange={(e) => setLLMSummary(e.target.value)}
+                  />
+                </div>
+                <div className="grid sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block mb-1">Prompt (optional)</label>
+                    <input
+                      className="w-full border rounded px-2 py-1"
+                      value={llm_prompt}
+                      onChange={(e) => setLLMPrompt(e.target.value)}
+                    />
                   </div>
-                ))}
-                <button
-                  type="button"
-                  className="px-3 py-1 text-sm border rounded"
-                  onClick={() => setRsOptions((prev) => [...prev, ''])}
-                >
-                  + Add Option
-                </button>
+                  <div>
+                    <label className="block mb-1">Model Name (optional)</label>
+                    <input
+                      className="w-full border rounded px-2 py-1"
+                      value={llm_model}
+                      onChange={(e) => setLLMModel(e.target.value)}
+                    />
+                  </div>
+                </div>
               </div>
-              <div>
-                <label className="block mb-1">Context (optional)</label>
-                <textarea
-                  className="w-full border rounded p-2 h-20"
-                  value={rs_context}
-                  onChange={(e) => setRsContext(e.target.value)}
-                />
-              </div>
-            </div>
-          )}
+            )}
 
-          {category === 'text_classification' && (
-            <div className="space-y-3">
-              <div>
-                <label className="block mb-1 font-medium">Text</label>
-                <textarea
-                  className="w-full border rounded p-2 h-28"
-                  value={tc_text}
-                  onChange={(e) => setTcText(e.target.value)}
-                />
+            {category === 'generative_ai_chatbot_assessment' && (
+              <div className="space-y-3">
+                <div className="space-y-2">
+                  <div className="font-medium">Messages</div>
+                  {chat_messages.map((m, i) => (
+                    <div key={i} className="flex items-start gap-2">
+                      <select
+                        className="border rounded px-2 py-1"
+                        value={m.role}
+                        onChange={(e) => {
+                          const v = e.target.value as Role;
+                          setChatMessages((prev) =>
+                            prev.map((mm, idx) => (idx === i ? { ...mm, role: v } : mm))
+                          );
+                        }}
+                      >
+                        <option value="user">user</option>
+                        <option value="assistant">assistant</option>
+                      </select>
+                      <textarea
+                        className="flex-1 border rounded p-2 h-20"
+                        value={m.content}
+                        onChange={(e) =>
+                          setChatMessages((prev) =>
+                            prev.map((mm, idx) =>
+                              idx === i ? { ...mm, content: e.target.value } : mm
+                            )
+                          )
+                        }
+                      />
+                      <button
+                        type="button"
+                        className="px-2 py-1 text-sm border rounded"
+                        onClick={() =>
+                          setChatMessages((prev) => prev.filter((_, idx) => idx !== i))
+                        }
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  ))}
+                  <button
+                    type="button"
+                    className="px-3 py-1 text-sm border rounded"
+                    onClick={() =>
+                      setChatMessages((prev) => [...prev, { role: 'user', content: '' }])
+                    }
+                  >
+                    + Add Message
+                  </button>
+                </div>
+                <div className="grid sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block mb-1">Model Name (optional)</label>
+                    <input
+                      className="w-full border rounded px-2 py-1"
+                      value={chat_model}
+                      onChange={(e) => setChatModel(e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <label className="block mb-1">Assessment Title</label>
+                    <input
+                      className="w-full border rounded px-2 py-1"
+                      value={chat_title}
+                      onChange={(e) => setChatTitle(e.target.value)}
+                    />
+                  </div>
+                </div>
               </div>
-              <div>
-                <label className="block mb-1">Labels (comma separated)</label>
-                <input
-                  className="w-full border rounded px-2 py-1"
-                  value={tc_labels}
-                  onChange={(e) => setTcLabels(e.target.value)}
-                />
-              </div>
-            </div>
-          )}
+            )}
 
-          {category === 'image_classification' && (
-            <div className="space-y-3">
-              <div>
-                <label className="block mb-1">Image URL</label>
-                <input
-                  className="w-full border rounded px-2 py-1"
-                  value={ic_image}
-                  onChange={(e) => setIcImage(e.target.value)}
-                />
+            {category === 'conversational_ai_response_selection' && (
+              <div className="space-y-3">
+                <div className="space-y-2">
+                  <div className="font-medium">Dialogue</div>
+                  {rs_dialogue.map((m, i) => (
+                    <div key={i} className="flex items-start gap-2">
+                      <select
+                        className="border rounded px-2 py-1"
+                        value={m.role}
+                        onChange={(e) => {
+                          const v = e.target.value as Role;
+                          setRsDialogue((prev) =>
+                            prev.map((mm, idx) => (idx === i ? { ...mm, role: v } : mm))
+                          );
+                        }}
+                      >
+                        <option value="user">user</option>
+                        <option value="assistant">assistant</option>
+                      </select>
+                      <textarea
+                        className="flex-1 border rounded p-2 h-20"
+                        value={m.content}
+                        onChange={(e) =>
+                          setRsDialogue((prev) =>
+                            prev.map((mm, idx) =>
+                              idx === i ? { ...mm, content: e.target.value } : mm
+                            )
+                          )
+                        }
+                      />
+                      <button
+                        type="button"
+                        className="px-2 py-1 text-sm border rounded"
+                        onClick={() => setRsDialogue((prev) => prev.filter((_, idx) => idx !== i))}
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  ))}
+                  <button
+                    type="button"
+                    className="px-3 py-1 text-sm border rounded"
+                    onClick={() =>
+                      setRsDialogue((prev) => [...prev, { role: 'user', content: '' }])
+                    }
+                  >
+                    + Add Message
+                  </button>
+                </div>
+                <div className="space-y-2">
+                  <div className="font-medium">Response Options</div>
+                  {rs_options.map((o, i) => (
+                    <div key={i} className="flex items-center gap-2">
+                      <input
+                        className="flex-1 border rounded px-2 py-1"
+                        value={o}
+                        onChange={(e) =>
+                          setRsOptions((prev) =>
+                            prev.map((oo, idx) => (idx === i ? e.target.value : oo))
+                          )
+                        }
+                        placeholder={`Option ${i + 1}`}
+                      />
+                      <button
+                        type="button"
+                        className="px-2 py-1 text-sm border rounded"
+                        onClick={() => setRsOptions((prev) => prev.filter((_, idx) => idx !== i))}
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  ))}
+                  <button
+                    type="button"
+                    className="px-3 py-1 text-sm border rounded"
+                    onClick={() => setRsOptions((prev) => [...prev, ''])}
+                  >
+                    + Add Option
+                  </button>
+                </div>
+                <div>
+                  <label className="block mb-1">Context (optional)</label>
+                  <textarea
+                    className="w-full border rounded p-2 h-20"
+                    value={rs_context}
+                    onChange={(e) => setRsContext(e.target.value)}
+                  />
+                </div>
               </div>
-              <div>
-                <label className="block mb-1">Labels (comma separated)</label>
-                <input
-                  className="w-full border rounded px-2 py-1"
-                  value={ic_labels}
-                  onChange={(e) => setIcLabels(e.target.value)}
-                />
-              </div>
-            </div>
-          )}
+            )}
 
-          {category === 'object_detection' && (
-            <div className="space-y-3">
-              <div>
-                <label className="block mb-1">Image URL</label>
-                <input
-                  className="w-full border rounded px-2 py-1"
-                  value={od_image}
-                  onChange={(e) => setOdImage(e.target.value)}
-                />
+            {category === 'text_classification' && (
+              <div className="space-y-3">
+                <div>
+                  <label className="block mb-1 font-medium">Text</label>
+                  <textarea
+                    className="w-full border rounded p-2 h-28"
+                    value={tc_text}
+                    onChange={(e) => setTcText(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label className="block mb-1">Labels (comma separated)</label>
+                  <input
+                    className="w-full border rounded px-2 py-1"
+                    value={tc_labels}
+                    onChange={(e) => setTcLabels(e.target.value)}
+                  />
+                </div>
               </div>
-              <div>
-                <label className="block mb-1">Classes (comma separated)</label>
-                <input
-                  className="w-full border rounded px-2 py-1"
-                  value={od_classes}
-                  onChange={(e) => setOdClasses(e.target.value)}
-                />
-              </div>
-            </div>
-          )}
+            )}
 
-          {category === 'named_entity_recognition' && (
-            <div className="space-y-3">
-              <div>
-                <label className="block mb-1 font-medium">Text</label>
-                <textarea
-                  className="w-full border rounded p-2 h-28"
-                  value={ner_text}
-                  onChange={(e) => setNerText(e.target.value)}
-                />
+            {category === 'image_classification' && (
+              <div className="space-y-3">
+                <div>
+                  <label className="block mb-1">Image URL</label>
+                  <input
+                    className="w-full border rounded px-2 py-1"
+                    value={ic_image}
+                    onChange={(e) => setIcImage(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label className="block mb-1">Labels (comma separated)</label>
+                  <input
+                    className="w-full border rounded px-2 py-1"
+                    value={ic_labels}
+                    onChange={(e) => setIcLabels(e.target.value)}
+                  />
+                </div>
               </div>
-              <div>
-                <label className="block mb-1">Entity Types (comma separated)</label>
-                <input
-                  className="w-full border rounded px-2 py-1"
-                  value={ner_entity_types}
-                  onChange={(e) => setNerEntityTypes(e.target.value)}
-                />
+            )}
+
+            {category === 'object_detection' && (
+              <div className="space-y-3">
+                <div>
+                  <label className="block mb-1">Image URL</label>
+                  <input
+                    className="w-full border rounded px-2 py-1"
+                    value={od_image}
+                    onChange={(e) => setOdImage(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label className="block mb-1">Classes (comma separated)</label>
+                  <input
+                    className="w-full border rounded px-2 py-1"
+                    value={od_classes}
+                    onChange={(e) => setOdClasses(e.target.value)}
+                  />
+                </div>
               </div>
-            </div>
-          )}
+            )}
 
-          {(!category ||
-            [
-              'generative_ai_llm_response_grading',
-              'generative_ai_chatbot_assessment',
-              'conversational_ai_response_selection',
-              'text_classification',
-              'image_classification',
-              'object_detection',
-              'named_entity_recognition',
-            ].indexOf(category) === -1) && (
-            <div className="text-sm text-gray-600">
-              No guided form for this category. A minimal empty task will be created.
-            </div>
-          )}
+            {category === 'named_entity_recognition' && (
+              <div className="space-y-3">
+                <div>
+                  <label className="block mb-1 font-medium">Text</label>
+                  <textarea
+                    className="w-full border rounded p-2 h-28"
+                    value={ner_text}
+                    onChange={(e) => setNerText(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label className="block mb-1">Entity Types (comma separated)</label>
+                  <input
+                    className="w-full border rounded px-2 py-1"
+                    value={ner_entity_types}
+                    onChange={(e) => setNerEntityTypes(e.target.value)}
+                  />
+                </div>
+              </div>
+            )}
 
-          <div>
-            <button onClick={createTask} className="bg-blue-600 text-white rounded px-4 py-2">
-              Add Task
-            </button>
+            {(!category ||
+              [
+                'generative_ai_llm_response_grading',
+                'generative_ai_chatbot_assessment',
+                'conversational_ai_response_selection',
+                'text_classification',
+                'image_classification',
+                'object_detection',
+                'named_entity_recognition',
+              ].indexOf(category) === -1) && (
+              <div className="text-sm text-gray-600">
+                No guided form for this category. A minimal empty task will be created.
+              </div>
+            )}
+
+            <div>
+              <button onClick={createTask} className="btn btn-primary">
+                Add Task
+              </button>
+            </div>
           </div>
         </div>
       )}
 
-      {error && <div className="text-red-600 text-sm">{error}</div>}
+      {error && (
+        <div className="rounded-md bg-red-50 border border-red-200 p-3 text-sm text-red-700">
+          {error}
+        </div>
+      )}
 
-      <div className="grid gap-3">
+      <div className="space-y-4">
         {user?.role === 'annotator' ? (
           <>
-            <h2 className="text-lg font-semibold">Your assigned tasks</h2>
-            {tasks.map((t) => (
-              <TaskCard key={t.id} t={t} isManager={false} />
-            ))}
+            <h2>Your assigned tasks</h2>
+            {tasks.length === 0 ? (
+              <div className="card">
+                <div className="card-body text-center py-12">
+                  <p className="muted">No tasks assigned yet</p>
+                </div>
+              </div>
+            ) : (
+              tasks.map((t) => <TaskCard key={t.id} t={t} isManager={false} />)
+            )}
           </>
         ) : (
           <>
-            <h2 className="text-lg font-semibold">In progress</h2>
-            {tasks
-              .filter((t) => !t.completed_status?.annotator_part)
-              .map((t) => (
-                <TaskCard key={t.id} t={t} isManager={true} />
-              ))}
-            <h2 className="text-lg font-semibold mt-6">Completed by annotator</h2>
-            {tasks
-              .filter((t) => t.completed_status?.annotator_part)
-              .map((t) => (
-                <TaskCard key={t.id} t={t} isManager={true} />
-              ))}
+            <div>
+              <h2>In progress</h2>
+              {tasks.filter((t) => !t.completed_status?.annotator_part).length === 0 ? (
+                <div className="card mt-3">
+                  <div className="card-body text-center py-8 muted">No tasks in progress</div>
+                </div>
+              ) : (
+                <div className="grid gap-3 mt-3">
+                  {tasks
+                    .filter((t) => !t.completed_status?.annotator_part)
+                    .map((t) => (
+                      <TaskCard key={t.id} t={t} isManager={true} />
+                    ))}
+                </div>
+              )}
+            </div>
+            <div>
+              <h2>Completed by annotator</h2>
+              {tasks.filter((t) => t.completed_status?.annotator_part).length === 0 ? (
+                <div className="card mt-3">
+                  <div className="card-body text-center py-8 muted">No completed tasks yet</div>
+                </div>
+              ) : (
+                <div className="grid gap-3 mt-3">
+                  {tasks
+                    .filter((t) => t.completed_status?.annotator_part)
+                    .map((t) => (
+                      <TaskCard key={t.id} t={t} isManager={true} />
+                    ))}
+                </div>
+              )}
+            </div>
           </>
         )}
       </div>
@@ -542,34 +576,41 @@ export default function ProjectDetailPage() {
 
 function TaskCard({ t, isManager }: { t: Task; isManager: boolean }) {
   return (
-    <div className="bg-white p-4 rounded shadow">
-      <div className="flex items-center justify-between">
-        <div>
-          <div className="font-semibold">Task {t.id.slice(0, 8)}</div>
-          <div className="text-sm text-gray-600">Category: {t.category}</div>
-          {t.completed_status?.annotator_part && (
-            <div className="text-xs text-green-700">Annotator completed</div>
-          )}
+    <div className="card hover:shadow-lg transition-shadow">
+      <div className="card-body">
+        <div className="flex items-center justify-between mb-3">
+          <div>
+            <div className="font-semibold text-base">Task {t.id.slice(0, 8)}</div>
+            <span className="badge mt-1">{t.category}</span>
+            {t.completed_status?.annotator_part && (
+              <span className="badge badge-green ml-2">Completed</span>
+            )}
+          </div>
+          <div className="flex items-center gap-3">
+            {isManager && (
+              <>
+                <LinkFix className="btn btn-outline btn-sm" to={`/tasks/${t.id}/assign`}>
+                  Assign
+                </LinkFix>
+                <LinkFix className="btn btn-outline btn-sm" to={`/tasks/${t.id}/qa`}>
+                  QA
+                </LinkFix>
+              </>
+            )}
+            <LinkFix className="btn btn-primary btn-sm" to={`/tasks/${t.id}/annotate`}>
+              Annotate
+            </LinkFix>
+          </div>
         </div>
-        <div className="flex items-center gap-3">
-          {isManager && (
-            <>
-              <LinkFix className="text-blue-600 hover:underline" to={`/tasks/${t.id}/assign`}>
-                Assign
-              </LinkFix>
-              <LinkFix className="text-blue-600 hover:underline" to={`/tasks/${t.id}/qa`}>
-                QA
-              </LinkFix>
-            </>
-          )}
-          <LinkFix className="text-blue-600 hover:underline" to={`/tasks/${t.id}/annotate`}>
-            Annotate
-          </LinkFix>
-        </div>
+        <details className="mt-2">
+          <summary className="cursor-pointer text-sm text-gray-700 hover:text-gray-900">
+            View task data
+          </summary>
+          <pre className="bg-gray-50 border border-gray-200 rounded-lg p-3 mt-2 text-xs font-mono overflow-auto scrollbar-thin max-h-64">
+            {JSON.stringify(t.task_data, null, 2)}
+          </pre>
+        </details>
       </div>
-      <pre className="bg-gray-50 p-2 rounded mt-2 text-sm overflow-auto">
-        {JSON.stringify(t.task_data, null, 2)}
-      </pre>
     </div>
   );
 }

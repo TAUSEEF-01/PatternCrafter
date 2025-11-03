@@ -31,31 +31,58 @@ export default function TaskAnnotatePage() {
   };
 
   return (
-    <div className="space-y-4">
-      <h1 className="text-2xl font-semibold">Annotate Task</h1>
-      {error && <div className="text-red-600 text-sm">{error}</div>}
-      {success && <div className="text-green-600 text-sm">{success}</div>}
+    <div className="space-y-6">
+      <div>
+        <h1>Annotate Task</h1>
+        <p className="muted mt-1">Review the task data and provide your annotation</p>
+      </div>
+      {error && (
+        <div className="rounded-md bg-red-50 border border-red-200 p-3 text-sm text-red-700">
+          {error}
+        </div>
+      )}
+      {success && (
+        <div className="rounded-md bg-green-50 border border-green-200 p-3 text-sm text-green-700">
+          {success}
+        </div>
+      )}
       {task && (
-        <div className="bg-white p-4 rounded shadow space-y-2">
-          <div className="text-sm text-gray-500">Task: {task.id}</div>
-          <div className="text-sm text-gray-500">Category: {task.category}</div>
-          <div>
-            <div className="font-medium mb-1">Task Data</div>
-            <JsonView data={task.task_data} />
+        <div className="card">
+          <div className="card-body space-y-4">
+            <div>
+              <h2 className="card-title mb-2">Task Information</h2>
+              <div className="flex items-center gap-2 text-sm">
+                <span className="font-mono text-gray-600">{task.id.slice(0, 8)}</span>
+                <span className="badge badge-primary">{task.category}</span>
+              </div>
+            </div>
+            <div>
+              <h3 className="font-medium mb-2">Task Data</h3>
+              <JsonView data={task.task_data} />
+            </div>
           </div>
         </div>
       )}
 
-      <form onSubmit={submit} className="bg-white p-4 rounded shadow space-y-3">
-        <label className="block mb-1">Annotation (JSON)</label>
-        <textarea
-          className="w-full border rounded p-2 h-40 font-mono"
-          value={annotation}
-          onChange={(e) => setAnnotation(e.target.value)}
-          placeholder='{"label":"..."}'
-        />
-        <button className="bg-blue-600 text-white rounded px-4 py-2">Submit</button>
-      </form>
+      <div className="card">
+        <div className="card-body">
+          <h2 className="card-title mb-4">Submit Annotation</h2>
+          <form onSubmit={submit} className="space-y-4">
+            <div>
+              <label className="label">Annotation (JSON format)</label>
+              <textarea
+                className="textarea font-mono text-sm h-48"
+                value={annotation}
+                onChange={(e) => setAnnotation(e.target.value)}
+                placeholder='{"label": "example", "confidence": 0.95}'
+              />
+            </div>
+            <button type="submit" className="btn btn-primary">
+              Submit Annotation
+            </button>
+          </form>
+        </div>
+      </div>
     </div>
   );
 }

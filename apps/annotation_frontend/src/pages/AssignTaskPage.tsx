@@ -46,44 +46,82 @@ export default function AssignTaskPage() {
   };
 
   return (
-    <div className="space-y-4">
-      <h1 className="text-2xl font-semibold">Assign Task</h1>
-      {error && <div className="text-red-600 text-sm">{error}</div>}
-      {success && <div className="text-green-600 text-sm">{success}</div>}
-
-      {task && (
-        <div className="bg-white p-4 rounded shadow space-y-2">
-          <div className="text-sm text-gray-500">Task: {task.id}</div>
-          <div className="text-sm text-gray-500">Category: {task.category}</div>
-          <div className="text-sm">Annotator: {task.assigned_annotator_id || '—'}</div>
-          <div className="text-sm">QA: {task.assigned_qa_id || '—'}</div>
+    <div className="space-y-6">
+      <div>
+        <h1>Assign Task</h1>
+        <p className="muted mt-1">Assign annotators and QA reviewers to this task</p>
+      </div>
+      {error && (
+        <div className="rounded-md bg-red-50 border border-red-200 p-3 text-sm text-red-700">
+          {error}
+        </div>
+      )}
+      {success && (
+        <div className="rounded-md bg-green-50 border border-green-200 p-3 text-sm text-green-700">
+          {success}
         </div>
       )}
 
-      <form onSubmit={submit} className="bg-white p-4 rounded shadow space-y-3">
-        <div>
-          <label className="block text-sm mb-1">Annotator</label>
-          <select
-            className="w-full border rounded px-3 py-2"
-            value={annotatorId}
-            onChange={(e) => setAnnotatorId(e.target.value)}
-          >
-            <option value="">— Select Annotator —</option>
-            {annotators.map((a) => (
-              <option key={a.id} value={a.id}>
-                {a.name} ({a.email})
-              </option>
-            ))}
-          </select>
+      {task && (
+        <div className="card">
+          <div className="card-body">
+            <h2 className="card-title mb-3">Current Assignments</h2>
+            <div className="space-y-2 text-sm">
+              <div className="flex items-center gap-2">
+                <span className="text-gray-600">Task ID:</span>
+                <span className="font-mono">{task.id.slice(0, 8)}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-gray-600">Category:</span>
+                <span className="badge badge-primary">{task.category}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-gray-600">Annotator:</span>
+                <span className="font-medium">{task.assigned_annotator_id || '—'}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-gray-600">QA:</span>
+                <span className="font-medium">{task.assigned_qa_id || '—'}</span>
+              </div>
+            </div>
+          </div>
         </div>
-        <input
-          className="w-full border rounded px-3 py-2"
-          placeholder="QA User ID"
-          value={qaId}
-          onChange={(e) => setQaId(e.target.value)}
-        />
-        <button className="bg-blue-600 text-white rounded px-4 py-2">Save</button>
-      </form>
+      )}
+
+      <div className="card">
+        <div className="card-body">
+          <h2 className="card-title mb-4">Update Assignment</h2>
+          <form onSubmit={submit} className="space-y-4">
+            <div>
+              <label className="label">Annotator</label>
+              <select
+                className="select"
+                value={annotatorId}
+                onChange={(e) => setAnnotatorId(e.target.value)}
+              >
+                <option value="">— Select Annotator —</option>
+                {annotators.map((a) => (
+                  <option key={a.id} value={a.id}>
+                    {a.name} ({a.email})
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="label">QA User ID</label>
+              <input
+                className="input"
+                placeholder="Enter QA user ID"
+                value={qaId}
+                onChange={(e) => setQaId(e.target.value)}
+              />
+            </div>
+            <button type="submit" className="btn btn-primary">
+              Save Assignment
+            </button>
+          </form>
+        </div>
+      </div>
     </div>
   );
 }
