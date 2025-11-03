@@ -12,10 +12,55 @@ type Me = {
   paid?: boolean;
 };
 
+// Predefined skill options
+const PROGRAMMING_LANGUAGES = [
+  'Python',
+  'Java',
+  'C++',
+  'C',
+  'JavaScript',
+  'TypeScript',
+  'Go',
+  'Rust',
+  'Ruby',
+  'PHP',
+  'Swift',
+  'Kotlin',
+  'C#',
+  'Scala',
+  'R',
+  'MATLAB',
+  'SQL',
+];
+
+const ANNOTATION_SKILLS = [
+  'Text Classification',
+  'Named Entity Recognition (NER)',
+  'Sentiment Analysis',
+  'Image Classification',
+  'Object Detection',
+  'Image Segmentation',
+  'Bounding Box Annotation',
+  'Semantic Segmentation',
+  'Keypoint Annotation',
+  'Video Annotation',
+  'Audio Transcription',
+  'Audio Classification',
+  'Text Summarization',
+  'Question Answering (QA)',
+  'Translation',
+  'Data Labeling',
+  'Quality Assurance',
+  'Bengali Language',
+  'English Language',
+  'Multi-lingual Annotation',
+];
+
 export default function ProfilePage() {
   const { user } = useAuth();
   const [me, setMe] = useState<Me | null>(null);
-  const [skillsText, setSkillsText] = useState('');
+  const [selectedProgrammingLangs, setSelectedProgrammingLangs] = useState<string[]>([]);
+  const [selectedAnnotationSkills, setSelectedAnnotationSkills] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const [invites, setInvites] = useState<
@@ -35,7 +80,10 @@ export default function ProfilePage() {
       try {
         const m = await apiFetch<Me>('/auth/me');
         setMe(m);
-        setSkillsText((m.skills || []).join(', '));
+        // Parse existing skills into programming languages and annotation skills
+        const skills = m.skills || [];
+        setSelectedProgrammingLangs(skills.filter((s) => PROGRAMMING_LANGUAGES.includes(s)));
+        setSelectedAnnotationSkills(skills.filter((s) => ANNOTATION_SKILLS.includes(s)));
       } catch (e: any) {
         setMsg(e?.message || 'Failed to load profile');
       }
@@ -55,21 +103,31 @@ export default function ProfilePage() {
     if (user) loadInvites();
   }, [user]);
 
+  const toggleProgrammingLang = (lang: string) => {
+    setSelectedProgrammingLangs((prev) =>
+      prev.includes(lang) ? prev.filter((l) => l !== lang) : [...prev, lang]
+    );
+  };
+
+  const toggleAnnotationSkill = (skill: string) => {
+    setSelectedAnnotationSkills((prev) =>
+      prev.includes(skill) ? prev.filter((s) => s !== skill) : [...prev, skill]
+    );
+  };
+
   const saveSkills = async () => {
     if (!me) return;
     setSaving(true);
     setMsg(null);
     try {
-      const skills = skillsText
-        .split(',')
-        .map((s) => s.trim())
-        .filter(Boolean);
+      // Combine both skill categories
+      const skills = [...selectedProgrammingLangs, ...selectedAnnotationSkills];
       const updated = await apiFetch<Me>('/users/me/skills', {
         method: 'PUT',
         body: { skills },
       });
       setMe(updated);
-      setMsg('Skills updated');
+      setMsg('Skills updated successfully!');
     } catch (e: any) {
       setMsg(e?.message || 'Failed to update skills');
     } finally {
@@ -125,22 +183,93 @@ export default function ProfilePage() {
 
       {me?.role === 'annotator' && (
         <div className="card">
-          <div className="card-body space-y-4">
+          <div className="card-body space-y-6">
             <h2 className="card-title">Skills & Expertise</h2>
+
+            {/* Programming Languages */}
             <div>
-              <label className="label">Skills (comma separated)</label>
-              <input
-                className="input"
-                value={skillsText}
-                onChange={(e) => setSkillsText(e.target.value)}
-                placeholder="e.g., NLP, Text Classification, Bengali, QA"
-              />
+              <label className="label">Programming Languages</label>
+              <p className="text-sm text-gray-600 mb-3">
+                Select all programming languages you're proficient in
+              </p>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+                {PROGRAMMING_LANGUAGES.map((lang) => (
+                  <button
+                    key={lang}
+                    type="button"
+                    onClick={() => toggleProgrammingLang(lang)}
+                    className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      selectedProgrammingLangs.includes(lang)
+                        ? 'bg-indigo-600 text-white hover:bg-indigo-700'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    {lang}
+                  </button>
+                ))}
+              </div>
             </div>
+
+            {/* Annotation Skills */}
+            <div>
+              <label className="label">Annotation Skills</label>
+              <p className="text-sm text-gray-600 mb-3">
+                Select all annotation tasks you can perform
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
+                {ANNOTATION_SKILLS.map((skill) => (
+                  <button
+                    key={skill}
+                    type="button"
+                    onClick={() => toggleAnnotationSkill(skill)}
+                    className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors text-left ${
+                      selectedAnnotationSkills.includes(skill)
+                        ? 'bg-green-600 text-white hover:bg-green-700'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    {skill}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Selected Skills Summary */}
+            <div className="bg-gray-50 rounded-lg p-4">
+              <h3 className="text-sm font-semibold text-gray-700 mb-2">
+                Selected Skills ({selectedProgrammingLangs.length + selectedAnnotationSkills.length}
+                )
+              </h3>
+              <div className="flex flex-wrap gap-2">
+                {selectedProgrammingLangs.map((lang) => (
+                  <span key={lang} className="badge badge-primary">
+                    {lang}
+                  </span>
+                ))}
+                {selectedAnnotationSkills.map((skill) => (
+                  <span key={skill} className="badge badge-green">
+                    {skill}
+                  </span>
+                ))}
+                {selectedProgrammingLangs.length === 0 && selectedAnnotationSkills.length === 0 && (
+                  <span className="text-sm text-gray-500">No skills selected yet</span>
+                )}
+              </div>
+            </div>
+
             <div className="flex items-center gap-3">
               <button disabled={saving} onClick={saveSkills} className="btn btn-primary">
                 {saving ? 'Saving...' : 'Save Skills'}
               </button>
-              {msg && <span className="text-sm text-gray-600">{msg}</span>}
+              {msg && (
+                <span
+                  className={`text-sm ${
+                    msg.includes('success') ? 'text-green-600' : 'text-gray-600'
+                  }`}
+                >
+                  {msg}
+                </span>
+              )}
             </div>
           </div>
         </div>

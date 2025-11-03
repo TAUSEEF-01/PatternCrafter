@@ -4,6 +4,58 @@ import { apiFetch } from '@/api/client';
 import { Project, Task } from '@/types';
 import { useAuth } from '@/auth/AuthContext';
 
+// Helper component to render structured data
+function DataViewer({ data, title }: { data: any; title?: string }) {
+  if (!data || typeof data !== 'object') {
+    return <div className="text-gray-500 text-sm">No data available</div>;
+  }
+
+  const renderValue = (value: any): React.ReactNode => {
+    if (value === null || value === undefined) return <span className="text-gray-400">—</span>;
+    if (typeof value === 'boolean') return value ? 'Yes' : 'No';
+    if (Array.isArray(value)) {
+      if (value.length === 0) return <span className="text-gray-400">Empty</span>;
+      return (
+        <div className="space-y-1">
+          {value.map((item, idx) => (
+            <div key={idx} className="text-sm text-gray-700 whitespace-pre-wrap break-words">
+              • {typeof item === 'object' ? JSON.stringify(item) : String(item)}
+            </div>
+          ))}
+        </div>
+      );
+    }
+    if (typeof value === 'object') {
+      return (
+        <div className="pl-3 space-y-2 border-l-2 border-gray-200">
+          {Object.entries(value).map(([k, v]) => (
+            <div key={k}>
+              <span className="text-xs font-semibold text-gray-600">{k.replace(/_/g, ' ')}:</span>
+              <div className="text-sm text-gray-700 mt-1">{renderValue(v)}</div>
+            </div>
+          ))}
+        </div>
+      );
+    }
+    return (
+      <div className="text-sm text-gray-700 whitespace-pre-wrap break-words">{String(value)}</div>
+    );
+  };
+
+  return (
+    <div className="space-y-3">
+      {Object.entries(data).map(([key, value]) => (
+        <div key={key} className="border-b border-gray-100 pb-3 last:border-b-0 last:pb-0">
+          <div className="text-sm font-semibold text-gray-800 mb-1.5 capitalize">
+            {key.replace(/_/g, ' ')}
+          </div>
+          {renderValue(value)}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export default function CompletedTasksPage() {
   // Temporary workaround for react-router-dom Link typing mismatch in this workspace
   const Link = RouterLink as unknown as any;
@@ -166,18 +218,18 @@ export default function CompletedTasksPage() {
                 <summary className="cursor-pointer text-sm font-medium text-gray-700 hover:text-gray-900">
                   Task Data
                 </summary>
-                <pre className="bg-gray-50 border border-gray-200 rounded-lg p-3 mt-2 text-xs font-mono overflow-auto scrollbar-thin max-h-64">
-                  {JSON.stringify(t.task_data, null, 2)}
-                </pre>
+                <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mt-2 max-h-96 overflow-auto scrollbar-thin">
+                  <DataViewer data={t.task_data} />
+                </div>
               </details>
               {t.annotation && (
                 <details className="mt-3">
                   <summary className="cursor-pointer text-sm font-medium text-gray-700 hover:text-gray-900">
                     Annotation
                   </summary>
-                  <pre className="bg-gray-50 border border-gray-200 rounded-lg p-3 mt-2 text-xs font-mono overflow-auto scrollbar-thin max-h-64">
-                    {JSON.stringify(t.annotation, null, 2)}
-                  </pre>
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-4 mt-2 max-h-96 overflow-auto scrollbar-thin">
+                    <DataViewer data={t.annotation} />
+                  </div>
                 </details>
               )}
               {t.qa_annotation && (
@@ -185,9 +237,86 @@ export default function CompletedTasksPage() {
                   <summary className="cursor-pointer text-sm font-medium text-gray-700 hover:text-gray-900">
                     QA Annotation
                   </summary>
-                  <pre className="bg-gray-50 border border-gray-200 rounded-lg p-3 mt-2 text-xs font-mono overflow-auto scrollbar-thin max-h-64">
-                    {JSON.stringify(t.qa_annotation, null, 2)}
-                  </pre>
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-2 space-y-3">
+                    {t.qa_annotation.decision && (
+                      <div className="flex items-center gap-3">
+                        <span className="text-sm font-medium text-gray-700 w-36">Decision:</span>
+                        <span
+                          className={`badge ${
+                            t.qa_annotation.decision === 'approve'
+                              ? 'badge-green'
+                              : t.qa_annotation.decision === 'reject'
+                              ? 'bg-red-100 text-red-800 border-red-300'
+                              : 'bg-yellow-100 text-yellow-800 border-yellow-300'
+                          }`}
+                        >
+                          {t.qa_annotation.decision === 'approve' && '✓ '}
+                          {t.qa_annotation.decision === 'reject' && '✗ '}
+                          {t.qa_annotation.decision === 'revise' && '↻ '}
+                          {t.qa_annotation.decision.charAt(0).toUpperCase() +
+                            t.qa_annotation.decision.slice(1)}
+                        </span>
+                      </div>
+                    )}
+                    {t.qa_annotation.quality_score !== undefined && (
+                      <div className="flex items-center gap-3">
+                        <span className="text-sm font-medium text-gray-700 w-36">
+                          Quality Score:
+                        </span>
+                        <span className="text-sm font-semibold text-gray-900">
+                          {t.qa_annotation.quality_score} / 10
+                        </span>
+                      </div>
+                    )}
+                    {t.qa_annotation.accuracy_rating !== undefined && (
+                      <div className="flex items-center gap-3">
+                        <span className="text-sm font-medium text-gray-700 w-36">
+                          Accuracy Rating:
+                        </span>
+                        <span className="text-sm font-semibold text-gray-900">
+                          {t.qa_annotation.accuracy_rating} / 10
+                        </span>
+                      </div>
+                    )}
+                    {t.qa_annotation.completeness_rating !== undefined && (
+                      <div className="flex items-center gap-3">
+                        <span className="text-sm font-medium text-gray-700 w-36">
+                          Completeness Rating:
+                        </span>
+                        <span className="text-sm font-semibold text-gray-900">
+                          {t.qa_annotation.completeness_rating} / 10
+                        </span>
+                      </div>
+                    )}
+                    {t.qa_annotation.clarity_rating !== undefined && (
+                      <div className="flex items-center gap-3">
+                        <span className="text-sm font-medium text-gray-700 w-36">
+                          Clarity Rating:
+                        </span>
+                        <span className="text-sm font-semibold text-gray-900">
+                          {t.qa_annotation.clarity_rating} / 10
+                        </span>
+                      </div>
+                    )}
+                    {t.qa_annotation.corrections && (
+                      <div>
+                        <div className="text-sm font-medium text-gray-700 mb-2">Corrections:</div>
+                        <div className="bg-yellow-50 border border-yellow-200 rounded p-3 text-sm text-gray-700 whitespace-pre-wrap">
+                          {typeof t.qa_annotation.corrections === 'string'
+                            ? t.qa_annotation.corrections
+                            : JSON.stringify(t.qa_annotation.corrections, null, 2)}
+                        </div>
+                      </div>
+                    )}
+                    {t.qa_annotation.notes && (
+                      <div>
+                        <div className="text-sm font-medium text-gray-700 mb-2">Notes:</div>
+                        <div className="bg-white border border-gray-300 rounded p-3 text-sm text-gray-700 whitespace-pre-wrap">
+                          {t.qa_annotation.notes}
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </details>
               )}
               {t.qa_feedback && (
