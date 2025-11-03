@@ -540,6 +540,54 @@ async def get_project_tasks(
 
 
 @router.get(
+    "/projects/{project_id}/completed-tasks",
+    response_model=List[TaskResponse],
+    response_model_by_alias=False,
+)
+async def get_completed_tasks(
+    project_id: str,
+    annotator_id: Optional[str] = None,
+    current_user: UserInDB = Depends(get_current_user),
+):
+    """List tasks in a project that have been completed by the annotator (annotator_part=True).
+
+    Accessible by admin or the project's manager. Optional filter by annotator_id.
+    """
+    if not ObjectId.is_valid(project_id):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid project ID"
+        )
+
+    project = await database.projects_collection.find_one({"_id": ObjectId(project_id)})
+    if not project:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Project not found"
+        )
+
+    if current_user.role not in ["admin", "manager"] or (
+        current_user.role == "manager" and project["manager_id"] != current_user.id
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to view completed tasks for this project",
+        )
+
+    query: Dict[str, Any] = {
+        "project_id": ObjectId(project_id),
+        "completed_status.annotator_part": True,
+    }
+    if annotator_id:
+        if not ObjectId.is_valid(annotator_id):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid annotator_id"
+            )
+        query["assigned_annotator_id"] = ObjectId(annotator_id)
+
+    tasks = await database.tasks_collection.find(query).to_list(None)
+    return [as_response(TaskResponse, task) for task in tasks]
+
+
+@router.get(
     "/projects/{project_id}/my-tasks",
     response_model=List[TaskResponse],
     response_model_by_alias=False,
@@ -775,7 +823,9 @@ async def submit_annotation(
         if category == TaskCategory.LLM_RESPONSE_GRADING:
             if "rating" not in annotation_dict:
                 # Map common fields to rating
-                if "score" in annotation_dict and isinstance(annotation_dict["score"], (int, float, str)):
+                if "score" in annotation_dict and isinstance(
+                    annotation_dict["score"], (int, float, str)
+                ):
                     try:
                         annotation_dict["rating"] = int(annotation_dict["score"])
                     except Exception:
@@ -787,7 +837,15 @@ async def submit_annotation(
                         pass
                 if "label" in annotation_dict and "rating" not in annotation_dict:
                     label = str(annotation_dict["label"]).strip().lower()
-                    mapping = {"excellent": 5, "great": 5, "good": 4, "average": 3, "ok": 3, "poor": 2, "bad": 1}
+                    mapping = {
+                        "excellent": 5,
+                        "great": 5,
+                        "good": 4,
+                        "average": 3,
+                        "ok": 3,
+                        "poor": 2,
+                        "bad": 1,
+                    }
                     if label.isdigit():
                         annotation_dict["rating"] = int(label)
                     elif label in mapping:

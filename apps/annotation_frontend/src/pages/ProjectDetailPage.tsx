@@ -499,38 +499,64 @@ export default function ProjectDetailPage() {
       {error && <div className="text-red-600 text-sm">{error}</div>}
 
       <div className="grid gap-3">
-        {user?.role === 'annotator' && (
-          <h2 className="text-lg font-semibold">Your assigned tasks</h2>
+        {user?.role === 'annotator' ? (
+          <>
+            <h2 className="text-lg font-semibold">Your assigned tasks</h2>
+            {tasks.map((t) => (
+              <TaskCard key={t.id} t={t} isManager={false} />
+            ))}
+          </>
+        ) : (
+          <>
+            <h2 className="text-lg font-semibold">In progress</h2>
+            {tasks
+              .filter((t) => !t.completed_status?.annotator_part)
+              .map((t) => (
+                <TaskCard key={t.id} t={t} isManager={true} />
+              ))}
+            <h2 className="text-lg font-semibold mt-6">Completed by annotator</h2>
+            {tasks
+              .filter((t) => t.completed_status?.annotator_part)
+              .map((t) => (
+                <TaskCard key={t.id} t={t} isManager={true} />
+              ))}
+          </>
         )}
-        {tasks.map((t) => (
-          <div key={t.id} className="bg-white p-4 rounded shadow">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="font-semibold">Task {t.id.slice(0, 8)}</div>
-                <div className="text-sm text-gray-600">Category: {t.category}</div>
-              </div>
-              <div className="flex items-center gap-3">
-                {user?.role !== 'annotator' && (
-                  <>
-                    <Link className="text-blue-600 hover:underline" to={`/tasks/${t.id}/assign`}>
-                      Assign
-                    </Link>
-                    <Link className="text-blue-600 hover:underline" to={`/tasks/${t.id}/qa`}>
-                      QA
-                    </Link>
-                  </>
-                )}
-                <Link className="text-blue-600 hover:underline" to={`/tasks/${t.id}/annotate`}>
-                  Annotate
-                </Link>
-              </div>
-            </div>
-            <pre className="bg-gray-50 p-2 rounded mt-2 text-sm overflow-auto">
-              {JSON.stringify(t.task_data, null, 2)}
-            </pre>
-          </div>
-        ))}
       </div>
+    </div>
+  );
+}
+
+function TaskCard({ t, isManager }: { t: Task; isManager: boolean }) {
+  return (
+    <div className="bg-white p-4 rounded shadow">
+      <div className="flex items-center justify-between">
+        <div>
+          <div className="font-semibold">Task {t.id.slice(0, 8)}</div>
+          <div className="text-sm text-gray-600">Category: {t.category}</div>
+          {t.completed_status?.annotator_part && (
+            <div className="text-xs text-green-700">Annotator completed</div>
+          )}
+        </div>
+        <div className="flex items-center gap-3">
+          {isManager && (
+            <>
+              <Link className="text-blue-600 hover:underline" to={`/tasks/${t.id}/assign`}>
+                Assign
+              </Link>
+              <Link className="text-blue-600 hover:underline" to={`/tasks/${t.id}/qa`}>
+                QA
+              </Link>
+            </>
+          )}
+          <Link className="text-blue-600 hover:underline" to={`/tasks/${t.id}/annotate`}>
+            Annotate
+          </Link>
+        </div>
+      </div>
+      <pre className="bg-gray-50 p-2 rounded mt-2 text-sm overflow-auto">
+        {JSON.stringify(t.task_data, null, 2)}
+      </pre>
     </div>
   );
 }
