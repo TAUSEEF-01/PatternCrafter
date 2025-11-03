@@ -75,9 +75,46 @@ function TaskDataViewer({ data }: { data: any }) {
 export default function TaskAnnotatePage() {
   const { taskId } = useParams();
   const [task, setTask] = useState<Task | null>(null);
-  const [annotation, setAnnotation] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+
+  // Common annotation fields
+  const [label, setLabel] = useState('');
+  const [confidence, setConfidence] = useState('0.95');
+  const [notes, setNotes] = useState('');
+
+  // Text Classification / Sentiment Analysis
+  const [category, setCategory] = useState('');
+  const [sentiment, setSentiment] = useState('');
+
+  // Image Classification
+  const [predictedClass, setPredictedClass] = useState('');
+
+  // Object Detection
+  const [objects, setObjects] = useState('');
+
+  // Named Entity Recognition
+  const [entities, setEntities] = useState('');
+
+  // Text Summarization
+  const [summary, setSummary] = useState('');
+
+  // QA Evaluation
+  const [accuracy, setAccuracy] = useState('');
+  const [relevance, setRelevance] = useState('');
+  const [completeness, setCompleteness] = useState('');
+
+  // LLM Response Grading
+  const [grade, setGrade] = useState('');
+  const [reasoning, setReasoning] = useState('');
+
+  // Chatbot Assessment
+  const [coherence, setCoherence] = useState('');
+  const [helpfulness, setHelpfulness] = useState('');
+
+  // Response Selection
+  const [selectedResponse, setSelectedResponse] = useState('');
+  const [selectionReason, setSelectionReason] = useState('');
 
   useEffect(() => {
     if (!taskId) return;
@@ -88,13 +125,74 @@ export default function TaskAnnotatePage() {
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
-    if (!taskId) return;
+    if (!taskId || !task) return;
+
+    let annotationData: any = {
+      confidence: parseFloat(confidence) || 0.95,
+      notes: notes || '',
+    };
+
+    // Build annotation based on task category
+    switch (task.category) {
+      case 'text_classification':
+        annotationData.label = label;
+        annotationData.category = category;
+        break;
+      case 'image_classification':
+        annotationData.predicted_class = predictedClass;
+        break;
+      case 'object_detection':
+        try {
+          annotationData.objects = objects ? JSON.parse(objects) : [];
+        } catch {
+          setError('Objects must be valid JSON array');
+          return;
+        }
+        break;
+      case 'named_entity_recognition':
+        try {
+          annotationData.entities = entities ? JSON.parse(entities) : [];
+        } catch {
+          setError('Entities must be valid JSON array');
+          return;
+        }
+        break;
+      case 'sentiment_analysis':
+        annotationData.sentiment = sentiment;
+        annotationData.label = label;
+        break;
+      case 'text_summarization':
+        annotationData.summary = summary;
+        break;
+      case 'qa_evaluation':
+        annotationData.accuracy = accuracy;
+        annotationData.relevance = relevance;
+        annotationData.completeness = completeness;
+        break;
+      case 'generative_ai_llm_response_grading':
+        annotationData.grade = grade;
+        annotationData.reasoning = reasoning;
+        break;
+      case 'generative_ai_chatbot_assessment':
+        annotationData.coherence = coherence;
+        annotationData.helpfulness = helpfulness;
+        break;
+      case 'conversational_ai_response_selection':
+        annotationData.selected_response = selectedResponse;
+        annotationData.selection_reason = selectionReason;
+        break;
+      default:
+        annotationData.label = label;
+    }
+
     try {
-      const body = { annotation: annotation ? JSON.parse(annotation) : {} };
+      const body = { annotation: annotationData };
       await apiFetch(`/tasks/${taskId}/annotation`, { method: 'PUT', body });
-      setSuccess('Annotation submitted');
+      setSuccess('Annotation submitted successfully!');
+      setError(null);
     } catch (e: any) {
       setError(e?.message || 'Failed to submit annotation');
+      setSuccess(null);
     }
   };
 
@@ -138,16 +236,284 @@ export default function TaskAnnotatePage() {
         <div className="card-body">
           <h2 className="card-title mb-4">Submit Annotation</h2>
           <form onSubmit={submit} className="space-y-4">
-            <div>
-              <label className="label">Annotation (JSON format)</label>
-              <textarea
-                className="textarea font-mono text-sm h-48"
-                value={annotation}
-                onChange={(e) => setAnnotation(e.target.value)}
-                placeholder='{"label": "example", "confidence": 0.95}'
-              />
+            {/* Text Classification */}
+            {task?.category === 'text_classification' && (
+              <>
+                <div>
+                  <label className="label">Label</label>
+                  <input
+                    type="text"
+                    className="input"
+                    value={label}
+                    onChange={(e) => setLabel(e.target.value)}
+                    placeholder="Enter label"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="label">Category</label>
+                  <input
+                    type="text"
+                    className="input"
+                    value={category}
+                    onChange={(e) => setCategory(e.target.value)}
+                    placeholder="Enter category"
+                  />
+                </div>
+              </>
+            )}
+
+            {/* Image Classification */}
+            {task?.category === 'image_classification' && (
+              <div>
+                <label className="label">Predicted Class</label>
+                <input
+                  type="text"
+                  className="input"
+                  value={predictedClass}
+                  onChange={(e) => setPredictedClass(e.target.value)}
+                  placeholder="Enter predicted class"
+                  required
+                />
+              </div>
+            )}
+
+            {/* Object Detection */}
+            {task?.category === 'object_detection' && (
+              <div>
+                <label className="label">
+                  Detected Objects{' '}
+                  <span className="text-xs text-gray-500">(JSON array format)</span>
+                </label>
+                <textarea
+                  className="textarea font-mono text-sm h-32"
+                  value={objects}
+                  onChange={(e) => setObjects(e.target.value)}
+                  placeholder='[{"class": "car", "bbox": [x, y, w, h], "confidence": 0.95}]'
+                  required
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Example: [&#123;"class": "person", "bbox": [10, 20, 100, 200], "confidence":
+                  0.92&#125;]
+                </p>
+              </div>
+            )}
+
+            {/* Named Entity Recognition */}
+            {task?.category === 'named_entity_recognition' && (
+              <div>
+                <label className="label">
+                  Entities <span className="text-xs text-gray-500">(JSON array format)</span>
+                </label>
+                <textarea
+                  className="textarea font-mono text-sm h-32"
+                  value={entities}
+                  onChange={(e) => setEntities(e.target.value)}
+                  placeholder='[{"entity": "John Doe", "type": "PERSON", "start": 0, "end": 8}]'
+                  required
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Example: [&#123;"entity": "Microsoft", "type": "ORG", "start": 0, "end": 9&#125;]
+                </p>
+              </div>
+            )}
+
+            {/* Sentiment Analysis */}
+            {task?.category === 'sentiment_analysis' && (
+              <>
+                <div>
+                  <label className="label">Sentiment</label>
+                  <select
+                    className="select"
+                    value={sentiment}
+                    onChange={(e) => setSentiment(e.target.value)}
+                    required
+                  >
+                    <option value="">Select sentiment</option>
+                    <option value="positive">Positive</option>
+                    <option value="negative">Negative</option>
+                    <option value="neutral">Neutral</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="label">Label (optional)</label>
+                  <input
+                    type="text"
+                    className="input"
+                    value={label}
+                    onChange={(e) => setLabel(e.target.value)}
+                    placeholder="Additional label"
+                  />
+                </div>
+              </>
+            )}
+
+            {/* Text Summarization */}
+            {task?.category === 'text_summarization' && (
+              <div>
+                <label className="label">Summary</label>
+                <textarea
+                  className="textarea h-32"
+                  value={summary}
+                  onChange={(e) => setSummary(e.target.value)}
+                  placeholder="Enter the summary"
+                  required
+                />
+              </div>
+            )}
+
+            {/* QA Evaluation */}
+            {task?.category === 'qa_evaluation' && (
+              <>
+                <div>
+                  <label className="label">Accuracy</label>
+                  <input
+                    type="text"
+                    className="input"
+                    value={accuracy}
+                    onChange={(e) => setAccuracy(e.target.value)}
+                    placeholder="e.g., High, Medium, Low or 1-10"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="label">Relevance</label>
+                  <input
+                    type="text"
+                    className="input"
+                    value={relevance}
+                    onChange={(e) => setRelevance(e.target.value)}
+                    placeholder="e.g., High, Medium, Low or 1-10"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="label">Completeness</label>
+                  <input
+                    type="text"
+                    className="input"
+                    value={completeness}
+                    onChange={(e) => setCompleteness(e.target.value)}
+                    placeholder="e.g., High, Medium, Low or 1-10"
+                    required
+                  />
+                </div>
+              </>
+            )}
+
+            {/* LLM Response Grading */}
+            {task?.category === 'generative_ai_llm_response_grading' && (
+              <>
+                <div>
+                  <label className="label">Grade</label>
+                  <input
+                    type="text"
+                    className="input"
+                    value={grade}
+                    onChange={(e) => setGrade(e.target.value)}
+                    placeholder="e.g., A, B, C or 1-10"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="label">Reasoning</label>
+                  <textarea
+                    className="textarea h-24"
+                    value={reasoning}
+                    onChange={(e) => setReasoning(e.target.value)}
+                    placeholder="Explain the grade"
+                    required
+                  />
+                </div>
+              </>
+            )}
+
+            {/* Chatbot Assessment */}
+            {task?.category === 'generative_ai_chatbot_assessment' && (
+              <>
+                <div>
+                  <label className="label">Coherence</label>
+                  <input
+                    type="text"
+                    className="input"
+                    value={coherence}
+                    onChange={(e) => setCoherence(e.target.value)}
+                    placeholder="e.g., High, Medium, Low or 1-10"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="label">Helpfulness</label>
+                  <input
+                    type="text"
+                    className="input"
+                    value={helpfulness}
+                    onChange={(e) => setHelpfulness(e.target.value)}
+                    placeholder="e.g., High, Medium, Low or 1-10"
+                    required
+                  />
+                </div>
+              </>
+            )}
+
+            {/* Response Selection */}
+            {task?.category === 'conversational_ai_response_selection' && (
+              <>
+                <div>
+                  <label className="label">Selected Response</label>
+                  <input
+                    type="text"
+                    className="input"
+                    value={selectedResponse}
+                    onChange={(e) => setSelectedResponse(e.target.value)}
+                    placeholder="Enter the selected response ID or text"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="label">Selection Reason</label>
+                  <textarea
+                    className="textarea h-24"
+                    value={selectionReason}
+                    onChange={(e) => setSelectionReason(e.target.value)}
+                    placeholder="Why did you select this response?"
+                    required
+                  />
+                </div>
+              </>
+            )}
+
+            {/* Common fields for all categories */}
+            <div className="border-t pt-4">
+              <h3 className="font-medium mb-3 text-sm text-gray-700">Additional Information</h3>
+              <div className="space-y-4">
+                <div>
+                  <label className="label">Confidence Score</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    max="1"
+                    className="input"
+                    value={confidence}
+                    onChange={(e) => setConfidence(e.target.value)}
+                    placeholder="0.95"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Value between 0 and 1</p>
+                </div>
+                <div>
+                  <label className="label">Notes (optional)</label>
+                  <textarea
+                    className="textarea h-20"
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    placeholder="Any additional notes or observations"
+                  />
+                </div>
+              </div>
             </div>
-            <button type="submit" className="btn btn-primary">
+
+            <button type="submit" className="btn btn-primary w-full">
               Submit Annotation
             </button>
           </form>
