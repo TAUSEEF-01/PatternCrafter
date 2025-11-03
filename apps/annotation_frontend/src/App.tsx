@@ -1,4 +1,4 @@
-import { Navigate, Route, Routes } from 'react-router-dom';
+import { Navigate, Route as RRRoute, Routes as RRRoutes } from 'react-router-dom';
 import NavBar from '@/components/NavBar';
 import { useAuth } from '@/auth/AuthContext';
 import LoginPage from '@/pages/LoginPage';
@@ -11,6 +11,7 @@ import TaskQAPage from '@/pages/TaskQAPage';
 import AssignTaskPage from '@/pages/AssignTaskPage';
 import ProfilePage from '@/pages/ProfilePage';
 import ProjectInvitesPage from '@/pages/ProjectInvitesPage';
+import CompletedTasksPage from '@/pages/CompletedTasksPage';
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -26,6 +27,9 @@ function RequireNonAnnotator({ children }: { children: React.ReactNode }) {
 }
 
 export default function App() {
+  // Temporary workaround for react-router-dom typing issues in this workspace
+  const Routes = RRRoutes as unknown as any;
+  const Route = RRRoute as unknown as any;
   return (
     <div className="min-h-full">
       <NavBar />
@@ -64,6 +68,16 @@ export default function App() {
               <RequireAuth>
                 <RequireNonAnnotator>
                   <ProjectInvitesPage />
+                </RequireNonAnnotator>
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/projects/:projectId/completed"
+            element={
+              <RequireAuth>
+                <RequireNonAnnotator>
+                  <CompletedTasksPage />
                 </RequireNonAnnotator>
               </RequireAuth>
             }

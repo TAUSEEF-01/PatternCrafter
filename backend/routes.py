@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.responses import StreamingResponse, JSONResponse
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from typing import List, Optional, Dict, Any
 from bson import ObjectId
@@ -572,9 +573,11 @@ async def get_completed_tasks(
             detail="Not authorized to view completed tasks for this project",
         )
 
+    # Fully completed = both annotator and QA parts done
     query: Dict[str, Any] = {
         "project_id": ObjectId(project_id),
         "completed_status.annotator_part": True,
+        "completed_status.qa_part": True,
     }
     if annotator_id:
         if not ObjectId.is_valid(annotator_id):
@@ -585,6 +588,125 @@ async def get_completed_tasks(
 
     tasks = await database.tasks_collection.find(query).to_list(None)
     return [as_response(TaskResponse, task) for task in tasks]
+
+
+@router.get("/projects/{project_id}/completed-tasks/export")
+async def export_completed_tasks(
+    project_id: str,
+    format: str = "csv",
+    current_user: UserInDB = Depends(get_current_user),
+):
+    """Export fully completed tasks (annotator+QA) as CSV or JSON.
+
+    Accessible by admin or the project's manager.
+    """
+    import io, csv, json
+
+    if not ObjectId.is_valid(project_id):
+        raise HTTPException(status_code=400, detail="Invalid project ID")
+
+    project = await database.projects_collection.find_one({"_id": ObjectId(project_id)})
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    if current_user.role not in ["admin", "manager"] or (
+        current_user.role == "manager" and project["manager_id"] != current_user.id
+    ):
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    cursor = database.tasks_collection.find(
+        {
+            "project_id": ObjectId(project_id),
+            "completed_status.annotator_part": True,
+            "completed_status.qa_part": True,
+        }
+    )
+    docs = await cursor.to_list(None)
+
+    # Prepare export rows
+    rows = []
+    for d in docs:
+        rows.append(
+            {
+                "task_id": str(d.get("_id")),
+                "project_id": str(d.get("project_id")),
+                "category": str(d.get("category")),
+                "annotator_id": (
+                    str(d.get("assigned_annotator_id"))
+                    if d.get("assigned_annotator_id")
+                    else None
+                ),
+                "qa_id": (
+                    str(d.get("assigned_qa_id")) if d.get("assigned_qa_id") else None
+                ),
+                "created_at": (
+                    d.get("created_at").isoformat() if d.get("created_at") else None
+                ),
+                "annotator_started_at": (
+                    d.get("annotator_started_at").isoformat()
+                    if d.get("annotator_started_at")
+                    else None
+                ),
+                "annotator_completed_at": (
+                    d.get("annotator_completed_at").isoformat()
+                    if d.get("annotator_completed_at")
+                    else None
+                ),
+                "qa_started_at": (
+                    d.get("qa_started_at").isoformat()
+                    if d.get("qa_started_at")
+                    else None
+                ),
+                "qa_completed_at": (
+                    d.get("qa_completed_at").isoformat()
+                    if d.get("qa_completed_at")
+                    else None
+                ),
+                "task_data": json.dumps(d.get("task_data", {}), ensure_ascii=False),
+                "annotation": json.dumps(d.get("annotation", {}), ensure_ascii=False),
+                "qa_annotation": json.dumps(
+                    d.get("qa_annotation", {}), ensure_ascii=False
+                ),
+                "qa_feedback": d.get("qa_feedback"),
+            }
+        )
+
+    if format.lower() == "json":
+        return JSONResponse(rows)
+
+    # Default CSV
+    output = io.StringIO()
+    fieldnames = (
+        list(rows[0].keys())
+        if rows
+        else [
+            "task_id",
+            "project_id",
+            "category",
+            "annotator_id",
+            "qa_id",
+            "created_at",
+            "annotator_started_at",
+            "annotator_completed_at",
+            "qa_started_at",
+            "qa_completed_at",
+            "task_data",
+            "annotation",
+            "qa_annotation",
+            "qa_feedback",
+        ]
+    )
+    writer = csv.DictWriter(output, fieldnames=fieldnames)
+    writer.writeheader()
+    for r in rows:
+        writer.writerow(r)
+    output.seek(0)
+    headers = {
+        "Content-Disposition": f"attachment; filename=completed_tasks_{project_id}.csv"
+    }
+    return StreamingResponse(
+        iter([output.read()]), media_type="text/csv", headers=headers
+    )
 
 
 @router.get(

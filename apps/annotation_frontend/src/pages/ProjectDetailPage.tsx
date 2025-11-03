@@ -1,11 +1,14 @@
 import { Fragment, useEffect, useMemo, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link as RouterLink, useParams } from 'react-router-dom';
 import { apiFetch } from '@/api/client';
 import { Project, Task } from '@/types';
 import { useAuth } from '@/auth/AuthContext';
 
 type Role = 'user' | 'assistant';
 type DialogueMessage = { role: Role; content: string };
+
+// Temporary workaround for react-router-dom Link typing mismatch across the file
+const LinkFix = RouterLink as unknown as any;
 
 export default function ProjectDetailPage() {
   const { projectId } = useParams();
@@ -172,9 +175,19 @@ export default function ProjectDetailPage() {
             </div>
           )}
         </div>
-        <Link className="text-blue-600 hover:underline" to="/projects">
-          Back
-        </Link>
+        <div className="flex items-center gap-4">
+          {user?.role !== 'annotator' && projectId && (
+            <LinkFix
+              className="text-blue-600 hover:underline"
+              to={`/projects/${projectId}/completed`}
+            >
+              Completed Tasks
+            </LinkFix>
+          )}
+          <LinkFix className="text-blue-600 hover:underline" to="/projects">
+            Back
+          </LinkFix>
+        </div>
       </div>
 
       {user?.role !== 'annotator' && (
@@ -541,17 +554,17 @@ function TaskCard({ t, isManager }: { t: Task; isManager: boolean }) {
         <div className="flex items-center gap-3">
           {isManager && (
             <>
-              <Link className="text-blue-600 hover:underline" to={`/tasks/${t.id}/assign`}>
+              <LinkFix className="text-blue-600 hover:underline" to={`/tasks/${t.id}/assign`}>
                 Assign
-              </Link>
-              <Link className="text-blue-600 hover:underline" to={`/tasks/${t.id}/qa`}>
+              </LinkFix>
+              <LinkFix className="text-blue-600 hover:underline" to={`/tasks/${t.id}/qa`}>
                 QA
-              </Link>
+              </LinkFix>
             </>
           )}
-          <Link className="text-blue-600 hover:underline" to={`/tasks/${t.id}/annotate`}>
+          <LinkFix className="text-blue-600 hover:underline" to={`/tasks/${t.id}/annotate`}>
             Annotate
-          </Link>
+          </LinkFix>
         </div>
       </div>
       <pre className="bg-gray-50 p-2 rounded mt-2 text-sm overflow-auto">
