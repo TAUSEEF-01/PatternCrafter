@@ -2,7 +2,75 @@ import { FormEvent, useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { apiFetch } from '@/api/client';
 import { Task } from '@/types';
-import JsonView from '@/components/JsonView';
+
+function TaskDataViewer({ data }: { data: any }) {
+  if (!data || typeof data !== 'object') {
+    return <div className="text-gray-500 text-sm">No data available</div>;
+  }
+
+  const renderValue = (value: any): React.ReactNode => {
+    if (value === null || value === undefined) return <span className="text-gray-400">—</span>;
+    if (typeof value === 'boolean') return value ? 'Yes' : 'No';
+    if (Array.isArray(value)) {
+      if (value.length === 0) return <span className="text-gray-400">Empty</span>;
+      if (typeof value[0] === 'string') {
+        return (
+          <div className="space-y-1">
+            {value.map((item, idx) => (
+              <div key={idx} className="text-sm text-gray-700 whitespace-pre-wrap break-words">
+                • {item}
+              </div>
+            ))}
+          </div>
+        );
+      }
+      if (typeof value[0] === 'object') {
+        return (
+          <div className="space-y-2">
+            {value.map((item, idx) => (
+              <div key={idx} className="pl-3 border-l-2 border-gray-200">
+                <div className="text-xs font-semibold text-gray-500 mb-1">Item {idx + 1}</div>
+                {Object.entries(item).map(([k, v]) => (
+                  <div key={k} className="text-sm mb-1">
+                    <span className="font-medium text-gray-600">{k}:</span>{' '}
+                    <span className="text-gray-700">{String(v)}</span>
+                  </div>
+                ))}
+              </div>
+            ))}
+          </div>
+        );
+      }
+      return value.join(', ');
+    }
+    if (typeof value === 'object') {
+      return (
+        <div className="pl-3 space-y-1">
+          {Object.entries(value).map(([k, v]) => (
+            <div key={k} className="text-sm">
+              <span className="font-medium text-gray-600">{k}:</span>{' '}
+              <span className="text-gray-700">{renderValue(v)}</span>
+            </div>
+          ))}
+        </div>
+      );
+    }
+    return <span className="text-gray-700 whitespace-pre-wrap break-words">{String(value)}</span>;
+  };
+
+  return (
+    <div className="space-y-3">
+      {Object.entries(data).map(([key, value]) => (
+        <div key={key} className="border-b border-gray-100 pb-3 last:border-b-0 last:pb-0">
+          <div className="text-sm font-semibold text-gray-800 mb-1 capitalize">
+            {key.replace(/_/g, ' ')}
+          </div>
+          <div className="text-sm">{renderValue(value)}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 export default function TaskQAPage() {
   const { taskId } = useParams();
@@ -59,12 +127,16 @@ export default function TaskQAPage() {
             </div>
             <div>
               <h3 className="font-medium mb-2">Task Data</h3>
-              <JsonView data={task.task_data} />
+              <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 max-h-96 overflow-auto scrollbar-thin">
+                <TaskDataViewer data={task.task_data} />
+              </div>
             </div>
             {task.annotation && (
               <div>
                 <h3 className="font-medium mb-2">Annotator Annotation</h3>
-                <JsonView data={task.annotation} />
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 max-h-64 overflow-auto scrollbar-thin">
+                  <TaskDataViewer data={task.annotation} />
+                </div>
               </div>
             )}
           </div>

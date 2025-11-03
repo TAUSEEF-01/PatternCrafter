@@ -574,6 +574,75 @@ export default function ProjectDetailPage() {
   );
 }
 
+function TaskDataViewer({ data }: { data: any }) {
+  if (!data || typeof data !== 'object') {
+    return <div className="text-gray-500 text-sm">No data available</div>;
+  }
+
+  const renderValue = (value: any): React.ReactNode => {
+    if (value === null || value === undefined) return <span className="text-gray-400">—</span>;
+    if (typeof value === 'boolean') return value ? 'Yes' : 'No';
+    if (Array.isArray(value)) {
+      if (value.length === 0) return <span className="text-gray-400">Empty</span>;
+      if (typeof value[0] === 'string') {
+        return (
+          <div className="space-y-1">
+            {value.map((item, idx) => (
+              <div key={idx} className="text-sm text-gray-700 whitespace-pre-wrap break-words">
+                • {item}
+              </div>
+            ))}
+          </div>
+        );
+      }
+      if (typeof value[0] === 'object') {
+        return (
+          <div className="space-y-2">
+            {value.map((item, idx) => (
+              <div key={idx} className="pl-3 border-l-2 border-gray-200">
+                <div className="text-xs font-semibold text-gray-500 mb-1">Item {idx + 1}</div>
+                {Object.entries(item).map(([k, v]) => (
+                  <div key={k} className="text-sm mb-1">
+                    <span className="font-medium text-gray-600">{k}:</span>{' '}
+                    <span className="text-gray-700">{String(v)}</span>
+                  </div>
+                ))}
+              </div>
+            ))}
+          </div>
+        );
+      }
+      return value.join(', ');
+    }
+    if (typeof value === 'object') {
+      return (
+        <div className="pl-3 space-y-1">
+          {Object.entries(value).map(([k, v]) => (
+            <div key={k} className="text-sm">
+              <span className="font-medium text-gray-600">{k}:</span>{' '}
+              <span className="text-gray-700">{renderValue(v)}</span>
+            </div>
+          ))}
+        </div>
+      );
+    }
+    return <span className="text-gray-700 whitespace-pre-wrap break-words">{String(value)}</span>;
+  };
+
+  return (
+    <div className="space-y-3">
+      {Object.entries(data).map(([key, value]) => (
+        <div key={key} className="border-b border-gray-100 pb-3 last:border-b-0 last:pb-0">
+          <div className="text-sm font-semibold text-gray-800 mb-1 capitalize">
+            {key.replace(/_/g, ' ')}
+          </div>
+          <div className="text-sm">{renderValue(value)}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function TaskCard({ t, isManager }: { t: Task; isManager: boolean }) {
   return (
     <div className="card hover:shadow-lg transition-shadow">
@@ -603,12 +672,12 @@ function TaskCard({ t, isManager }: { t: Task; isManager: boolean }) {
           </div>
         </div>
         <details className="mt-2">
-          <summary className="cursor-pointer text-sm text-gray-700 hover:text-gray-900">
+          <summary className="cursor-pointer text-sm font-medium text-gray-700 hover:text-gray-900">
             View task data
           </summary>
-          <pre className="bg-gray-50 border border-gray-200 rounded-lg p-3 mt-2 text-xs font-mono overflow-auto scrollbar-thin max-h-64">
-            {JSON.stringify(t.task_data, null, 2)}
-          </pre>
+          <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mt-2 max-h-96 overflow-auto scrollbar-thin">
+            <TaskDataViewer data={t.task_data} />
+          </div>
         </details>
       </div>
     </div>
