@@ -17,6 +17,15 @@ export type Task = {
   qa_feedback?: string;
   assigned_annotator_id?: Id | null;
   assigned_qa_id?: Id | null;
+  completed_status?: {
+    annotator_part?: boolean;
+    qa_part?: boolean;
+  };
+  created_at?: string;
+  annotator_started_at?: string | null;
+  annotator_completed_at?: string | null;
+  qa_started_at?: string | null;
+  qa_completed_at?: string | null;
 };
 
 export type Invite = {

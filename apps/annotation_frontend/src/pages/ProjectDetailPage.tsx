@@ -1,46 +1,163 @@
-import { useEffect, useMemo, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Fragment, useEffect, useMemo, useState } from 'react';
+import { Link as RouterLink, useParams } from 'react-router-dom';
 import { apiFetch } from '@/api/client';
 import { Project, Task } from '@/types';
+import { useAuth } from '@/auth/AuthContext';
 
-const CATEGORIES = [
-  'LLM_RESPONSE_GRADING',
-  'RESPONSE_SELECTION',
-  'TEXT_CLASSIFICATION',
-  'NER',
-  'IMAGE_CLASSIFICATION',
-  'OBJECT_DETECTION',
-];
+type Role = 'user' | 'assistant';
+type DialogueMessage = { role: Role; content: string };
+
+// Temporary workaround for react-router-dom Link typing mismatch across the file
+const LinkFix = RouterLink as unknown as any;
 
 export default function ProjectDetailPage() {
   const { projectId } = useParams();
+  const { user } = useAuth();
   const [project, setProject] = useState<Project | null>(null);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [error, setError] = useState<string | null>(null);
 
-  const [taskData, setTaskData] = useState('');
-  const category = useMemo(() => project?.category || CATEGORIES[0], [project]);
+  // Build task data per category
+  const category = useMemo(() => project?.category, [project]);
+
+  // Common helpers
+  const parseList = (s: string) =>
+    s
+      .split(',')
+      .map((x) => x.trim())
+      .filter(Boolean);
+
+  // LLM Response Grading
+  const [llm_document, setLLMDocument] = useState('');
+  const [llm_split, setLLMSplit] = useState(false);
+  const [llm_summary, setLLMSummary] = useState('');
+  const [llm_prompt, setLLMPrompt] = useState('');
+  const [llm_model, setLLMModel] = useState('');
+
+  // Chatbot Model Assessment
+  const [chat_messages, setChatMessages] = useState<DialogueMessage[]>([
+    { role: 'user', content: '' },
+    { role: 'assistant', content: '' },
+  ]);
+  const [chat_model, setChatModel] = useState('');
+  const [chat_title, setChatTitle] = useState('InstructGPT Assessment');
+
+  // Response Selection
+  const [rs_dialogue, setRsDialogue] = useState<DialogueMessage[]>([{ role: 'user', content: '' }]);
+  const [rs_options, setRsOptions] = useState<string[]>(['', '', '']);
+  const [rs_context, setRsContext] = useState('');
+
+  // Text Classification
+  const [tc_text, setTcText] = useState('');
+  const [tc_labels, setTcLabels] = useState('positive, negative');
+
+  // Image Classification
+  const [ic_image, setIcImage] = useState('');
+  const [ic_labels, setIcLabels] = useState('cat, dog');
+
+  // Object Detection
+  const [od_image, setOdImage] = useState('');
+  const [od_classes, setOdClasses] = useState('person, car');
+
+  // NER
+  const [ner_text, setNerText] = useState('');
+  const [ner_entity_types, setNerEntityTypes] = useState('PERSON, ORG, LOCATION');
 
   useEffect(() => {
     if (!projectId) return;
     apiFetch<Project>(`/projects/${projectId}`)
       .then(setProject)
       .catch((e) => setError(String(e)));
-    apiFetch<Task[]>(`/projects/${projectId}/tasks`)
+    const tasksPath =
+      user?.role === 'annotator'
+        ? `/projects/${projectId}/my-tasks`
+        : `/projects/${projectId}/tasks`;
+    apiFetch<Task[]>(tasksPath)
       .then(setTasks)
       .catch((e) => setError(String(e)));
-  }, [projectId]);
+  }, [projectId, user?.role]);
 
   const createTask = async () => {
     if (!projectId) return;
     try {
-      const body = {
-        category,
-        task_data: taskData ? JSON.parse(taskData) : {},
-      };
+      let task_data: any = {};
+      switch (category) {
+        case 'generative_ai_llm_response_grading': {
+          const paragraphs = llm_document
+            .split(/\n\n+/)
+            .map((x) => x.trim())
+            .filter(Boolean);
+          task_data = {
+            document: llm_split ? paragraphs : llm_document,
+            summary: llm_summary,
+            ...(llm_prompt ? { prompt: llm_prompt } : {}),
+            ...(llm_model ? { model_name: llm_model } : {}),
+          };
+          break;
+        }
+        case 'generative_ai_chatbot_assessment': {
+          task_data = {
+            messages: chat_messages.filter((m) => m.content.trim().length),
+            ...(chat_model ? { model_name: chat_model } : {}),
+            ...(chat_title ? { assessment_title: chat_title } : {}),
+          };
+          break;
+        }
+        case 'conversational_ai_response_selection': {
+          task_data = {
+            dialogue: rs_dialogue.filter((m) => m.content.trim().length),
+            response_options: rs_options.map((o) => o.trim()).filter(Boolean),
+            ...(rs_context ? { context: rs_context } : {}),
+          };
+          break;
+        }
+        case 'text_classification': {
+          task_data = { text: tc_text, labels: parseList(tc_labels) };
+          break;
+        }
+        case 'image_classification': {
+          task_data = { image_url: ic_image, labels: parseList(ic_labels) };
+          break;
+        }
+        case 'object_detection': {
+          task_data = { image_url: od_image, classes: parseList(od_classes) };
+          break;
+        }
+        case 'named_entity_recognition': {
+          task_data = { text: ner_text, entity_types: parseList(ner_entity_types) };
+          break;
+        }
+        default: {
+          // Fallback for categories without a dedicated form
+          task_data = {};
+        }
+      }
+
+      const body = { category, task_data };
       const t = await apiFetch<Task>(`/projects/${projectId}/tasks`, { method: 'POST', body });
       setTasks((prev) => [t, ...prev]);
-      setTaskData('');
+      // reset simple fields
+      setLLMDocument('');
+      setLLMSummary('');
+      setLLMPrompt('');
+      setLLMModel('');
+      setChatMessages([
+        { role: 'user', content: '' },
+        { role: 'assistant', content: '' },
+      ]);
+      setChatModel('');
+      setChatTitle('InstructGPT Assessment');
+      setRsDialogue([{ role: 'user', content: '' }]);
+      setRsOptions(['', '', '']);
+      setRsContext('');
+      setTcText('');
+      setTcLabels('positive, negative');
+      setIcImage('');
+      setIcLabels('cat, dog');
+      setOdImage('');
+      setOdClasses('person, car');
+      setNerText('');
+      setNerEntityTypes('PERSON, ORG, LOCATION');
     } catch (e: any) {
       setError(e?.message || 'Failed to create task');
     }
@@ -50,59 +167,449 @@ export default function ProjectDetailPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold">Project</h1>
+          <h1>Project Details</h1>
           {project && (
-            <div className="text-gray-600 text-sm space-y-1">
-              <div>Name: {project.details}</div>
-              <div>Category: {project.category}</div>
+            <div className="muted mt-1 space-y-0.5">
+              <div>{project.details}</div>
+              <span className="badge badge-primary">{project.category}</span>
             </div>
           )}
         </div>
-        <Link className="text-blue-600 hover:underline" to="/projects">
-          Back
-        </Link>
+        <div className="flex items-center gap-4">
+          {user?.role !== 'annotator' && projectId && (
+            <LinkFix className="btn btn-outline" to={`/projects/${projectId}/completed`}>
+              Completed Tasks
+            </LinkFix>
+          )}
+          <LinkFix className="btn btn-ghost" to="/projects">
+            ← Back
+          </LinkFix>
+        </div>
       </div>
 
-      <div className="bg-white p-4 rounded shadow space-y-3">
-        <h2 className="font-semibold">Create Task ({category})</h2>
-        <textarea
-          className="w-full border rounded p-2 h-36 font-mono"
-          value={taskData}
-          onChange={(e) => setTaskData(e.target.value)}
-          placeholder='{"input":"text or JSON per category"}'
-        />
-        <button onClick={createTask} className="bg-blue-600 text-white rounded px-4 py-2">
-          Add Task
-        </button>
-      </div>
+      {user?.role !== 'annotator' && (
+        <div className="card">
+          <div className="card-body space-y-4">
+            <h2 className="card-title">Create Task</h2>
+            <div className="badge badge-primary w-fit">{category}</div>
 
-      {error && <div className="text-red-600 text-sm">{error}</div>}
+            {/* Category-specific forms */}
+            {category === 'generative_ai_llm_response_grading' && (
+              <div className="space-y-3">
+                <div>
+                  <label className="block mb-1 font-medium">Document</label>
+                  <textarea
+                    className="w-full border rounded p-2 h-28"
+                    value={llm_document}
+                    onChange={(e) => setLLMDocument(e.target.value)}
+                    placeholder="Paste text; enable split to make paragraphs"
+                  />
+                  <label className="inline-flex items-center gap-2 mt-2 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={llm_split}
+                      onChange={(e) => setLLMSplit(e.target.checked)}
+                    />
+                    Split by blank lines into paragraphs
+                  </label>
+                </div>
+                <div>
+                  <label className="block mb-1 font-medium">Summary</label>
+                  <textarea
+                    className="w-full border rounded p-2 h-20"
+                    value={llm_summary}
+                    onChange={(e) => setLLMSummary(e.target.value)}
+                  />
+                </div>
+                <div className="grid sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block mb-1">Prompt (optional)</label>
+                    <input
+                      className="w-full border rounded px-2 py-1"
+                      value={llm_prompt}
+                      onChange={(e) => setLLMPrompt(e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <label className="block mb-1">Model Name (optional)</label>
+                    <input
+                      className="w-full border rounded px-2 py-1"
+                      value={llm_model}
+                      onChange={(e) => setLLMModel(e.target.value)}
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
 
-      <div className="grid gap-3">
-        {tasks.map((t) => (
-          <div key={t.id} className="bg-white p-4 rounded shadow">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="font-semibold">Task {t.id.slice(0, 8)}</div>
-                <div className="text-sm text-gray-600">Category: {t.category}</div>
+            {category === 'generative_ai_chatbot_assessment' && (
+              <div className="space-y-3">
+                <div className="space-y-2">
+                  <div className="font-medium">Messages</div>
+                  {chat_messages.map((m, i) => (
+                    <div key={i} className="flex items-start gap-2">
+                      <select
+                        className="border rounded px-2 py-1"
+                        value={m.role}
+                        onChange={(e) => {
+                          const v = e.target.value as Role;
+                          setChatMessages((prev) =>
+                            prev.map((mm, idx) => (idx === i ? { ...mm, role: v } : mm))
+                          );
+                        }}
+                      >
+                        <option value="user">user</option>
+                        <option value="assistant">assistant</option>
+                      </select>
+                      <textarea
+                        className="flex-1 border rounded p-2 h-20"
+                        value={m.content}
+                        onChange={(e) =>
+                          setChatMessages((prev) =>
+                            prev.map((mm, idx) =>
+                              idx === i ? { ...mm, content: e.target.value } : mm
+                            )
+                          )
+                        }
+                      />
+                      <button
+                        type="button"
+                        className="px-2 py-1 text-sm border rounded"
+                        onClick={() =>
+                          setChatMessages((prev) => prev.filter((_, idx) => idx !== i))
+                        }
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  ))}
+                  <button
+                    type="button"
+                    className="px-3 py-1 text-sm border rounded"
+                    onClick={() =>
+                      setChatMessages((prev) => [...prev, { role: 'user', content: '' }])
+                    }
+                  >
+                    + Add Message
+                  </button>
+                </div>
+                <div className="grid sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block mb-1">Model Name (optional)</label>
+                    <input
+                      className="w-full border rounded px-2 py-1"
+                      value={chat_model}
+                      onChange={(e) => setChatModel(e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <label className="block mb-1">Assessment Title</label>
+                    <input
+                      className="w-full border rounded px-2 py-1"
+                      value={chat_title}
+                      onChange={(e) => setChatTitle(e.target.value)}
+                    />
+                  </div>
+                </div>
               </div>
-              <div className="flex items-center gap-3">
-                <Link className="text-blue-600 hover:underline" to={`/tasks/${t.id}/assign`}>
-                  Assign
-                </Link>
-                <Link className="text-blue-600 hover:underline" to={`/tasks/${t.id}/annotate`}>
-                  Annotate
-                </Link>
-                <Link className="text-blue-600 hover:underline" to={`/tasks/${t.id}/qa`}>
-                  QA
-                </Link>
+            )}
+
+            {category === 'conversational_ai_response_selection' && (
+              <div className="space-y-3">
+                <div className="space-y-2">
+                  <div className="font-medium">Dialogue</div>
+                  {rs_dialogue.map((m, i) => (
+                    <div key={i} className="flex items-start gap-2">
+                      <select
+                        className="border rounded px-2 py-1"
+                        value={m.role}
+                        onChange={(e) => {
+                          const v = e.target.value as Role;
+                          setRsDialogue((prev) =>
+                            prev.map((mm, idx) => (idx === i ? { ...mm, role: v } : mm))
+                          );
+                        }}
+                      >
+                        <option value="user">user</option>
+                        <option value="assistant">assistant</option>
+                      </select>
+                      <textarea
+                        className="flex-1 border rounded p-2 h-20"
+                        value={m.content}
+                        onChange={(e) =>
+                          setRsDialogue((prev) =>
+                            prev.map((mm, idx) =>
+                              idx === i ? { ...mm, content: e.target.value } : mm
+                            )
+                          )
+                        }
+                      />
+                      <button
+                        type="button"
+                        className="px-2 py-1 text-sm border rounded"
+                        onClick={() => setRsDialogue((prev) => prev.filter((_, idx) => idx !== i))}
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  ))}
+                  <button
+                    type="button"
+                    className="px-3 py-1 text-sm border rounded"
+                    onClick={() =>
+                      setRsDialogue((prev) => [...prev, { role: 'user', content: '' }])
+                    }
+                  >
+                    + Add Message
+                  </button>
+                </div>
+                <div className="space-y-2">
+                  <div className="font-medium">Response Options</div>
+                  {rs_options.map((o, i) => (
+                    <div key={i} className="flex items-center gap-2">
+                      <input
+                        className="flex-1 border rounded px-2 py-1"
+                        value={o}
+                        onChange={(e) =>
+                          setRsOptions((prev) =>
+                            prev.map((oo, idx) => (idx === i ? e.target.value : oo))
+                          )
+                        }
+                        placeholder={`Option ${i + 1}`}
+                      />
+                      <button
+                        type="button"
+                        className="px-2 py-1 text-sm border rounded"
+                        onClick={() => setRsOptions((prev) => prev.filter((_, idx) => idx !== i))}
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  ))}
+                  <button
+                    type="button"
+                    className="px-3 py-1 text-sm border rounded"
+                    onClick={() => setRsOptions((prev) => [...prev, ''])}
+                  >
+                    + Add Option
+                  </button>
+                </div>
+                <div>
+                  <label className="block mb-1">Context (optional)</label>
+                  <textarea
+                    className="w-full border rounded p-2 h-20"
+                    value={rs_context}
+                    onChange={(e) => setRsContext(e.target.value)}
+                  />
+                </div>
               </div>
+            )}
+
+            {category === 'text_classification' && (
+              <div className="space-y-3">
+                <div>
+                  <label className="block mb-1 font-medium">Text</label>
+                  <textarea
+                    className="w-full border rounded p-2 h-28"
+                    value={tc_text}
+                    onChange={(e) => setTcText(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label className="block mb-1">Labels (comma separated)</label>
+                  <input
+                    className="w-full border rounded px-2 py-1"
+                    value={tc_labels}
+                    onChange={(e) => setTcLabels(e.target.value)}
+                  />
+                </div>
+              </div>
+            )}
+
+            {category === 'image_classification' && (
+              <div className="space-y-3">
+                <div>
+                  <label className="block mb-1">Image URL</label>
+                  <input
+                    className="w-full border rounded px-2 py-1"
+                    value={ic_image}
+                    onChange={(e) => setIcImage(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label className="block mb-1">Labels (comma separated)</label>
+                  <input
+                    className="w-full border rounded px-2 py-1"
+                    value={ic_labels}
+                    onChange={(e) => setIcLabels(e.target.value)}
+                  />
+                </div>
+              </div>
+            )}
+
+            {category === 'object_detection' && (
+              <div className="space-y-3">
+                <div>
+                  <label className="block mb-1">Image URL</label>
+                  <input
+                    className="w-full border rounded px-2 py-1"
+                    value={od_image}
+                    onChange={(e) => setOdImage(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label className="block mb-1">Classes (comma separated)</label>
+                  <input
+                    className="w-full border rounded px-2 py-1"
+                    value={od_classes}
+                    onChange={(e) => setOdClasses(e.target.value)}
+                  />
+                </div>
+              </div>
+            )}
+
+            {category === 'named_entity_recognition' && (
+              <div className="space-y-3">
+                <div>
+                  <label className="block mb-1 font-medium">Text</label>
+                  <textarea
+                    className="w-full border rounded p-2 h-28"
+                    value={ner_text}
+                    onChange={(e) => setNerText(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label className="block mb-1">Entity Types (comma separated)</label>
+                  <input
+                    className="w-full border rounded px-2 py-1"
+                    value={ner_entity_types}
+                    onChange={(e) => setNerEntityTypes(e.target.value)}
+                  />
+                </div>
+              </div>
+            )}
+
+            {(!category ||
+              [
+                'generative_ai_llm_response_grading',
+                'generative_ai_chatbot_assessment',
+                'conversational_ai_response_selection',
+                'text_classification',
+                'image_classification',
+                'object_detection',
+                'named_entity_recognition',
+              ].indexOf(category) === -1) && (
+              <div className="text-sm text-gray-600">
+                No guided form for this category. A minimal empty task will be created.
+              </div>
+            )}
+
+            <div>
+              <button onClick={createTask} className="btn btn-primary">
+                Add Task
+              </button>
             </div>
-            <pre className="bg-gray-50 p-2 rounded mt-2 text-sm overflow-auto">
-              {JSON.stringify(t.task_data, null, 2)}
-            </pre>
           </div>
-        ))}
+        </div>
+      )}
+
+      {error && (
+        <div className="rounded-md bg-red-50 border border-red-200 p-3 text-sm text-red-700">
+          {error}
+        </div>
+      )}
+
+      <div className="space-y-4">
+        {user?.role === 'annotator' ? (
+          <>
+            <h2>Your assigned tasks</h2>
+            {tasks.length === 0 ? (
+              <div className="card">
+                <div className="card-body text-center py-12">
+                  <p className="muted">No tasks assigned yet</p>
+                </div>
+              </div>
+            ) : (
+              tasks.map((t) => <TaskCard key={t.id} t={t} isManager={false} />)
+            )}
+          </>
+        ) : (
+          <>
+            <div>
+              <h2>In progress</h2>
+              {tasks.filter((t) => !t.completed_status?.annotator_part).length === 0 ? (
+                <div className="card mt-3">
+                  <div className="card-body text-center py-8 muted">No tasks in progress</div>
+                </div>
+              ) : (
+                <div className="grid gap-3 mt-3">
+                  {tasks
+                    .filter((t) => !t.completed_status?.annotator_part)
+                    .map((t) => (
+                      <TaskCard key={t.id} t={t} isManager={true} />
+                    ))}
+                </div>
+              )}
+            </div>
+            <div>
+              <h2>Completed by annotator</h2>
+              {tasks.filter((t) => t.completed_status?.annotator_part).length === 0 ? (
+                <div className="card mt-3">
+                  <div className="card-body text-center py-8 muted">No completed tasks yet</div>
+                </div>
+              ) : (
+                <div className="grid gap-3 mt-3">
+                  {tasks
+                    .filter((t) => t.completed_status?.annotator_part)
+                    .map((t) => (
+                      <TaskCard key={t.id} t={t} isManager={true} />
+                    ))}
+                </div>
+              )}
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function TaskCard({ t, isManager }: { t: Task; isManager: boolean }) {
+  return (
+    <div className="card hover:shadow-lg transition-shadow">
+      <div className="card-body">
+        <div className="flex items-center justify-between mb-3">
+          <div>
+            <div className="font-semibold text-base">Task {t.id.slice(0, 8)}</div>
+            <span className="badge mt-1">{t.category}</span>
+            {t.completed_status?.annotator_part && (
+              <span className="badge badge-green ml-2">Completed</span>
+            )}
+          </div>
+          <div className="flex items-center gap-3">
+            {isManager && (
+              <>
+                <LinkFix className="btn btn-outline btn-sm" to={`/tasks/${t.id}/assign`}>
+                  Assign
+                </LinkFix>
+                <LinkFix className="btn btn-outline btn-sm" to={`/tasks/${t.id}/qa`}>
+                  QA
+                </LinkFix>
+              </>
+            )}
+            <LinkFix className="btn btn-primary btn-sm" to={`/tasks/${t.id}/annotate`}>
+              Annotate
+            </LinkFix>
+          </div>
+        </div>
+        <details className="mt-2">
+          <summary className="cursor-pointer text-sm text-gray-700 hover:text-gray-900">
+            View task data
+          </summary>
+          <pre className="bg-gray-50 border border-gray-200 rounded-lg p-3 mt-2 text-xs font-mono overflow-auto scrollbar-thin max-h-64">
+            {JSON.stringify(t.task_data, null, 2)}
+          </pre>
+        </details>
       </div>
     </div>
   );

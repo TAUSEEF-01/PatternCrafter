@@ -1,4 +1,4 @@
-import { Navigate, Route, Routes } from 'react-router-dom';
+import { Navigate, Route as RRRoute, Routes as RRRoutes } from 'react-router-dom';
 import NavBar from '@/components/NavBar';
 import { useAuth } from '@/auth/AuthContext';
 import LoginPage from '@/pages/LoginPage';
@@ -9,6 +9,9 @@ import InvitesPage from '@/pages/InvitesPage';
 import TaskAnnotatePage from '@/pages/TaskAnnotatePage';
 import TaskQAPage from '@/pages/TaskQAPage';
 import AssignTaskPage from '@/pages/AssignTaskPage';
+import ProfilePage from '@/pages/ProfilePage';
+import ProjectInvitesPage from '@/pages/ProjectInvitesPage';
+import CompletedTasksPage from '@/pages/CompletedTasksPage';
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -17,11 +20,20 @@ function RequireAuth({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+function RequireNonAnnotator({ children }: { children: React.ReactNode }) {
+  const { user } = useAuth();
+  if (user?.role === 'annotator') return <Navigate to="/projects" replace />;
+  return <>{children}</>;
+}
+
 export default function App() {
+  // Temporary workaround for react-router-dom typing issues in this workspace
+  const Routes = RRRoutes as unknown as any;
+  const Route = RRRoute as unknown as any;
   return (
     <div className="min-h-full">
       <NavBar />
-      <div className="max-w-6xl mx-auto p-4">
+      <div className="container-app py-6">
         <Routes>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
@@ -51,10 +63,38 @@ export default function App() {
             }
           />
           <Route
+            path="/projects/:projectId/invites"
+            element={
+              <RequireAuth>
+                <RequireNonAnnotator>
+                  <ProjectInvitesPage />
+                </RequireNonAnnotator>
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/projects/:projectId/completed"
+            element={
+              <RequireAuth>
+                <RequireNonAnnotator>
+                  <CompletedTasksPage />
+                </RequireNonAnnotator>
+              </RequireAuth>
+            }
+          />
+          <Route
             path="/invites"
             element={
               <RequireAuth>
                 <InvitesPage />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/profile"
+            element={
+              <RequireAuth>
+                <ProfilePage />
               </RequireAuth>
             }
           />

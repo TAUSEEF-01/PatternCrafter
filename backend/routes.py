@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.responses import StreamingResponse, JSONResponse
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from typing import List, Optional, Dict, Any
 from bson import ObjectId
@@ -7,6 +8,7 @@ from datetime import datetime
 import database
 from schemas import *
 from auth import get_password_hash, verify_password, create_access_token, verify_token
+from pydantic import BaseModel
 
 router = APIRouter()
 security = HTTPBearer()
@@ -71,6 +73,47 @@ def as_response(model_cls, doc: Dict[str, Any]):
     """Return an instance of model_cls with all ObjectIds converted to strings and aliases preserved."""
     data = _stringify_object_ids(doc)
     return model_cls(**data)
+
+
+class UpdateSkillsRequest(BaseModel):
+    skills: List[str]
+
+
+@router.put(
+    "/users/me/skills", response_model=UserResponse, response_model_by_alias=False
+)
+async def update_my_skills(
+    payload: UpdateSkillsRequest, current_user: UserInDB = Depends(get_current_user)
+):
+    """Annotator updates their skills list."""
+    if current_user.role != "annotator":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only annotators can update skills",
+        )
+    await database.users_collection.update_one(
+        {"_id": current_user.id}, {"$set": {"skills": payload.skills}}
+    )
+    updated = await database.users_collection.find_one({"_id": current_user.id})
+    return as_response(UserResponse, updated)
+
+
+# List annotators (manager/admin only)
+@router.get(
+    "/annotators", response_model=List[UserResponse], response_model_by_alias=False
+)
+async def list_annotators(current_user: UserInDB = Depends(get_current_user)):
+    """List all annotators with their skills (accessible to managers and admins)."""
+    if current_user.role not in ["admin", "manager"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to list annotators",
+        )
+
+    annotators = await database.users_collection.find({"role": "annotator"}).to_list(
+        None
+    )
+    return [as_response(UserResponse, u) for u in annotators]
 
 
 # Authentication endpoints
@@ -217,14 +260,8 @@ async def get_projects(current_user: UserInDB = Depends(get_current_user)):
         # Admins see all projects
         projects = await database.projects_collection.find().to_list(None)
     else:
-        # Annotators see projects they're invited to
-        invites = await database.invites_collection.find(
-            {"user_id": current_user.id, "accepted_status": True}
-        ).to_list(None)
-        project_ids = [invite["project_id"] for invite in invites]
-        projects = await database.projects_collection.find(
-            {"_id": {"$in": project_ids}}
-        ).to_list(None)
+        # Annotators see all available projects (names/details/category, list only)
+        projects = await database.projects_collection.find().to_list(None)
 
     return [as_response(ProjectResponse, project) for project in projects]
 
@@ -273,6 +310,87 @@ async def get_project(
     return as_response(ProjectResponse, project)
 
 
+# Project invites listing for managers/admins
+@router.get(
+    "/projects/{project_id}/invites",
+    response_model=List[InviteResponse],
+    response_model_by_alias=False,
+)
+async def list_project_invites(
+    project_id: str, current_user: UserInDB = Depends(get_current_user)
+):
+    """List all invites for a project (only admin or the project's manager)."""
+    if not ObjectId.is_valid(project_id):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid project ID"
+        )
+
+    project = await database.projects_collection.find_one({"_id": ObjectId(project_id)})
+    if not project:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Project not found"
+        )
+
+    if current_user.role not in ["admin", "manager"] or (
+        current_user.role == "manager" and project["manager_id"] != current_user.id
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to view invites for this project",
+        )
+
+    invites = await database.invites_collection.find(
+        {"project_id": ObjectId(project_id)}
+    ).to_list(None)
+    return [as_response(InviteResponse, inv) for inv in invites]
+
+
+# List annotators who are working on this project
+@router.get(
+    "/projects/{project_id}/annotators",
+    response_model=List[UserResponse],
+    response_model_by_alias=False,
+)
+async def list_project_annotators(
+    project_id: str, current_user: UserInDB = Depends(get_current_user)
+):
+    """List annotators who have accepted invites (present in project_working)."""
+    if not ObjectId.is_valid(project_id):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid project ID"
+        )
+
+    project = await database.projects_collection.find_one({"_id": ObjectId(project_id)})
+    if not project:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Project not found"
+        )
+
+    if current_user.role not in ["admin", "manager"] or (
+        current_user.role == "manager" and project["manager_id"] != current_user.id
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to list annotators for this project",
+        )
+
+    pw = await database.project_working_collection.find_one(
+        {"project_id": ObjectId(project_id)}
+    )
+    annotator_ids = [
+        a.get("annotator_id")
+        for a in (pw.get("annotator_assignments", []) if pw else [])
+        if a.get("annotator_id") is not None
+    ]
+    if not annotator_ids:
+        return []
+
+    users = await database.users_collection.find(
+        {"_id": {"$in": annotator_ids}}
+    ).to_list(None)
+    return [as_response(UserResponse, u) for u in users]
+
+
 # Task endpoints
 @router.post(
     "/projects/{project_id}/tasks",
@@ -308,15 +426,31 @@ async def create_task(
             detail="Only managers and admins can create tasks",
         )
 
-    # Enforce task category matches project category (optional but recommended)
-    if str(project.get("category")) != str(task.category):
+    # Enforce task category matches project category (compare enum value vs stored string)
+    project_cat = project.get("category")
+    incoming_cat_value = (
+        task.category.value
+        if isinstance(task.category, TaskCategory)
+        else str(task.category)
+    )
+    if str(project_cat) != str(incoming_cat_value):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Task category must match project's category",
         )
 
     # Validate task_data based on category
-    model = DATA_MODEL_BY_CATEGORY.get(task.category)
+    # Resolve the proper enum for validation lookup
+    try:
+        cat_enum = (
+            task.category
+            if isinstance(task.category, TaskCategory)
+            else TaskCategory(str(task.category))
+        )
+    except Exception:
+        cat_enum = None
+
+    model = DATA_MODEL_BY_CATEGORY.get(cat_enum) if cat_enum else None
     task_data: Dict[str, Any]
     if model is not None:
         try:
@@ -332,7 +466,7 @@ async def create_task(
 
     task_dict = {
         "project_id": ObjectId(project_id),
-        "category": task.category,
+        "category": incoming_cat_value,
         "task_data": task_data,
         "annotation": None,
         "qa_annotation": None,
@@ -402,6 +536,236 @@ async def get_project_tasks(
 
     tasks = await database.tasks_collection.find(
         {"project_id": ObjectId(project_id)}
+    ).to_list(None)
+    return [as_response(TaskResponse, task) for task in tasks]
+
+
+@router.get(
+    "/projects/{project_id}/completed-tasks",
+    response_model=List[TaskResponse],
+    response_model_by_alias=False,
+)
+async def get_completed_tasks(
+    project_id: str,
+    annotator_id: Optional[str] = None,
+    current_user: UserInDB = Depends(get_current_user),
+):
+    """List tasks in a project that have been completed by the annotator (annotator_part=True).
+
+    Accessible by admin or the project's manager. Optional filter by annotator_id.
+    """
+    if not ObjectId.is_valid(project_id):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid project ID"
+        )
+
+    project = await database.projects_collection.find_one({"_id": ObjectId(project_id)})
+    if not project:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Project not found"
+        )
+
+    if current_user.role not in ["admin", "manager"] or (
+        current_user.role == "manager" and project["manager_id"] != current_user.id
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to view completed tasks for this project",
+        )
+
+    # Fully completed = both annotator and QA parts done
+    query: Dict[str, Any] = {
+        "project_id": ObjectId(project_id),
+        "completed_status.annotator_part": True,
+        "completed_status.qa_part": True,
+    }
+    if annotator_id:
+        if not ObjectId.is_valid(annotator_id):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid annotator_id"
+            )
+        query["assigned_annotator_id"] = ObjectId(annotator_id)
+
+    tasks = await database.tasks_collection.find(query).to_list(None)
+    return [as_response(TaskResponse, task) for task in tasks]
+
+
+@router.get("/projects/{project_id}/completed-tasks/export")
+async def export_completed_tasks(
+    project_id: str,
+    format: str = "csv",
+    current_user: UserInDB = Depends(get_current_user),
+):
+    """Export fully completed tasks (annotator+QA) as CSV or JSON.
+
+    Accessible by admin or the project's manager.
+    """
+    import io, csv, json
+
+    if not ObjectId.is_valid(project_id):
+        raise HTTPException(status_code=400, detail="Invalid project ID")
+
+    project = await database.projects_collection.find_one({"_id": ObjectId(project_id)})
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    if current_user.role not in ["admin", "manager"] or (
+        current_user.role == "manager" and project["manager_id"] != current_user.id
+    ):
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    cursor = database.tasks_collection.find(
+        {
+            "project_id": ObjectId(project_id),
+            "completed_status.annotator_part": True,
+            "completed_status.qa_part": True,
+        }
+    )
+    docs = await cursor.to_list(None)
+
+    # Prepare export rows
+    rows = []
+    for d in docs:
+        rows.append(
+            {
+                "task_id": str(d.get("_id")),
+                "project_id": str(d.get("project_id")),
+                "category": str(d.get("category")),
+                "annotator_id": (
+                    str(d.get("assigned_annotator_id"))
+                    if d.get("assigned_annotator_id")
+                    else None
+                ),
+                "qa_id": (
+                    str(d.get("assigned_qa_id")) if d.get("assigned_qa_id") else None
+                ),
+                "created_at": (
+                    d.get("created_at").isoformat() if d.get("created_at") else None
+                ),
+                "annotator_started_at": (
+                    d.get("annotator_started_at").isoformat()
+                    if d.get("annotator_started_at")
+                    else None
+                ),
+                "annotator_completed_at": (
+                    d.get("annotator_completed_at").isoformat()
+                    if d.get("annotator_completed_at")
+                    else None
+                ),
+                "qa_started_at": (
+                    d.get("qa_started_at").isoformat()
+                    if d.get("qa_started_at")
+                    else None
+                ),
+                "qa_completed_at": (
+                    d.get("qa_completed_at").isoformat()
+                    if d.get("qa_completed_at")
+                    else None
+                ),
+                "task_data": json.dumps(d.get("task_data", {}), ensure_ascii=False),
+                "annotation": json.dumps(d.get("annotation", {}), ensure_ascii=False),
+                "qa_annotation": json.dumps(
+                    d.get("qa_annotation", {}), ensure_ascii=False
+                ),
+                "qa_feedback": d.get("qa_feedback"),
+            }
+        )
+
+    if format.lower() == "json":
+        return JSONResponse(rows)
+
+    # Default CSV
+    output = io.StringIO()
+    fieldnames = (
+        list(rows[0].keys())
+        if rows
+        else [
+            "task_id",
+            "project_id",
+            "category",
+            "annotator_id",
+            "qa_id",
+            "created_at",
+            "annotator_started_at",
+            "annotator_completed_at",
+            "qa_started_at",
+            "qa_completed_at",
+            "task_data",
+            "annotation",
+            "qa_annotation",
+            "qa_feedback",
+        ]
+    )
+    writer = csv.DictWriter(output, fieldnames=fieldnames)
+    writer.writeheader()
+    for r in rows:
+        writer.writerow(r)
+    output.seek(0)
+    headers = {
+        "Content-Disposition": f"attachment; filename=completed_tasks_{project_id}.csv"
+    }
+    return StreamingResponse(
+        iter([output.read()]), media_type="text/csv", headers=headers
+    )
+
+
+@router.get(
+    "/projects/{project_id}/my-tasks",
+    response_model=List[TaskResponse],
+    response_model_by_alias=False,
+)
+async def get_my_project_tasks(
+    project_id: str, current_user: UserInDB = Depends(get_current_user)
+):
+    """Get tasks in a project that are assigned to the current annotator.
+
+    Only available to annotators who have accepted an invite (or been added to project_working).
+    """
+    if current_user.role != "annotator":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only annotators can view their assigned tasks",
+        )
+
+    if not ObjectId.is_valid(project_id):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid project ID"
+        )
+
+    # Ensure project exists
+    project = await database.projects_collection.find_one({"_id": ObjectId(project_id)})
+    if not project:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Project not found"
+        )
+
+    # Check annotator is a member (accepted invite or present in project_working)
+    invite = await database.invites_collection.find_one(
+        {
+            "project_id": ObjectId(project_id),
+            "user_id": current_user.id,
+            "accepted_status": True,
+        }
+    )
+    if not invite:
+        pw = await database.project_working_collection.find_one(
+            {
+                "project_id": ObjectId(project_id),
+                "annotator_assignments.annotator_id": current_user.id,
+            }
+        )
+        if not pw:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Not authorized to view tasks for this project",
+            )
+
+    tasks = await database.tasks_collection.find(
+        {
+            "project_id": ObjectId(project_id),
+            "assigned_annotator_id": current_user.id,
+            "completed_status.annotator_part": False,
+        }
     ).to_list(None)
     return [as_response(TaskResponse, task) for task in tasks]
 
@@ -481,6 +845,19 @@ async def assign_task(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Invalid annotator_id",
             )
+        # Validate that annotator belongs to project_working for this project
+        pw = await database.project_working_collection.find_one(
+            {"project_id": task["project_id"]}
+        )
+        allowed_annotators = set(
+            a.get("annotator_id")
+            for a in (pw.get("annotator_assignments", []) if pw else [])
+        )
+        if ObjectId(payload.annotator_id) not in allowed_annotators:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Annotator is not part of this project (invite not accepted)",
+            )
         update["assigned_annotator_id"] = ObjectId(payload.annotator_id)
         # Set annotator_started_at if not present
         if not task.get("annotator_started_at"):
@@ -503,6 +880,17 @@ async def assign_task(
     await database.tasks_collection.update_one(
         {"_id": ObjectId(task_id)}, {"$set": update}
     )
+    # If annotator was assigned, update project_working to include this task under that annotator
+    if payload.annotator_id:
+        await database.project_working_collection.update_one(
+            {
+                "project_id": task["project_id"],
+                "annotator_assignments.annotator_id": ObjectId(payload.annotator_id),
+            },
+            {
+                "$addToSet": {"annotator_assignments.$.task_ids": ObjectId(task_id)},
+            },
+        )
     return {"message": "Task assignment updated"}
 
 
@@ -550,17 +938,47 @@ async def submit_annotation(
         else task["category"]
     )
     ann_model = ANNOTATION_MODEL_BY_CATEGORY.get(category)
-    annotation_dict: Dict[str, Any]
+    annotation_dict: Dict[str, Any] = payload.annotation
+    # Be tolerant: attempt coercions/mapping for common lightweight payloads
     if ann_model is not None:
+        # Heuristics for LLM grading: accept {label:"good"} or {score: 4}
+        if category == TaskCategory.LLM_RESPONSE_GRADING:
+            if "rating" not in annotation_dict:
+                # Map common fields to rating
+                if "score" in annotation_dict and isinstance(
+                    annotation_dict["score"], (int, float, str)
+                ):
+                    try:
+                        annotation_dict["rating"] = int(annotation_dict["score"])
+                    except Exception:
+                        pass
+                if "value" in annotation_dict and "rating" not in annotation_dict:
+                    try:
+                        annotation_dict["rating"] = int(annotation_dict["value"])
+                    except Exception:
+                        pass
+                if "label" in annotation_dict and "rating" not in annotation_dict:
+                    label = str(annotation_dict["label"]).strip().lower()
+                    mapping = {
+                        "excellent": 5,
+                        "great": 5,
+                        "good": 4,
+                        "average": 3,
+                        "ok": 3,
+                        "poor": 2,
+                        "bad": 1,
+                    }
+                    if label.isdigit():
+                        annotation_dict["rating"] = int(label)
+                    elif label in mapping:
+                        annotation_dict["rating"] = mapping[label]
+
+        # Now validate; if still invalid, fallback to storing raw annotation
         try:
-            annotation_dict = ann_model(**payload.annotation).model_dump()
-        except Exception as e:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Invalid annotation for category {category}: {e}",
-            )
-    else:
-        annotation_dict = payload.annotation
+            annotation_dict = ann_model(**annotation_dict).model_dump()
+        except Exception:
+            # Store as-is without strict validation to avoid blocking annotators
+            annotation_dict = payload.annotation
 
     updates = {
         "annotation": annotation_dict,
@@ -571,6 +989,17 @@ async def submit_annotation(
     await database.tasks_collection.update_one(
         {"_id": ObjectId(task_id)}, {"$set": updates}
     )
+
+    # After submission: remove this task from project_working assigned task list for the annotator
+    if task.get("assigned_annotator_id"):
+        await database.project_working_collection.update_one(
+            {
+                "project_id": task["project_id"],
+                "annotator_assignments.annotator_id": task["assigned_annotator_id"],
+            },
+            {"$pull": {"annotator_assignments.$.task_ids": ObjectId(task_id)}},
+        )
+
     return {"message": "Annotation submitted"}
 
 
@@ -731,4 +1160,65 @@ async def accept_invite(
         {"$set": {"accepted_status": True, "accepted_at": datetime.utcnow()}},
     )
 
+    # Ensure annotator is added to project_working for this project
+    project_id = invite["project_id"]
+    # Find existing project_working doc
+    pw = await database.project_working_collection.find_one({"project_id": project_id})
+
+    annotator_entry = {
+        "annotator_id": current_user.id,
+        "task_ids": [],
+        "assigned_at": datetime.utcnow(),
+    }
+
+    if pw is None:
+        # Create new project_working document for this project
+        await database.project_working_collection.insert_one(
+            {
+                "project_id": project_id,
+                "annotator_assignments": [annotator_entry],
+                "created_at": datetime.utcnow(),
+            }
+        )
+    else:
+        # Add annotator if not already present
+        existing = pw.get("annotator_assignments", [])
+        already = any(a.get("annotator_id") == current_user.id for a in existing)
+        if not already:
+            await database.project_working_collection.update_one(
+                {"_id": pw["_id"]},
+                {"$push": {"annotator_assignments": annotator_entry}},
+            )
+
     return {"message": "Invite accepted successfully"}
+
+
+@router.delete("/invites/{invite_id}")
+async def delete_invite(
+    invite_id: str, current_user: UserInDB = Depends(get_current_user)
+):
+    """Cancel/delete an invite (admin or project's manager)."""
+    if not ObjectId.is_valid(invite_id):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid invite ID"
+        )
+
+    invite = await database.invites_collection.find_one({"_id": ObjectId(invite_id)})
+    if not invite:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Invite not found"
+        )
+
+    project = await database.projects_collection.find_one({"_id": invite["project_id"]})
+    if current_user.role not in ["admin", "manager"] or (
+        current_user.role == "manager"
+        and project
+        and project["manager_id"] != current_user.id
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to cancel this invite",
+        )
+
+    await database.invites_collection.delete_one({"_id": ObjectId(invite_id)})
+    return {"message": "Invite canceled"}
