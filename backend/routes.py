@@ -893,13 +893,12 @@ async def assign_task(
         )
 
         # Create entry in annotator_tasks_collection for time tracking
+        # Only store completion_time, timer runs on frontend
         annotator_task_entry = {
             "annotator_id": ObjectId(payload.annotator_id),
             "project_id": task["project_id"],
             "task_id": ObjectId(task_id),
-            "started_at": update.get("annotator_started_at", datetime.utcnow()),
-            "completed_at": None,
-            "completion_time": None,
+            "completion_time": None,  # Will be set when annotation is submitted
         }
 
         # Check if entry already exists for this task
@@ -913,7 +912,7 @@ async def assign_task(
         if not existing_entry:
             await database.annotator_tasks_collection.insert_one(annotator_task_entry)
         else:
-            # Update the started_at if reassigning
+            # Reset completion_time if reassigning
             await database.annotator_tasks_collection.update_one(
                 {
                     "task_id": ObjectId(task_id),
@@ -921,10 +920,6 @@ async def assign_task(
                 },
                 {
                     "$set": {
-                        "started_at": update.get(
-                            "annotator_started_at", datetime.utcnow()
-                        ),
-                        "completed_at": None,
                         "completion_time": None,
                     }
                 },
@@ -1040,24 +1035,21 @@ async def submit_annotation(
             {"$pull": {"annotator_assignments.$.task_ids": ObjectId(task_id)}},
         )
 
-        # Update annotator_tasks_collection with completion time
-        started_at = task.get("annotator_started_at")
-        if started_at:
-            # Calculate completion time in seconds
-            completion_time = (completed_at - started_at).total_seconds()
+        # Update annotator_tasks_collection with completion time from frontend timer
+        # Use the completion_time sent from frontend (in seconds)
+        completion_time = payload.completion_time if payload.completion_time else 0
 
-            await database.annotator_tasks_collection.update_one(
-                {
-                    "task_id": ObjectId(task_id),
-                    "annotator_id": task["assigned_annotator_id"],
-                },
-                {
-                    "$set": {
-                        "completed_at": completed_at,
-                        "completion_time": completion_time,
-                    }
-                },
-            )
+        await database.annotator_tasks_collection.update_one(
+            {
+                "task_id": ObjectId(task_id),
+                "annotator_id": task["assigned_annotator_id"],
+            },
+            {
+                "$set": {
+                    "completion_time": completion_time,
+                }
+            },
+        )
 
     return {"message": "Annotation submitted"}
 
@@ -1341,7 +1333,8 @@ async def get_annotator_task_stats(
 
         stats_by_annotator[annotator_id]["total_tasks_assigned"] += 1
 
-        if task_record.get("completed_at"):
+        # Task is completed if completion_time is not None
+        if task_record.get("completion_time") is not None:
             stats_by_annotator[annotator_id]["total_tasks_completed"] += 1
             completion_time = task_record.get("completion_time", 0)
             stats_by_annotator[annotator_id]["total_time_seconds"] += completion_time
@@ -1349,16 +1342,6 @@ async def get_annotator_task_stats(
             stats_by_annotator[annotator_id]["tasks"].append(
                 {
                     "task_id": str(task_record["task_id"]),
-                    "started_at": (
-                        task_record["started_at"].isoformat()
-                        if task_record.get("started_at")
-                        else None
-                    ),
-                    "completed_at": (
-                        task_record["completed_at"].isoformat()
-                        if task_record.get("completed_at")
-                        else None
-                    ),
                     "completion_time_seconds": completion_time,
                     "completion_time_formatted": f"{int(completion_time // 60)}m {int(completion_time % 60)}s",
                 }
@@ -1419,29 +1402,22 @@ async def get_my_task_history(
             {"_id": record["project_id"]}
         )
 
+        completion_time = record.get("completion_time")
+        is_completed = completion_time is not None
+
         history.append(
             {
                 "task_id": str(record["task_id"]),
                 "project_id": str(record["project_id"]),
                 "project_name": project.get("name", "") if project else "",
                 "task_category": task.get("category", "") if task else "",
-                "started_at": (
-                    record["started_at"].isoformat()
-                    if record.get("started_at")
-                    else None
-                ),
-                "completed_at": (
-                    record["completed_at"].isoformat()
-                    if record.get("completed_at")
-                    else None
-                ),
-                "completion_time_seconds": record.get("completion_time"),
+                "completion_time_seconds": completion_time,
                 "completion_time_formatted": (
-                    f"{int(record['completion_time'] // 60)}m {int(record['completion_time'] % 60)}s"
-                    if record.get("completion_time")
+                    f"{int(completion_time // 60)}m {int(completion_time % 60)}s"
+                    if is_completed
                     else "In Progress"
                 ),
-                "status": "Completed" if record.get("completed_at") else "In Progress",
+                "status": "Completed" if is_completed else "In Progress",
             }
         )
 

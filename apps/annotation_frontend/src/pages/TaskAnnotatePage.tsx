@@ -78,6 +78,10 @@ export default function TaskAnnotatePage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
+  // Timer state - tracks time in seconds
+  const [elapsedTime, setElapsedTime] = useState(0);
+  const [isTimerActive, setIsTimerActive] = useState(false);
+
   // Common annotation fields
   const [label, setLabel] = useState('');
   const [confidence, setConfidence] = useState('0.95');
@@ -119,13 +123,45 @@ export default function TaskAnnotatePage() {
   useEffect(() => {
     if (!taskId) return;
     apiFetch<Task>(`/tasks/${taskId}`)
-      .then(setTask)
+      .then((taskData) => {
+        setTask(taskData);
+        // Start timer when task loads
+        setIsTimerActive(true);
+      })
       .catch((e) => setError(String(e)));
   }, [taskId]);
+
+  // Timer effect
+  useEffect(() => {
+    let interval: NodeJS.Timeout | null = null;
+
+    if (isTimerActive) {
+      interval = setInterval(() => {
+        setElapsedTime((prevTime) => prevTime + 1);
+      }, 1000);
+    }
+
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [isTimerActive]);
+
+  // Format time as HH:MM:SS
+  const formatTime = (seconds: number): string => {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const secs = seconds % 60;
+    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs
+      .toString()
+      .padStart(2, '0')}`;
+  };
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
     if (!taskId || !task) return;
+
+    // Stop the timer
+    setIsTimerActive(false);
 
     let annotationData: any = {
       confidence: parseFloat(confidence) || 0.95,
@@ -146,6 +182,7 @@ export default function TaskAnnotatePage() {
           annotationData.objects = objects ? JSON.parse(objects) : [];
         } catch {
           setError('Objects must be valid JSON array');
+          setIsTimerActive(true); // Resume timer on error
           return;
         }
         break;
@@ -154,6 +191,7 @@ export default function TaskAnnotatePage() {
           annotationData.entities = entities ? JSON.parse(entities) : [];
         } catch {
           setError('Entities must be valid JSON array');
+          setIsTimerActive(true); // Resume timer on error
           return;
         }
         break;
@@ -186,13 +224,17 @@ export default function TaskAnnotatePage() {
     }
 
     try {
-      const body = { annotation: annotationData };
+      const body = {
+        annotation: annotationData,
+        completion_time: elapsedTime, // Send elapsed time in seconds
+      };
       await apiFetch(`/tasks/${taskId}/annotation`, { method: 'PUT', body });
-      setSuccess('Annotation submitted successfully!');
+      setSuccess(`Annotation submitted successfully! Time taken: ${formatTime(elapsedTime)}`);
       setError(null);
     } catch (e: any) {
       setError(e?.message || 'Failed to submit annotation');
       setSuccess(null);
+      setIsTimerActive(true); // Resume timer on error
     }
   };
 
@@ -215,11 +257,35 @@ export default function TaskAnnotatePage() {
       {task && (
         <div className="card">
           <div className="card-body space-y-4">
-            <div>
-              <h2 className="card-title mb-2">Task Information</h2>
-              <div className="flex items-center gap-2 text-sm">
-                <span className="font-mono text-gray-600">{task.id.slice(0, 8)}</span>
-                <span className="badge badge-primary">{task.category}</span>
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="card-title mb-2">Task Information</h2>
+                <div className="flex items-center gap-2 text-sm">
+                  <span className="font-mono text-gray-600">{task.id.slice(0, 8)}</span>
+                  <span className="badge badge-primary">{task.category}</span>
+                </div>
+              </div>
+              {/* Timer Display */}
+              <div className="flex flex-col items-end">
+                <div className="text-xs text-gray-500 mb-1">Time Elapsed</div>
+                <div
+                  className={`font-mono text-2xl font-bold ${
+                    isTimerActive ? 'text-blue-600' : 'text-gray-600'
+                  }`}
+                >
+                  {formatTime(elapsedTime)}
+                </div>
+                <div className="flex items-center gap-1 mt-1">
+                  {isTimerActive && (
+                    <>
+                      <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
+                      <span className="text-xs text-gray-500">Recording</span>
+                    </>
+                  )}
+                  {!isTimerActive && elapsedTime > 0 && (
+                    <span className="text-xs text-gray-500">Completed</span>
+                  )}
+                </div>
               </div>
             </div>
             <div>
