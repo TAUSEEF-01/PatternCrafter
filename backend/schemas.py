@@ -397,9 +397,7 @@ class ProjectWorking(BaseModel):
 class TaskCompletion(BaseModel):
     task_id: PyObjectId
     annotator_id: PyObjectId
-    started_at: datetime
-    completed_at: datetime
-    completion_time: float  # Time in seconds
+    completion_time: Optional[float] = None  # Time in seconds from frontend timer
 
 
 class AnnotatorTasks(BaseModel):
@@ -447,6 +445,7 @@ class AssignTaskRequest(BaseModel):
 
 class SubmitAnnotationRequest(BaseModel):
     annotation: Dict[str, Any]
+    completion_time: Optional[float] = None  # Time in seconds from frontend timer
 
 
 class SubmitQARequest(BaseModel):

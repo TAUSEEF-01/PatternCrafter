@@ -75,10 +75,18 @@ function TaskDataViewer({ data }: { data: any }) {
 export default function TaskQAPage() {
   const { taskId } = useParams();
   const [task, setTask] = useState<Task | null>(null);
-  const [qa, setQa] = useState('');
-  const [feedback, setFeedback] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+
+  // QA Review Fields
+  const [decision, setDecision] = useState<'approve' | 'reject' | 'revise'>('approve');
+  const [qualityScore, setQualityScore] = useState('5');
+  const [accuracyRating, setAccuracyRating] = useState('5');
+  const [completenessRating, setCompletenessRating] = useState('5');
+  const [clarityRating, setClarityRating] = useState('5');
+  const [feedback, setFeedback] = useState('');
+  const [corrections, setCorrections] = useState('');
+  const [notes, setNotes] = useState('');
 
   useEffect(() => {
     if (!taskId) return;
@@ -90,12 +98,42 @@ export default function TaskQAPage() {
   const submit = async (e: FormEvent) => {
     e.preventDefault();
     if (!taskId) return;
+
+    // Build QA annotation object
+    const qaAnnotation: any = {
+      decision: decision,
+      quality_score: parseInt(qualityScore) || 5,
+      accuracy_rating: parseInt(accuracyRating) || 5,
+      completeness_rating: parseInt(completenessRating) || 5,
+      clarity_rating: parseInt(clarityRating) || 5,
+    };
+
+    // Add corrections if provided
+    if (corrections.trim()) {
+      try {
+        qaAnnotation.corrections = JSON.parse(corrections);
+      } catch {
+        // If not JSON, store as text
+        qaAnnotation.corrections = corrections;
+      }
+    }
+
+    // Add notes if provided
+    if (notes.trim()) {
+      qaAnnotation.notes = notes;
+    }
+
     try {
-      const body = { qa_annotation: qa ? JSON.parse(qa) : {}, qa_feedback: feedback || undefined };
+      const body = {
+        qa_annotation: qaAnnotation,
+        qa_feedback: feedback.trim() || undefined,
+      };
       await apiFetch(`/tasks/${taskId}/qa`, { method: 'PUT', body });
-      setSuccess('QA submitted');
+      setSuccess('QA review submitted successfully!');
+      setError(null);
     } catch (e: any) {
-      setError(e?.message || 'Failed to submit QA');
+      setError(e?.message || 'Failed to submit QA review');
+      setSuccess(null);
     }
   };
 
@@ -146,28 +184,150 @@ export default function TaskQAPage() {
       <div className="card">
         <div className="card-body">
           <h2 className="card-title mb-4">Submit QA Review</h2>
-          <form onSubmit={submit} className="space-y-4">
-            <div>
-              <label className="label">QA Annotation (JSON format)</label>
-              <textarea
-                className="textarea font-mono text-sm h-40"
-                value={qa}
-                onChange={(e) => setQa(e.target.value)}
-                placeholder='{"decision": "approve", "quality_score": 5}'
-              />
+          <form onSubmit={submit} className="space-y-6">
+            {/* Decision Section */}
+            <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+              <h3 className="font-medium mb-3 text-gray-800">Review Decision</h3>
+              <div>
+                <label className="label">Decision *</label>
+                <select
+                  className="select"
+                  value={decision}
+                  onChange={(e) => setDecision(e.target.value as 'approve' | 'reject' | 'revise')}
+                  required
+                >
+                  <option value="approve">✓ Approve - Annotation is correct</option>
+                  <option value="revise">↻ Revise - Needs minor corrections</option>
+                  <option value="reject">✗ Reject - Requires complete rework</option>
+                </select>
+              </div>
             </div>
-            <div>
-              <label className="label">Feedback (optional)</label>
-              <input
-                className="input"
-                placeholder="Provide feedback for the annotator"
-                value={feedback}
-                onChange={(e) => setFeedback(e.target.value)}
-              />
+
+            {/* Quality Ratings Section */}
+            <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+              <h3 className="font-medium mb-3 text-gray-800">Quality Ratings</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="label">Overall Quality Score (1-10)</label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="10"
+                    className="input"
+                    value={qualityScore}
+                    onChange={(e) => setQualityScore(e.target.value)}
+                    required
+                  />
+                  <p className="text-xs text-gray-500 mt-1">1 = Poor, 10 = Excellent</p>
+                </div>
+
+                <div>
+                  <label className="label">Accuracy Rating (1-10)</label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="10"
+                    className="input"
+                    value={accuracyRating}
+                    onChange={(e) => setAccuracyRating(e.target.value)}
+                    required
+                  />
+                  <p className="text-xs text-gray-500 mt-1">How correct is the annotation?</p>
+                </div>
+
+                <div>
+                  <label className="label">Completeness Rating (1-10)</label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="10"
+                    className="input"
+                    value={completenessRating}
+                    onChange={(e) => setCompletenessRating(e.target.value)}
+                    required
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Is all required information included?
+                  </p>
+                </div>
+
+                <div>
+                  <label className="label">Clarity Rating (1-10)</label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="10"
+                    className="input"
+                    value={clarityRating}
+                    onChange={(e) => setClarityRating(e.target.value)}
+                    required
+                  />
+                  <p className="text-xs text-gray-500 mt-1">How clear and well-structured?</p>
+                </div>
+              </div>
             </div>
-            <button type="submit" className="btn btn-primary">
-              Submit QA Review
-            </button>
+
+            {/* Feedback Section */}
+            <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+              <h3 className="font-medium mb-3 text-gray-800">Detailed Feedback</h3>
+              <div className="space-y-4">
+                <div>
+                  <label className="label">Feedback for Annotator</label>
+                  <textarea
+                    className="textarea h-24"
+                    value={feedback}
+                    onChange={(e) => setFeedback(e.target.value)}
+                    placeholder="Provide constructive feedback about the annotation quality, what was done well, and what could be improved..."
+                  />
+                </div>
+
+                {decision !== 'approve' && (
+                  <div>
+                    <label className="label">
+                      Corrections Needed{' '}
+                      <span className="text-xs text-gray-500">(JSON or text)</span>
+                    </label>
+                    <textarea
+                      className="textarea font-mono text-sm h-32"
+                      value={corrections}
+                      onChange={(e) => setCorrections(e.target.value)}
+                      placeholder='Specify corrections as JSON, e.g., {"corrected_label": "positive"} or as plain text'
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      Optional: Provide specific corrections that need to be made
+                    </p>
+                  </div>
+                )}
+
+                <div>
+                  <label className="label">Internal Notes (optional)</label>
+                  <textarea
+                    className="textarea h-20"
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    placeholder="Any internal notes for managers or future reference..."
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex gap-3">
+              <button
+                type="submit"
+                className={`btn flex-1 ${
+                  decision === 'approve'
+                    ? 'btn-primary'
+                    : decision === 'revise'
+                    ? 'bg-yellow-500 hover:bg-yellow-600 text-white'
+                    : 'bg-red-500 hover:bg-red-600 text-white'
+                }`}
+              >
+                {decision === 'approve' && '✓ Submit Approval'}
+                {decision === 'revise' && '↻ Request Revision'}
+                {decision === 'reject' && '✗ Submit Rejection'}
+              </button>
+            </div>
           </form>
         </div>
       </div>

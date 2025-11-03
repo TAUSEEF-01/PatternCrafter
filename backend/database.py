@@ -74,6 +74,10 @@ async def create_indexes():
     await manager_projects_collection.create_index("project_id")
     await project_working_collection.create_index("project_id")
     await annotator_tasks_collection.create_index("project_id")
+    await annotator_tasks_collection.create_index("annotator_id")
+    await annotator_tasks_collection.create_index(
+        [("task_id", 1), ("annotator_id", 1)], unique=True
+    )
 
 
 def get_database() -> AsyncIOMotorDatabase:
