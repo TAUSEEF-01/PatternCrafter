@@ -1,5 +1,5 @@
 import { Navigate, Route as RRRoute, Routes as RRRoutes } from 'react-router-dom';
-import NavBar from '@/components/NavBar';
+import NavBar, { ThemeProvider, AnimatedBackground, useTheme } from '@/components/NavBar';
 import { useAuth } from '@/auth/AuthContext';
 import LoginPage from '@/pages/LoginPage';
 import RegisterPage from '@/pages/RegisterPage';
@@ -12,6 +12,7 @@ import AssignTaskPage from '@/pages/AssignTaskPage';
 import ProfilePage from '@/pages/ProfilePage';
 import ProjectInvitesPage from '@/pages/ProjectInvitesPage';
 import CompletedTasksPage from '@/pages/CompletedTasksPage';
+import WelcomePage from '@/pages/WelcomePage';
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -26,26 +27,28 @@ function RequireNonAnnotator({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
-export default function App() {
-  // Temporary workaround for react-router-dom typing issues in this workspace
+function AppContent() {
+  const { darkMode } = useTheme();
   const Routes = RRRoutes as unknown as any;
   const Route = RRRoute as unknown as any;
+
   return (
-    <div className="min-h-full">
+    <div 
+      className="min-h-full"
+      style={{
+        backgroundColor: darkMode ? '#0f172a' : '#f8fafc',
+        color: darkMode ? '#e2e8f0' : '#1e293b',
+        minHeight: '100vh',
+        position: 'relative',
+      }}
+    >
+      <AnimatedBackground />
       <NavBar />
-      <div className="container-app py-6">
+      <div className="container-app py-6" style={{ position: 'relative', zIndex: 1 }}>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
-
-          <Route
-            path="/"
-            element={
-              <RequireAuth>
-                <Navigate to="/projects" />
-              </RequireAuth>
-            }
-          />
+          <Route path="/" element={<WelcomePage />} />
           <Route
             path="/projects"
             element={
@@ -98,7 +101,6 @@ export default function App() {
               </RequireAuth>
             }
           />
-
           <Route
             path="/tasks/:taskId/annotate"
             element={
@@ -126,5 +128,13 @@ export default function App() {
         </Routes>
       </div>
     </div>
+  );
+}
+
+export default function App() {
+  return (
+    <ThemeProvider>
+      <AppContent />
+    </ThemeProvider>
   );
 }
