@@ -891,6 +891,45 @@ async def assign_task(
                 "$addToSet": {"annotator_assignments.$.task_ids": ObjectId(task_id)},
             },
         )
+
+        # Create entry in annotator_tasks_collection for time tracking
+        annotator_task_entry = {
+            "annotator_id": ObjectId(payload.annotator_id),
+            "project_id": task["project_id"],
+            "task_id": ObjectId(task_id),
+            "started_at": update.get("annotator_started_at", datetime.utcnow()),
+            "completed_at": None,
+            "completion_time": None,
+        }
+
+        # Check if entry already exists for this task
+        existing_entry = await database.annotator_tasks_collection.find_one(
+            {
+                "task_id": ObjectId(task_id),
+                "annotator_id": ObjectId(payload.annotator_id),
+            }
+        )
+
+        if not existing_entry:
+            await database.annotator_tasks_collection.insert_one(annotator_task_entry)
+        else:
+            # Update the started_at if reassigning
+            await database.annotator_tasks_collection.update_one(
+                {
+                    "task_id": ObjectId(task_id),
+                    "annotator_id": ObjectId(payload.annotator_id),
+                },
+                {
+                    "$set": {
+                        "started_at": update.get(
+                            "annotator_started_at", datetime.utcnow()
+                        ),
+                        "completed_at": None,
+                        "completion_time": None,
+                    }
+                },
+            )
+
     return {"message": "Task assignment updated"}
 
 
@@ -980,10 +1019,11 @@ async def submit_annotation(
             # Store as-is without strict validation to avoid blocking annotators
             annotation_dict = payload.annotation
 
+    completed_at = datetime.utcnow()
     updates = {
         "annotation": annotation_dict,
         "completed_status.annotator_part": True,
-        "annotator_completed_at": datetime.utcnow(),
+        "annotator_completed_at": completed_at,
     }
 
     await database.tasks_collection.update_one(
@@ -999,6 +1039,25 @@ async def submit_annotation(
             },
             {"$pull": {"annotator_assignments.$.task_ids": ObjectId(task_id)}},
         )
+
+        # Update annotator_tasks_collection with completion time
+        started_at = task.get("annotator_started_at")
+        if started_at:
+            # Calculate completion time in seconds
+            completion_time = (completed_at - started_at).total_seconds()
+
+            await database.annotator_tasks_collection.update_one(
+                {
+                    "task_id": ObjectId(task_id),
+                    "annotator_id": task["assigned_annotator_id"],
+                },
+                {
+                    "$set": {
+                        "completed_at": completed_at,
+                        "completion_time": completion_time,
+                    }
+                },
+            )
 
     return {"message": "Annotation submitted"}
 
@@ -1222,3 +1281,174 @@ async def delete_invite(
 
     await database.invites_collection.delete_one({"_id": ObjectId(invite_id)})
     return {"message": "Invite canceled"}
+
+
+# Get annotator task statistics
+@router.get("/projects/{project_id}/annotator-stats")
+async def get_annotator_task_stats(
+    project_id: str,
+    current_user: UserInDB = Depends(get_current_user),
+):
+    """Get task completion statistics for annotators in a project (manager or admin only)"""
+    if not ObjectId.is_valid(project_id):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid project ID"
+        )
+
+    project = await database.projects_collection.find_one({"_id": ObjectId(project_id)})
+    if not project:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Project not found"
+        )
+
+    # Only admins or the project's manager can view statistics
+    if current_user.role not in ["admin", "manager"] or (
+        current_user.role == "manager" and project["manager_id"] != current_user.id
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to view project statistics",
+        )
+
+    # Fetch all annotator task records for this project
+    cursor = database.annotator_tasks_collection.find(
+        {"project_id": ObjectId(project_id)}
+    )
+    annotator_tasks = await cursor.to_list(length=None)
+
+    # Group statistics by annotator
+    stats_by_annotator = {}
+    for task_record in annotator_tasks:
+        annotator_id = str(task_record["annotator_id"])
+
+        if annotator_id not in stats_by_annotator:
+            # Fetch annotator info
+            annotator = await database.users_collection.find_one(
+                {"_id": task_record["annotator_id"]}
+            )
+            stats_by_annotator[annotator_id] = {
+                "annotator_id": annotator_id,
+                "annotator_name": (
+                    annotator.get("name", "Unknown") if annotator else "Unknown"
+                ),
+                "annotator_email": annotator.get("email", "") if annotator else "",
+                "total_tasks_assigned": 0,
+                "total_tasks_completed": 0,
+                "total_time_seconds": 0,
+                "average_time_seconds": 0,
+                "tasks": [],
+            }
+
+        stats_by_annotator[annotator_id]["total_tasks_assigned"] += 1
+
+        if task_record.get("completed_at"):
+            stats_by_annotator[annotator_id]["total_tasks_completed"] += 1
+            completion_time = task_record.get("completion_time", 0)
+            stats_by_annotator[annotator_id]["total_time_seconds"] += completion_time
+
+            stats_by_annotator[annotator_id]["tasks"].append(
+                {
+                    "task_id": str(task_record["task_id"]),
+                    "started_at": (
+                        task_record["started_at"].isoformat()
+                        if task_record.get("started_at")
+                        else None
+                    ),
+                    "completed_at": (
+                        task_record["completed_at"].isoformat()
+                        if task_record.get("completed_at")
+                        else None
+                    ),
+                    "completion_time_seconds": completion_time,
+                    "completion_time_formatted": f"{int(completion_time // 60)}m {int(completion_time % 60)}s",
+                }
+            )
+
+    # Calculate averages
+    for annotator_id in stats_by_annotator:
+        completed = stats_by_annotator[annotator_id]["total_tasks_completed"]
+        if completed > 0:
+            avg_time = (
+                stats_by_annotator[annotator_id]["total_time_seconds"] / completed
+            )
+            stats_by_annotator[annotator_id]["average_time_seconds"] = round(
+                avg_time, 2
+            )
+            stats_by_annotator[annotator_id][
+                "average_time_formatted"
+            ] = f"{int(avg_time // 60)}m {int(avg_time % 60)}s"
+        else:
+            stats_by_annotator[annotator_id]["average_time_formatted"] = "N/A"
+
+    return {
+        "project_id": project_id,
+        "project_name": project.get("name", ""),
+        "annotators": list(stats_by_annotator.values()),
+    }
+
+
+# Get individual annotator's task history
+@router.get("/annotators/my-task-history")
+async def get_my_task_history(
+    project_id: str = None,
+    current_user: UserInDB = Depends(get_current_user),
+):
+    """Get task completion history for the current annotator"""
+    if current_user.role != "annotator":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="This endpoint is for annotators only",
+        )
+
+    query = {"annotator_id": current_user.id}
+    if project_id:
+        if not ObjectId.is_valid(project_id):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid project ID"
+            )
+        query["project_id"] = ObjectId(project_id)
+
+    cursor = database.annotator_tasks_collection.find(query)
+    task_records = await cursor.to_list(length=None)
+
+    history = []
+    for record in task_records:
+        # Fetch task details
+        task = await database.tasks_collection.find_one({"_id": record["task_id"]})
+        project = await database.projects_collection.find_one(
+            {"_id": record["project_id"]}
+        )
+
+        history.append(
+            {
+                "task_id": str(record["task_id"]),
+                "project_id": str(record["project_id"]),
+                "project_name": project.get("name", "") if project else "",
+                "task_category": task.get("category", "") if task else "",
+                "started_at": (
+                    record["started_at"].isoformat()
+                    if record.get("started_at")
+                    else None
+                ),
+                "completed_at": (
+                    record["completed_at"].isoformat()
+                    if record.get("completed_at")
+                    else None
+                ),
+                "completion_time_seconds": record.get("completion_time"),
+                "completion_time_formatted": (
+                    f"{int(record['completion_time'] // 60)}m {int(record['completion_time'] % 60)}s"
+                    if record.get("completion_time")
+                    else "In Progress"
+                ),
+                "status": "Completed" if record.get("completed_at") else "In Progress",
+            }
+        )
+
+    return {
+        "annotator_id": str(current_user.id),
+        "annotator_name": current_user.name,
+        "total_tasks": len(history),
+        "completed_tasks": sum(1 for h in history if h["status"] == "Completed"),
+        "history": history,
+    }
