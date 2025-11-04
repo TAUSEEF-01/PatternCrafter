@@ -155,7 +155,7 @@ export default function NavBar() {
   const { darkMode, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const [dropdownOpen, setDropdownOpen] = useState(false);
-  
+
   const Link = RRLink as unknown as any;
   const NavLink = RRNavLink as unknown as any;
 
@@ -188,7 +188,7 @@ export default function NavBar() {
   };
 
   return (
-    <nav 
+    <nav
       style={{
         backgroundColor: '#7A1CAC',
         color: '#EBD3F8',
@@ -199,25 +199,26 @@ export default function NavBar() {
       }}
     >
       <div className="container-app py-3 flex items-center justify-between">
-        <Link 
-          to="/" 
+        <Link
+          to="/"
           className="flex items-center gap-2 font-semibold text-lg"
           style={{ color: '#EBD3F8', textDecoration: 'none' }}
         >
-          <span 
-            className="inline-block h-6 w-6 rounded" 
-            style={{ backgroundColor: '#EBD3F8' }}
+          <img
+            src="/favicon.png"
+            alt="PatternCrafter Logo"
+            className="h-8 w-8"
+            style={{ objectFit: 'contain' }}
           />
           <span>PatternCrafter</span>
         </Link>
-        
+
         <div className="flex items-center gap-6">
           {user ? (
             <>
               <NavLink
                 className={({ isActive }: any) =>
-                  `text-sm ${
-                    isActive ? 'font-semibold' : 'hover:text-white'
+                  `text-sm ${isActive ? 'font-semibold' : 'hover:text-white'
                   }`
                 }
                 style={({ isActive }: any) => ({
@@ -230,8 +231,7 @@ export default function NavBar() {
               </NavLink>
               <NavLink
                 className={({ isActive }: any) =>
-                  `text-sm ${
-                    isActive ? 'font-semibold' : 'hover:text-white'
+                  `text-sm ${isActive ? 'font-semibold' : 'hover:text-white'
                   }`
                 }
                 style={({ isActive }: any) => ({
@@ -242,14 +242,14 @@ export default function NavBar() {
               >
                 Invites
               </NavLink>
-              
+
               {/* Profile Dropdown */}
               <div style={{ position: 'relative' }}>
                 <button
                   id="profile-button"
                   onClick={() => setDropdownOpen(!dropdownOpen)}
                   className="flex items-center gap-2"
-                  style={{ 
+                  style={{
                     color: '#EBD3F8',
                     background: 'none',
                     border: 'none',
@@ -265,14 +265,14 @@ export default function NavBar() {
                     e.currentTarget.style.backgroundColor = 'transparent';
                   }}
                 >
-                  <div 
+                  <div
                     className="h-8 w-8 rounded-full flex items-center justify-center text-sm font-semibold"
                     style={{ backgroundColor: '#EBD3F8', color: '#2E073F' }}
                   >
                     {user.name?.[0]?.toUpperCase() || '?'}
                   </div>
                 </button>
-                
+
                 {/* Dropdown Menu */}
                 {dropdownOpen && (
                   <div
@@ -291,18 +291,18 @@ export default function NavBar() {
                       overflow: 'hidden',
                     }}
                   >
-                    <div style={{ 
+                    <div style={{
                       padding: '1rem',
                       borderBottom: `1px solid ${darkMode ? '#334155' : '#e2e8f0'}`,
                     }}>
-                      <div style={{ 
+                      <div style={{
                         fontWeight: '600',
                         color: darkMode ? '#e2e8f0' : '#1e293b',
                         marginBottom: '0.5rem',
                       }}>
                         {user.name}
                       </div>
-                      <div style={{ 
+                      <div style={{
                         fontSize: '0.75rem',
                         color: darkMode ? '#94a3b8' : '#64748b',
                         display: 'inline-block',
@@ -408,8 +408,7 @@ export default function NavBar() {
             <>
               <NavLink
                 className={({ isActive }: any) =>
-                  `text-sm ${
-                    isActive ? 'font-semibold' : 'hover:text-white'
+                  `text-sm ${isActive ? 'font-semibold' : 'hover:text-white'
                   }`
                 }
                 style={({ isActive }: any) => ({
@@ -422,8 +421,7 @@ export default function NavBar() {
               </NavLink>
               <NavLink
                 className={({ isActive }: any) =>
-                  `text-sm ${
-                    isActive ? 'font-semibold' : 'hover:text-white'
+                  `text-sm ${isActive ? 'font-semibold' : 'hover:text-white'
                   }`
                 }
                 style={({ isActive }: any) => ({
