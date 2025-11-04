@@ -68,7 +68,7 @@ export default function WelcomePage() {
             Craft, annotate, and evaluate conversational AI datasets and templates—all in
             one powerful, unified workspace.
           </p>
-          <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+          {/* <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
             <button
               onClick={() => navigate('/register')}
               style={{
@@ -126,7 +126,7 @@ export default function WelcomePage() {
             >
               Sign In
             </button>
-          </div>
+          </div> */}
         </section>
 
         {/* Features */}

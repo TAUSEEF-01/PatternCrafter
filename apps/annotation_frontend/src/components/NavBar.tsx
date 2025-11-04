@@ -1,4 +1,4 @@
-import { Link as RRLink, NavLink as RRNavLink } from 'react-router-dom';
+import { Link as RRLink, NavLink as RRNavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/auth/AuthContext';
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 
@@ -153,12 +153,42 @@ export function AnimatedBackground() {
 export default function NavBar() {
   const { user, logout } = useAuth();
   const { darkMode, toggleTheme } = useTheme();
-  
+  const navigate = useNavigate();
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+
   const Link = RRLink as unknown as any;
   const NavLink = RRNavLink as unknown as any;
 
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      const dropdown = document.getElementById('profile-dropdown');
+      const button = document.getElementById('profile-button');
+      if (dropdown && button && !dropdown.contains(e.target as Node) && !button.contains(e.target as Node)) {
+        setDropdownOpen(false);
+      }
+    };
+
+    if (dropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [dropdownOpen]);
+
+  const handleLogout = () => {
+    setDropdownOpen(false);
+    logout();
+  };
+
+  const handleProfileClick = () => {
+    setDropdownOpen(false);
+    navigate('/profile');
+  };
+
   return (
-    <nav 
+    <nav
       style={{
         backgroundColor: '#7A1CAC',
         color: '#EBD3F8',
@@ -169,25 +199,26 @@ export default function NavBar() {
       }}
     >
       <div className="container-app py-3 flex items-center justify-between">
-        <Link 
-          to="/" 
+        <Link
+          to="/"
           className="flex items-center gap-2 font-semibold text-lg"
           style={{ color: '#EBD3F8', textDecoration: 'none' }}
         >
-          <span 
-            className="inline-block h-6 w-6 rounded" 
-            style={{ backgroundColor: '#EBD3F8' }}
+          <img
+            src="/favicon.png"
+            alt="PatternCrafter Logo"
+            className="h-8 w-8"
+            style={{ objectFit: 'contain' }}
           />
           <span>PatternCrafter</span>
         </Link>
-        
+
         <div className="flex items-center gap-6">
           {user ? (
             <>
               <NavLink
                 className={({ isActive }: any) =>
-                  `text-sm ${
-                    isActive ? 'font-semibold' : 'hover:text-white'
+                  `text-sm ${isActive ? 'font-semibold' : 'hover:text-white'
                   }`
                 }
                 style={({ isActive }: any) => ({
@@ -200,8 +231,7 @@ export default function NavBar() {
               </NavLink>
               <NavLink
                 className={({ isActive }: any) =>
-                  `text-sm ${
-                    isActive ? 'font-semibold' : 'hover:text-white'
+                  `text-sm ${isActive ? 'font-semibold' : 'hover:text-white'
                   }`
                 }
                 style={({ isActive }: any) => ({
@@ -212,32 +242,14 @@ export default function NavBar() {
               >
                 Invites
               </NavLink>
-              <NavLink
-                className={({ isActive }: any) =>
-                  `text-sm ${
-                    isActive ? 'font-semibold' : 'hover:text-white'
-                  }`
-                }
-                style={({ isActive }: any) => ({
-                  color: isActive ? '#ffffff' : '#EBD3F8',
-                  textDecoration: 'none',
-                })}
-                to="/profile"
-              >
-                Profile
-              </NavLink>
-              
+
               {/* Profile Dropdown */}
               <div style={{ position: 'relative' }}>
                 <button
-                  onClick={() => {
-                    const dropdown = document.getElementById('profile-dropdown');
-                    if (dropdown) {
-                      dropdown.style.display = dropdown.style.display === 'block' ? 'none' : 'block';
-                    }
-                  }}
-                  className="hidden sm:flex items-center gap-2 text-sm"
-                  style={{ 
+                  id="profile-button"
+                  onClick={() => setDropdownOpen(!dropdownOpen)}
+                  className="flex items-center gap-2"
+                  style={{
                     color: '#EBD3F8',
                     background: 'none',
                     border: 'none',
@@ -253,71 +265,119 @@ export default function NavBar() {
                     e.currentTarget.style.backgroundColor = 'transparent';
                   }}
                 >
-                  <div 
-                    className="h-7 w-7 rounded-full flex items-center justify-center text-xs font-semibold"
+                  <div
+                    className="h-8 w-8 rounded-full flex items-center justify-center text-sm font-semibold"
                     style={{ backgroundColor: '#EBD3F8', color: '#2E073F' }}
                   >
                     {user.name?.[0]?.toUpperCase() || '?'}
                   </div>
-                  <svg 
-                    width="16" 
-                    height="16" 
-                    viewBox="0 0 16 16" 
-                    fill="none" 
-                    style={{ color: '#EBD3F8' }}
-                  >
-                    <path 
-                      d="M4 6L8 10L12 6" 
-                      stroke="currentColor" 
-                      strokeWidth="2" 
-                      strokeLinecap="round" 
-                      strokeLinejoin="round"
-                    />
-                  </svg>
                 </button>
-                
+
                 {/* Dropdown Menu */}
-                <div
-                  id="profile-dropdown"
-                  style={{
-                    display: 'none',
-                    position: 'absolute',
-                    top: '100%',
-                    right: 0,
-                    marginTop: '0.5rem',
-                    backgroundColor: darkMode ? '#1e293b' : '#ffffff',
-                    border: `1px solid ${darkMode ? '#334155' : '#e2e8f0'}`,
-                    borderRadius: '0.5rem',
-                    boxShadow: '0 10px 25px rgba(0, 0, 0, 0.2)',
-                    padding: '0.75rem',
-                    minWidth: '200px',
-                    zIndex: 50,
-                  }}
-                >
-                  <div style={{ 
-                    padding: '0.5rem',
-                    borderBottom: `1px solid ${darkMode ? '#334155' : '#e2e8f0'}`,
-                    marginBottom: '0.5rem',
-                  }}>
-                    <div style={{ 
-                      fontWeight: '600',
-                      color: darkMode ? '#e2e8f0' : '#1e293b',
-                      marginBottom: '0.25rem',
+                {dropdownOpen && (
+                  <div
+                    id="profile-dropdown"
+                    style={{
+                      position: 'absolute',
+                      top: '100%',
+                      right: 0,
+                      marginTop: '0.5rem',
+                      backgroundColor: darkMode ? '#1e293b' : '#ffffff',
+                      border: `1px solid ${darkMode ? '#334155' : '#e2e8f0'}`,
+                      borderRadius: '0.5rem',
+                      boxShadow: '0 10px 25px rgba(0, 0, 0, 0.2)',
+                      minWidth: '220px',
+                      zIndex: 50,
+                      overflow: 'hidden',
+                    }}
+                  >
+                    <div style={{
+                      padding: '1rem',
+                      borderBottom: `1px solid ${darkMode ? '#334155' : '#e2e8f0'}`,
                     }}>
-                      {user.name}
+                      <div style={{
+                        fontWeight: '600',
+                        color: darkMode ? '#e2e8f0' : '#1e293b',
+                        marginBottom: '0.5rem',
+                      }}>
+                        {user.name}
+                      </div>
+                      <div style={{
+                        fontSize: '0.75rem',
+                        color: darkMode ? '#94a3b8' : '#64748b',
+                        display: 'inline-block',
+                        backgroundColor: darkMode ? '#334155' : '#f1f5f9',
+                        padding: '0.25rem 0.5rem',
+                        borderRadius: '0.25rem',
+                        textTransform: 'capitalize',
+                      }}>
+                        {user.role}
+                      </div>
                     </div>
-                    <div style={{ 
-                      fontSize: '0.75rem',
-                      color: darkMode ? '#94a3b8' : '#64748b',
-                      display: 'inline-block',
-                      backgroundColor: darkMode ? '#334155' : '#f1f5f9',
-                      padding: '0.25rem 0.5rem',
-                      borderRadius: '0.25rem',
-                    }}>
-                      {user.role}
-                    </div>
+
+                    <button
+                      onClick={handleProfileClick}
+                      style={{
+                        width: '100%',
+                        padding: '0.75rem 1rem',
+                        textAlign: 'left',
+                        backgroundColor: 'transparent',
+                        border: 'none',
+                        cursor: 'pointer',
+                        color: darkMode ? '#e2e8f0' : '#1e293b',
+                        fontSize: '0.875rem',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.75rem',
+                        transition: 'background-color 0.2s ease',
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = darkMode ? '#334155' : '#f1f5f9';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = 'transparent';
+                      }}
+                    >
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                        <circle cx="12" cy="7" r="4" />
+                      </svg>
+                      Profile
+                    </button>
+
+                    <button
+                      onClick={handleLogout}
+                      style={{
+                        width: '100%',
+                        padding: '0.75rem 1rem',
+                        textAlign: 'left',
+                        backgroundColor: 'transparent',
+                        border: 'none',
+                        cursor: 'pointer',
+                        color: '#ef4444',
+                        fontSize: '0.875rem',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.75rem',
+                        transition: 'background-color 0.2s ease',
+                        borderTop: `1px solid ${darkMode ? '#334155' : '#e2e8f0'}`,
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = darkMode ? '#334155' : '#fef2f2';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = 'transparent';
+                      }}
+                    >
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                        <polyline points="16 17 21 12 16 7" />
+                        <line x1="21" y1="12" x2="9" y2="12" />
+                      </svg>
+                      Logout
+                    </button>
                   </div>
-                </div>
+                )}
               </div>
 
               {/* Theme Toggle */}
@@ -343,39 +403,12 @@ export default function NavBar() {
               >
                 {darkMode ? '☀️' : '🌙'}
               </button>
-              
-              <button 
-                className="btn btn-outline"
-                onClick={logout}
-                style={{
-                  backgroundColor: 'transparent',
-                  color: '#EBD3F8',
-                  border: '1px solid #EBD3F8',
-                  padding: '0.5rem 1rem',
-                  borderRadius: '0.375rem',
-                  cursor: 'pointer',
-                  fontSize: '0.875rem',
-                  fontWeight: '500',
-                  transition: 'all 0.3s ease',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = '#EBD3F8';
-                  e.currentTarget.style.color = '#2E073F';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = 'transparent';
-                  e.currentTarget.style.color = '#EBD3F8';
-                }}
-              >
-                Logout
-              </button>
             </>
           ) : (
             <>
               <NavLink
                 className={({ isActive }: any) =>
-                  `text-sm ${
-                    isActive ? 'font-semibold' : 'hover:text-white'
+                  `text-sm ${isActive ? 'font-semibold' : 'hover:text-white'
                   }`
                 }
                 style={({ isActive }: any) => ({
@@ -388,8 +421,7 @@ export default function NavBar() {
               </NavLink>
               <NavLink
                 className={({ isActive }: any) =>
-                  `text-sm ${
-                    isActive ? 'font-semibold' : 'hover:text-white'
+                  `text-sm ${isActive ? 'font-semibold' : 'hover:text-white'
                   }`
                 }
                 style={({ isActive }: any) => ({
