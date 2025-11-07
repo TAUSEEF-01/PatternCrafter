@@ -40,3 +40,8 @@ logs/
 
 # OS
 Thumbs.db
+
+# Run
+start_frontend.sh
+start_backend.sh
+
