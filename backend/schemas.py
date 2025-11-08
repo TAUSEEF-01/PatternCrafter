@@ -119,6 +119,7 @@ class Project(BaseModel):
     details: str
     category: TaskCategory  # Added category field
     task_ids: List[PyObjectId] = []
+    is_completed: bool = False  # Track if project is marked as completed
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
     class Config:
@@ -134,6 +135,7 @@ class ProjectResponse(BaseModel):
     details: str
     category: TaskCategory
     task_ids: List[str] = []
+    is_completed: bool = False
     created_at: datetime
 
 
