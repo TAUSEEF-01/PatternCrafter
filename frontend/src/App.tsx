@@ -22,6 +22,10 @@ import ProfilePage from "@/pages/ProfilePage";
 import ProjectInvitesPage from "@/pages/ProjectInvitesPage";
 import CompletedTasksPage from "@/pages/CompletedTasksPage";
 import WelcomePage from "@/pages/WelcomePage";
+import CreateTaskPage from "@/pages/CreateTaskPage";
+import ManageRolesPage from "@/pages/ManageRolesPage";
+import InProgressTasksPage from "@/pages/InProgressTasksPage";
+import AnnotatorCompletedTasksPage from "@/pages/AnnotatorCompletedTasksPage";
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -93,6 +97,44 @@ function AppContent() {
               <RequireAuth>
                 <RequireNonAnnotator>
                   <CompletedTasksPage />
+                </RequireNonAnnotator>
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/projects/:projectId/tasks/create"
+            element={
+              <RequireAuth>
+                <RequireNonAnnotator>
+                  <CreateTaskPage />
+                </RequireNonAnnotator>
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/projects/:projectId/tasks/in-progress"
+            element={
+              <RequireAuth>
+                <InProgressTasksPage />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/projects/:projectId/tasks/annotator-completed"
+            element={
+              <RequireAuth>
+                <RequireNonAnnotator>
+                  <AnnotatorCompletedTasksPage />
+                </RequireNonAnnotator>
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/projects/:projectId/roles"
+            element={
+              <RequireAuth>
+                <RequireNonAnnotator>
+                  <ManageRolesPage />
                 </RequireNonAnnotator>
               </RequireAuth>
             }

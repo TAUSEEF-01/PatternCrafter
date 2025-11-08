@@ -1,0 +1,523 @@
+import { useEffect, useState } from "react";
+import { Link as RouterLink, useParams, useNavigate } from "react-router-dom";
+import { apiFetch } from "@/api/client";
+import { Task } from "@/types";
+
+type Role = "user" | "assistant";
+type DialogueMessage = { role: Role; content: string };
+
+const LinkFix = RouterLink as unknown as any;
+
+export default function CreateTaskPage() {
+  const { projectId } = useParams();
+  const navigate = useNavigate();
+  const [error, setError] = useState<string | null>(null);
+  const [category, setCategory] = useState<string>("");
+
+  // Get category from route state
+  useEffect(() => {
+    const state = (window.history.state as any)?.usr;
+    if (state?.category) {
+      setCategory(state.category);
+    }
+  }, []);
+
+  // LLM Response Grading
+  const [llm_document, setLLMDocument] = useState("");
+  const [llm_split, setLLMSplit] = useState(false);
+  const [llm_summary, setLLMSummary] = useState("");
+  const [llm_prompt, setLLMPrompt] = useState("");
+  const [llm_model, setLLMModel] = useState("");
+
+  // Chatbot Model Assessment
+  const [chat_messages, setChatMessages] = useState<DialogueMessage[]>([
+    { role: "user", content: "" },
+    { role: "assistant", content: "" },
+  ]);
+  const [chat_model, setChatModel] = useState("");
+  const [chat_title, setChatTitle] = useState("InstructGPT Assessment");
+
+  // Response Selection
+  const [rs_dialogue, setRsDialogue] = useState<DialogueMessage[]>([
+    { role: "user", content: "" },
+  ]);
+  const [rs_options, setRsOptions] = useState<string[]>(["", "", ""]);
+  const [rs_context, setRsContext] = useState("");
+
+  // Text Classification
+  const [tc_text, setTcText] = useState("");
+  const [tc_labels, setTcLabels] = useState("positive, negative");
+
+  // Image Classification
+  const [ic_image, setIcImage] = useState("");
+  const [ic_labels, setIcLabels] = useState("cat, dog");
+
+  // Object Detection
+  const [od_image, setOdImage] = useState("");
+  const [od_classes, setOdClasses] = useState("person, car");
+
+  // NER
+  const [ner_text, setNerText] = useState("");
+  const [ner_entity_types, setNerEntityTypes] = useState(
+    "PERSON, ORG, LOCATION"
+  );
+
+  // Get category from route state
+  useEffect(() => {
+    const state = (window.history.state as any)?.usr;
+    if (state?.category) {
+      setCategory(state.category);
+    }
+  }, []);
+
+  // Common helpers
+  const parseList = (s: string) =>
+    s
+      .split(",")
+      .map((x) => x.trim())
+      .filter(Boolean);
+
+  const createTask = async () => {
+    if (!projectId) return;
+    try {
+      let task_data: any = {};
+      switch (category) {
+        case "generative_ai_llm_response_grading": {
+          const paragraphs = llm_document
+            .split(/\n\n+/)
+            .map((x) => x.trim())
+            .filter(Boolean);
+          task_data = {
+            document: llm_split ? paragraphs : llm_document,
+            summary: llm_summary,
+            ...(llm_prompt ? { prompt: llm_prompt } : {}),
+            ...(llm_model ? { model_name: llm_model } : {}),
+          };
+          break;
+        }
+        case "generative_ai_chatbot_assessment": {
+          task_data = {
+            messages: chat_messages.filter((m) => m.content.trim().length),
+            ...(chat_model ? { model_name: chat_model } : {}),
+            ...(chat_title ? { assessment_title: chat_title } : {}),
+          };
+          break;
+        }
+        case "conversational_ai_response_selection": {
+          task_data = {
+            dialogue: rs_dialogue.filter((m) => m.content.trim().length),
+            response_options: rs_options.map((o) => o.trim()).filter(Boolean),
+            ...(rs_context ? { context: rs_context } : {}),
+          };
+          break;
+        }
+        case "text_classification": {
+          task_data = { text: tc_text, labels: parseList(tc_labels) };
+          break;
+        }
+        case "image_classification": {
+          task_data = { image_url: ic_image, labels: parseList(ic_labels) };
+          break;
+        }
+        case "object_detection": {
+          task_data = { image_url: od_image, classes: parseList(od_classes) };
+          break;
+        }
+        case "named_entity_recognition": {
+          task_data = {
+            text: ner_text,
+            entity_types: parseList(ner_entity_types),
+          };
+          break;
+        }
+        default: {
+          task_data = {};
+        }
+      }
+
+      const body = { category, task_data };
+      await apiFetch<Task>(`/projects/${projectId}/tasks`, {
+        method: "POST",
+        body,
+      });
+
+      // Navigate back to project details
+      navigate(`/projects/${projectId}`);
+    } catch (e: any) {
+      setError(e?.message || "Failed to create task");
+    }
+  };
+
+  return (
+    <div className="max-w-4xl mx-auto space-y-6">
+      <div className="flex items-center justify-between">
+        <h1>Create New Task</h1>
+        <LinkFix className="btn btn-ghost" to={`/projects/${projectId}`}>
+          ← Back to Project
+        </LinkFix>
+      </div>
+
+      {error && (
+        <div className="rounded-md bg-red-50 border border-red-200 p-3 text-sm text-red-700">
+          {error}
+        </div>
+      )}
+
+      <div className="card">
+        <div className="card-body space-y-4">
+          <div>
+            <h2 className="card-title">Task Details</h2>
+            <div className="badge badge-primary w-fit mt-2">
+              {category || "Select category"}
+            </div>
+          </div>
+
+          {/* Category-specific forms */}
+          {category === "generative_ai_llm_response_grading" && (
+            <div className="space-y-3">
+              <div>
+                <label className="block mb-1 font-medium">Document</label>
+                <textarea
+                  className="w-full border rounded p-2 h-28"
+                  value={llm_document}
+                  onChange={(e) => setLLMDocument(e.target.value)}
+                  placeholder="Paste text; enable split to make paragraphs"
+                />
+                <label className="inline-flex items-center gap-2 mt-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={llm_split}
+                    onChange={(e) => setLLMSplit(e.target.checked)}
+                  />
+                  Split by blank lines into paragraphs
+                </label>
+              </div>
+              <div>
+                <label className="block mb-1 font-medium">Summary</label>
+                <textarea
+                  className="w-full border rounded p-2 h-20"
+                  value={llm_summary}
+                  onChange={(e) => setLLMSummary(e.target.value)}
+                />
+              </div>
+              <div className="grid sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block mb-1">Prompt (optional)</label>
+                  <input
+                    className="w-full border rounded px-2 py-1"
+                    value={llm_prompt}
+                    onChange={(e) => setLLMPrompt(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label className="block mb-1">Model Name (optional)</label>
+                  <input
+                    className="w-full border rounded px-2 py-1"
+                    value={llm_model}
+                    onChange={(e) => setLLMModel(e.target.value)}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {category === "generative_ai_chatbot_assessment" && (
+            <div className="space-y-3">
+              <div className="space-y-2">
+                <div className="font-medium">Messages</div>
+                {chat_messages.map((m, i) => (
+                  <div key={i} className="flex items-start gap-2">
+                    <select
+                      className="border rounded px-2 py-1"
+                      value={m.role}
+                      onChange={(e) => {
+                        const v = e.target.value as Role;
+                        setChatMessages((prev) =>
+                          prev.map((mm, idx) =>
+                            idx === i ? { ...mm, role: v } : mm
+                          )
+                        );
+                      }}
+                    >
+                      <option value="user">user</option>
+                      <option value="assistant">assistant</option>
+                    </select>
+                    <textarea
+                      className="flex-1 border rounded p-2 h-20"
+                      value={m.content}
+                      onChange={(e) =>
+                        setChatMessages((prev) =>
+                          prev.map((mm, idx) =>
+                            idx === i ? { ...mm, content: e.target.value } : mm
+                          )
+                        )
+                      }
+                    />
+                    <button
+                      type="button"
+                      className="px-2 py-1 text-sm border rounded"
+                      onClick={() =>
+                        setChatMessages((prev) =>
+                          prev.filter((_, idx) => idx !== i)
+                        )
+                      }
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ))}
+                <button
+                  type="button"
+                  className="px-3 py-1 text-sm border rounded"
+                  onClick={() =>
+                    setChatMessages((prev) => [
+                      ...prev,
+                      { role: "user", content: "" },
+                    ])
+                  }
+                >
+                  + Add Message
+                </button>
+              </div>
+              <div className="grid sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block mb-1">Model Name (optional)</label>
+                  <input
+                    className="w-full border rounded px-2 py-1"
+                    value={chat_model}
+                    onChange={(e) => setChatModel(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label className="block mb-1">Assessment Title</label>
+                  <input
+                    className="w-full border rounded px-2 py-1"
+                    value={chat_title}
+                    onChange={(e) => setChatTitle(e.target.value)}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {category === "conversational_ai_response_selection" && (
+            <div className="space-y-3">
+              <div className="space-y-2">
+                <div className="font-medium">Dialogue</div>
+                {rs_dialogue.map((m, i) => (
+                  <div key={i} className="flex items-start gap-2">
+                    <select
+                      className="border rounded px-2 py-1"
+                      value={m.role}
+                      onChange={(e) => {
+                        const v = e.target.value as Role;
+                        setRsDialogue((prev) =>
+                          prev.map((mm, idx) =>
+                            idx === i ? { ...mm, role: v } : mm
+                          )
+                        );
+                      }}
+                    >
+                      <option value="user">user</option>
+                      <option value="assistant">assistant</option>
+                    </select>
+                    <textarea
+                      className="flex-1 border rounded p-2 h-20"
+                      value={m.content}
+                      onChange={(e) =>
+                        setRsDialogue((prev) =>
+                          prev.map((mm, idx) =>
+                            idx === i ? { ...mm, content: e.target.value } : mm
+                          )
+                        )
+                      }
+                    />
+                    <button
+                      type="button"
+                      className="px-2 py-1 text-sm border rounded"
+                      onClick={() =>
+                        setRsDialogue((prev) =>
+                          prev.filter((_, idx) => idx !== i)
+                        )
+                      }
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ))}
+                <button
+                  type="button"
+                  className="px-3 py-1 text-sm border rounded"
+                  onClick={() =>
+                    setRsDialogue((prev) => [
+                      ...prev,
+                      { role: "user", content: "" },
+                    ])
+                  }
+                >
+                  + Add Message
+                </button>
+              </div>
+              <div className="space-y-2">
+                <div className="font-medium">Response Options</div>
+                {rs_options.map((o, i) => (
+                  <div key={i} className="flex items-center gap-2">
+                    <input
+                      className="flex-1 border rounded px-2 py-1"
+                      value={o}
+                      onChange={(e) =>
+                        setRsOptions((prev) =>
+                          prev.map((oo, idx) =>
+                            idx === i ? e.target.value : oo
+                          )
+                        )
+                      }
+                      placeholder={`Option ${i + 1}`}
+                    />
+                    <button
+                      type="button"
+                      className="px-2 py-1 text-sm border rounded"
+                      onClick={() =>
+                        setRsOptions((prev) =>
+                          prev.filter((_, idx) => idx !== i)
+                        )
+                      }
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ))}
+                <button
+                  type="button"
+                  className="px-3 py-1 text-sm border rounded"
+                  onClick={() => setRsOptions((prev) => [...prev, ""])}
+                >
+                  + Add Option
+                </button>
+              </div>
+              <div>
+                <label className="block mb-1">Context (optional)</label>
+                <textarea
+                  className="w-full border rounded p-2 h-20"
+                  value={rs_context}
+                  onChange={(e) => setRsContext(e.target.value)}
+                />
+              </div>
+            </div>
+          )}
+
+          {category === "text_classification" && (
+            <div className="space-y-3">
+              <div>
+                <label className="block mb-1 font-medium">Text</label>
+                <textarea
+                  className="w-full border rounded p-2 h-28"
+                  value={tc_text}
+                  onChange={(e) => setTcText(e.target.value)}
+                />
+              </div>
+              <div>
+                <label className="block mb-1">Labels (comma separated)</label>
+                <input
+                  className="w-full border rounded px-2 py-1"
+                  value={tc_labels}
+                  onChange={(e) => setTcLabels(e.target.value)}
+                />
+              </div>
+            </div>
+          )}
+
+          {category === "image_classification" && (
+            <div className="space-y-3">
+              <div>
+                <label className="block mb-1">Image URL</label>
+                <input
+                  className="w-full border rounded px-2 py-1"
+                  value={ic_image}
+                  onChange={(e) => setIcImage(e.target.value)}
+                />
+              </div>
+              <div>
+                <label className="block mb-1">Labels (comma separated)</label>
+                <input
+                  className="w-full border rounded px-2 py-1"
+                  value={ic_labels}
+                  onChange={(e) => setIcLabels(e.target.value)}
+                />
+              </div>
+            </div>
+          )}
+
+          {category === "object_detection" && (
+            <div className="space-y-3">
+              <div>
+                <label className="block mb-1">Image URL</label>
+                <input
+                  className="w-full border rounded px-2 py-1"
+                  value={od_image}
+                  onChange={(e) => setOdImage(e.target.value)}
+                />
+              </div>
+              <div>
+                <label className="block mb-1">Classes (comma separated)</label>
+                <input
+                  className="w-full border rounded px-2 py-1"
+                  value={od_classes}
+                  onChange={(e) => setOdClasses(e.target.value)}
+                />
+              </div>
+            </div>
+          )}
+
+          {category === "named_entity_recognition" && (
+            <div className="space-y-3">
+              <div>
+                <label className="block mb-1 font-medium">Text</label>
+                <textarea
+                  className="w-full border rounded p-2 h-28"
+                  value={ner_text}
+                  onChange={(e) => setNerText(e.target.value)}
+                />
+              </div>
+              <div>
+                <label className="block mb-1">
+                  Entity Types (comma separated)
+                </label>
+                <input
+                  className="w-full border rounded px-2 py-1"
+                  value={ner_entity_types}
+                  onChange={(e) => setNerEntityTypes(e.target.value)}
+                />
+              </div>
+            </div>
+          )}
+
+          {(!category ||
+            [
+              "generative_ai_llm_response_grading",
+              "generative_ai_chatbot_assessment",
+              "conversational_ai_response_selection",
+              "text_classification",
+              "image_classification",
+              "object_detection",
+              "named_entity_recognition",
+            ].indexOf(category) === -1) && (
+            <div className="text-sm text-gray-600">
+              No guided form for this category. A minimal empty task will be
+              created.
+            </div>
+          )}
+
+          <div className="flex gap-3">
+            <button onClick={createTask} className="btn btn-primary">
+              Create Task
+            </button>
+            <LinkFix className="btn btn-outline" to={`/projects/${projectId}`}>
+              Cancel
+            </LinkFix>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
