@@ -732,7 +732,12 @@ export default function ProjectDetailPage() {
                   {tasks
                     .filter((t) => t.is_returned)
                     .map((t) => (
-                      <TaskCard key={t.id} t={t} isManager={false} />
+                      <TaskCard
+                        key={t.id}
+                        t={t}
+                        isManager={false}
+                        annotators={projectAnnotators}
+                      />
                     ))}
                 </div>
               </div>
@@ -756,7 +761,12 @@ export default function ProjectDetailPage() {
                         !t.is_returned && !t.completed_status?.annotator_part
                     )
                     .map((t) => (
-                      <TaskCard key={t.id} t={t} isManager={false} />
+                      <TaskCard
+                        key={t.id}
+                        t={t}
+                        isManager={false}
+                        annotators={projectAnnotators}
+                      />
                     ))}
                 </div>
               )}
@@ -775,7 +785,12 @@ export default function ProjectDetailPage() {
                         t.completed_status?.annotator_part && !t.is_returned
                     )
                     .map((t) => (
-                      <TaskCard key={t.id} t={t} isManager={false} />
+                      <TaskCard
+                        key={t.id}
+                        t={t}
+                        isManager={false}
+                        annotators={projectAnnotators}
+                      />
                     ))}
                 </div>
               </div>
@@ -797,7 +812,12 @@ export default function ProjectDetailPage() {
                   {tasks
                     .filter((t) => !t.completed_status?.annotator_part)
                     .map((t) => (
-                      <TaskCard key={t.id} t={t} isManager={true} />
+                      <TaskCard
+                        key={t.id}
+                        t={t}
+                        isManager={true}
+                        annotators={projectAnnotators}
+                      />
                     ))}
                 </div>
               )}
@@ -816,7 +836,12 @@ export default function ProjectDetailPage() {
                   {tasks
                     .filter((t) => t.completed_status?.annotator_part)
                     .map((t) => (
-                      <TaskCard key={t.id} t={t} isManager={true} />
+                      <TaskCard
+                        key={t.id}
+                        t={t}
+                        isManager={true}
+                        annotators={projectAnnotators}
+                      />
                     ))}
                 </div>
               )}
@@ -911,9 +936,23 @@ function TaskDataViewer({ data }: { data: any }) {
   );
 }
 
-function TaskCard({ t, isManager }: { t: Task; isManager: boolean }) {
+function TaskCard({
+  t,
+  isManager,
+  annotators = [],
+}: {
+  t: Task;
+  isManager: boolean;
+  annotators?: { id: string; name: string; email: string }[];
+}) {
   const [returning, setReturning] = useState(false);
   const [returnError, setReturnError] = useState<string | null>(null);
+
+  // Find annotator info
+  const annotatorInfo = annotators.find(
+    (a) => a.id === t.assigned_annotator_id
+  );
+  const qaInfo = annotators.find((a) => a.id === t.assigned_qa_id);
 
   const handleReturn = async () => {
     if (
@@ -951,6 +990,27 @@ function TaskCard({ t, isManager }: { t: Task; isManager: boolean }) {
             )}
             {t.is_returned && (
               <span className="badge badge-warning ml-2">Returned</span>
+            )}
+            {t.assigned_annotator_id && (
+              <div className="text-xs text-gray-600 mt-2">
+                <span className="font-medium">Annotator:</span>{" "}
+                {annotatorInfo?.name || t.assigned_annotator_id}
+                {annotatorInfo?.email && (
+                  <span className="text-gray-500">
+                    {" "}
+                    ({annotatorInfo.email})
+                  </span>
+                )}
+              </div>
+            )}
+            {t.assigned_qa_id && (
+              <div className="text-xs text-gray-600 mt-1">
+                <span className="font-medium">QA:</span>{" "}
+                {qaInfo?.name || t.assigned_qa_id}
+                {qaInfo?.email && (
+                  <span className="text-gray-500"> ({qaInfo.email})</span>
+                )}
+              </div>
             )}
           </div>
           <div className="flex items-center gap-3">
