@@ -293,7 +293,7 @@ async def get_project(
             detail="Not authorized to view this project",
         )
     elif current_user.role == "annotator":
-        # Check if annotator is invited to this project
+        # Check if annotator/qa is invited to this project
         invite = await database.invites_collection.find_one(
             {
                 "project_id": ObjectId(project_id),
@@ -389,6 +389,117 @@ async def list_project_annotators(
         {"_id": {"$in": annotator_ids}}
     ).to_list(None)
     return [as_response(UserResponse, u) for u in users]
+
+
+# QA Annotators management for projects
+@router.get(
+    "/projects/{project_id}/qa-annotators",
+    response_model=List[UserResponse],
+    response_model_by_alias=False,
+)
+async def list_project_qa_annotators(
+    project_id: str, current_user: UserInDB = Depends(get_current_user)
+):
+    """List annotators designated as QA reviewers for this project."""
+    if not ObjectId.is_valid(project_id):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid project ID"
+        )
+
+    project = await database.projects_collection.find_one({"_id": ObjectId(project_id)})
+    if not project:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Project not found"
+        )
+
+    if current_user.role not in ["admin", "manager"] or (
+        current_user.role == "manager" and project["manager_id"] != current_user.id
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to list QA annotators for this project",
+        )
+
+    pw = await database.project_working_collection.find_one(
+        {"project_id": ObjectId(project_id)}
+    )
+    qa_annotator_ids = pw.get("qa_annotator_ids", []) if pw else []
+
+    if not qa_annotator_ids:
+        return []
+
+    users = await database.users_collection.find(
+        {"_id": {"$in": qa_annotator_ids}}
+    ).to_list(None)
+    return [as_response(UserResponse, u) for u in users]
+
+
+@router.put("/projects/{project_id}/qa-annotators")
+async def update_project_qa_annotators(
+    project_id: str,
+    annotator_ids: List[str],
+    current_user: UserInDB = Depends(get_current_user),
+):
+    """Set which annotators are designated as QA reviewers for this project."""
+    if not ObjectId.is_valid(project_id):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid project ID"
+        )
+
+    project = await database.projects_collection.find_one({"_id": ObjectId(project_id)})
+    if not project:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Project not found"
+        )
+
+    if current_user.role not in ["admin", "manager"] or (
+        current_user.role == "manager" and project["manager_id"] != current_user.id
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to manage QA annotators for this project",
+        )
+
+    # Validate all annotator IDs
+    valid_ids = []
+    for aid in annotator_ids:
+        if not ObjectId.is_valid(aid):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Invalid annotator ID: {aid}",
+            )
+        valid_ids.append(ObjectId(aid))
+
+    # Verify all are actual annotators in the project
+    pw = await database.project_working_collection.find_one(
+        {"project_id": ObjectId(project_id)}
+    )
+    if not pw:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Project working record not found",
+        )
+
+    project_annotator_ids = [
+        a.get("annotator_id")
+        for a in pw.get("annotator_assignments", [])
+        if a.get("annotator_id") is not None
+    ]
+
+    for vid in valid_ids:
+        if vid not in project_annotator_ids:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Annotator {str(vid)} is not part of this project",
+            )
+
+    # Update the qa_annotator_ids field
+    await database.project_working_collection.update_one(
+        {"project_id": ObjectId(project_id)},
+        {"$set": {"qa_annotator_ids": valid_ids}},
+    )
+
+    return {"message": "QA annotators updated successfully"}
 
 
 # Task endpoints
@@ -845,6 +956,22 @@ async def assign_task(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Invalid annotator_id",
             )
+
+        # Validate that the user has annotator role
+        annotator_user = await database.users_collection.find_one(
+            {"_id": ObjectId(payload.annotator_id)}
+        )
+        if not annotator_user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Annotator user not found",
+            )
+        if annotator_user.get("role") != "annotator":
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="User must have annotator role to be assigned as annotator",
+            )
+
         # Validate that annotator belongs to project_working for this project
         pw = await database.project_working_collection.find_one(
             {"project_id": task["project_id"]}
@@ -868,6 +995,32 @@ async def assign_task(
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid qa_id"
             )
+
+        # Validate that the user is an annotator designated as QA for this project
+        qa_user = await database.users_collection.find_one(
+            {"_id": ObjectId(payload.qa_id)}
+        )
+        if not qa_user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="QA user not found",
+            )
+        if qa_user.get("role") != "annotator":
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Only annotators can be assigned as QA reviewers",
+            )
+
+        # Check if this annotator is designated as QA for this project
+        pw = await database.project_working_collection.find_one(
+            {"project_id": task["project_id"]}
+        )
+        if not pw or ObjectId(payload.qa_id) not in pw.get("qa_annotator_ids", []):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="This annotator is not designated as QA reviewer for this project",
+            )
+
         update["assigned_qa_id"] = ObjectId(payload.qa_id)
         if not task.get("qa_started_at"):
             update["qa_started_at"] = datetime.utcnow()
@@ -1086,6 +1239,7 @@ async def submit_qa(
         )
         allowed = project and project["manager_id"] == current_user.id
     elif current_user.role == "annotator":
+        # Check if this annotator is assigned as QA for this task
         allowed = task.get("assigned_qa_id") == current_user.id
 
     if not allowed:

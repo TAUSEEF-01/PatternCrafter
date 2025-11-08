@@ -1,14 +1,19 @@
-import { FormEvent, useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
-import { apiFetch } from '@/api/client';
-import { Task } from '@/types';
+import { FormEvent, useEffect, useState } from "react";
+import { useParams } from "react-router-dom";
+import { apiFetch } from "@/api/client";
+import { Task } from "@/types";
 
 export default function AssignTaskPage() {
   const { taskId } = useParams();
   const [task, setTask] = useState<Task | null>(null);
-  const [annotatorId, setAnnotatorId] = useState('');
-  const [annotators, setAnnotators] = useState<{ id: string; name: string; email: string }[]>([]);
-  const [qaId, setQaId] = useState('');
+  const [annotatorId, setAnnotatorId] = useState("");
+  const [annotators, setAnnotators] = useState<
+    { id: string; name: string; email: string }[]
+  >([]);
+  const [qaId, setQaId] = useState("");
+  const [qaUsers, setQaUsers] = useState<
+    { id: string; name: string; email: string }[]
+  >([]);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
@@ -19,13 +24,27 @@ export default function AssignTaskPage() {
         setTask(t);
         // Load project annotators for assignment dropdown
         try {
-          const list = await apiFetch<{ id: string; name: string; email: string }[]>(
-            `/projects/${t.project_id}/annotators`
-          );
+          const list = await apiFetch<
+            { id: string; name: string; email: string }[]
+          >(`/projects/${t.project_id}/annotators`);
           setAnnotators(list);
         } catch (e: any) {
           // don't hard fail UI; show error banner
-          setError((prev) => prev || e?.message || 'Failed to load project annotators');
+          setError(
+            (prev) => prev || e?.message || "Failed to load project annotators"
+          );
+        }
+
+        // Load QA users for assignment dropdown
+        try {
+          const qaList = await apiFetch<
+            { id: string; name: string; email: string }[]
+          >(`/projects/${t.project_id}/qa-annotators`);
+          setQaUsers(qaList);
+        } catch (e: any) {
+          setError(
+            (prev) => prev || e?.message || "Failed to load QA annotators"
+          );
         }
       })
       .catch((e) => setError(String(e)));
@@ -38,10 +57,10 @@ export default function AssignTaskPage() {
       const body: any = {};
       if (annotatorId) body.annotator_id = annotatorId;
       if (qaId) body.qa_id = qaId;
-      await apiFetch(`/tasks/${taskId}/assign`, { method: 'PUT', body });
-      setSuccess('Assignment updated');
+      await apiFetch(`/tasks/${taskId}/assign`, { method: "PUT", body });
+      setSuccess("Assignment updated");
     } catch (e: any) {
-      setError(e?.message || 'Failed to assign');
+      setError(e?.message || "Failed to assign");
     }
   };
 
@@ -49,7 +68,9 @@ export default function AssignTaskPage() {
     <div className="space-y-6">
       <div>
         <h1>Assign Task</h1>
-        <p className="muted mt-1">Assign annotators and QA reviewers to this task</p>
+        <p className="muted mt-1">
+          Assign annotators and QA reviewers to this task
+        </p>
       </div>
       {error && (
         <div className="rounded-md bg-red-50 border border-red-200 p-3 text-sm text-red-700">
@@ -77,11 +98,15 @@ export default function AssignTaskPage() {
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-gray-600">Annotator:</span>
-                <span className="font-medium">{task.assigned_annotator_id || '—'}</span>
+                <span className="font-medium">
+                  {task.assigned_annotator_id || "—"}
+                </span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-gray-600">QA:</span>
-                <span className="font-medium">{task.assigned_qa_id || '—'}</span>
+                <span className="font-medium">
+                  {task.assigned_qa_id || "—"}
+                </span>
               </div>
             </div>
           </div>
@@ -108,13 +133,19 @@ export default function AssignTaskPage() {
               </select>
             </div>
             <div>
-              <label className="label">QA User ID</label>
-              <input
-                className="input"
-                placeholder="Enter QA user ID"
+              <label className="label">QA Reviewer</label>
+              <select
+                className="select"
                 value={qaId}
                 onChange={(e) => setQaId(e.target.value)}
-              />
+              >
+                <option value="">— Select QA Reviewer —</option>
+                {qaUsers.map((q) => (
+                  <option key={q.id} value={q.id}>
+                    {q.name} ({q.email})
+                  </option>
+                ))}
+              </select>
             </div>
             <button type="submit" className="btn btn-primary">
               Save Assignment

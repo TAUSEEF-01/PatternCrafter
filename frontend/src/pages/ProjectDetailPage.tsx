@@ -17,6 +17,16 @@ export default function ProjectDetailPage() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [error, setError] = useState<string | null>(null);
 
+  // QA Management
+  const [projectAnnotators, setProjectAnnotators] = useState<
+    { id: string; name: string; email: string }[]
+  >([]);
+  const [qaAnnotators, setQaAnnotators] = useState<
+    { id: string; name: string; email: string }[]
+  >([]);
+  const [selectedQaIds, setSelectedQaIds] = useState<string[]>([]);
+  const [qaManagementOpen, setQaManagementOpen] = useState(false);
+
   // Build task data per category
   const category = useMemo(() => project?.category, [project]);
 
@@ -79,7 +89,45 @@ export default function ProjectDetailPage() {
     apiFetch<Task[]>(tasksPath)
       .then(setTasks)
       .catch((e) => setError(String(e)));
+
+    // Load annotators and QA annotators for managers
+    if (user?.role !== "annotator") {
+      apiFetch<{ id: string; name: string; email: string }[]>(
+        `/projects/${projectId}/annotators`
+      )
+        .then(setProjectAnnotators)
+        .catch((e) => console.error("Failed to load annotators:", e));
+
+      apiFetch<{ id: string; name: string; email: string }[]>(
+        `/projects/${projectId}/qa-annotators`
+      )
+        .then((qaList) => {
+          setQaAnnotators(qaList);
+          setSelectedQaIds(qaList.map((q) => q.id));
+        })
+        .catch((e) => console.error("Failed to load QA annotators:", e));
+    }
   }, [projectId, user?.role]);
+
+  const updateQaAnnotators = async () => {
+    if (!projectId) return;
+    try {
+      await apiFetch(`/projects/${projectId}/qa-annotators`, {
+        method: "PUT",
+        body: selectedQaIds,
+      });
+
+      // Reload QA annotators
+      const qaList = await apiFetch<
+        { id: string; name: string; email: string }[]
+      >(`/projects/${projectId}/qa-annotators`);
+      setQaAnnotators(qaList);
+      setQaManagementOpen(false);
+      setError(null);
+    } catch (e: any) {
+      setError(e?.message || "Failed to update QA annotators");
+    }
+  };
 
   const createTask = async () => {
     if (!projectId) return;
@@ -201,360 +249,467 @@ export default function ProjectDetailPage() {
       </div>
 
       {user?.role !== "annotator" && (
-        <div className="card">
-          <div className="card-body space-y-4">
-            <h2 className="card-title">Create Task</h2>
-            <div className="badge badge-primary w-fit">{category}</div>
-
-            {/* Category-specific forms */}
-            {category === "generative_ai_llm_response_grading" && (
-              <div className="space-y-3">
+        <>
+          {/* QA Annotators Management */}
+          <div className="card">
+            <div className="card-body">
+              <div className="flex items-center justify-between">
                 <div>
-                  <label className="block mb-1 font-medium">Document</label>
-                  <textarea
-                    className="w-full border rounded p-2 h-28"
-                    value={llm_document}
-                    onChange={(e) => setLLMDocument(e.target.value)}
-                    placeholder="Paste text; enable split to make paragraphs"
-                  />
-                  <label className="inline-flex items-center gap-2 mt-2 text-sm">
-                    <input
-                      type="checkbox"
-                      checked={llm_split}
-                      onChange={(e) => setLLMSplit(e.target.checked)}
-                    />
-                    Split by blank lines into paragraphs
-                  </label>
+                  <h2 className="card-title">QA Reviewers</h2>
+                  <p className="text-sm text-gray-600 mt-1">
+                    Designate which annotators can perform QA reviews for this
+                    project
+                  </p>
                 </div>
-                <div>
-                  <label className="block mb-1 font-medium">Summary</label>
-                  <textarea
-                    className="w-full border rounded p-2 h-20"
-                    value={llm_summary}
-                    onChange={(e) => setLLMSummary(e.target.value)}
-                  />
-                </div>
-                <div className="grid sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className="block mb-1">Prompt (optional)</label>
-                    <input
-                      className="w-full border rounded px-2 py-1"
-                      value={llm_prompt}
-                      onChange={(e) => setLLMPrompt(e.target.value)}
-                    />
-                  </div>
-                  <div>
-                    <label className="block mb-1">Model Name (optional)</label>
-                    <input
-                      className="w-full border rounded px-2 py-1"
-                      value={llm_model}
-                      onChange={(e) => setLLMModel(e.target.value)}
-                    />
-                  </div>
-                </div>
+                <button
+                  className="btn btn-outline btn-sm"
+                  onClick={() => setQaManagementOpen(!qaManagementOpen)}
+                >
+                  {qaManagementOpen ? "Cancel" : "Manage QA"}
+                </button>
               </div>
-            )}
 
-            {category === "generative_ai_chatbot_assessment" && (
-              <div className="space-y-3">
-                <div className="space-y-2">
-                  <div className="font-medium">Messages</div>
-                  {chat_messages.map((m, i) => (
-                    <div key={i} className="flex items-start gap-2">
-                      <select
-                        className="border rounded px-2 py-1"
-                        value={m.role}
-                        onChange={(e) => {
-                          const v = e.target.value as Role;
-                          setChatMessages((prev) =>
-                            prev.map((mm, idx) =>
-                              idx === i ? { ...mm, role: v } : mm
-                            )
-                          );
-                        }}
-                      >
-                        <option value="user">user</option>
-                        <option value="assistant">assistant</option>
-                      </select>
-                      <textarea
-                        className="flex-1 border rounded p-2 h-20"
-                        value={m.content}
-                        onChange={(e) =>
-                          setChatMessages((prev) =>
-                            prev.map((mm, idx) =>
-                              idx === i
-                                ? { ...mm, content: e.target.value }
-                                : mm
-                            )
-                          )
-                        }
-                      />
-                      <button
-                        type="button"
-                        className="px-2 py-1 text-sm border rounded"
-                        onClick={() =>
-                          setChatMessages((prev) =>
-                            prev.filter((_, idx) => idx !== i)
-                          )
-                        }
-                      >
-                        Remove
-                      </button>
+              {qaManagementOpen ? (
+                <div className="mt-4 space-y-3">
+                  <div className="text-sm font-medium">
+                    Select QA Reviewers:
+                  </div>
+                  {projectAnnotators.length === 0 ? (
+                    <p className="text-sm text-gray-500">
+                      No annotators in this project yet. Invite annotators
+                      first.
+                    </p>
+                  ) : (
+                    <div className="space-y-2">
+                      {projectAnnotators.map((annotator) => (
+                        <label
+                          key={annotator.id}
+                          className="flex items-center gap-2 p-2 border rounded hover:bg-gray-50 cursor-pointer"
+                        >
+                          <input
+                            type="checkbox"
+                            className="checkbox"
+                            checked={selectedQaIds.includes(annotator.id)}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setSelectedQaIds([
+                                  ...selectedQaIds,
+                                  annotator.id,
+                                ]);
+                              } else {
+                                setSelectedQaIds(
+                                  selectedQaIds.filter(
+                                    (id) => id !== annotator.id
+                                  )
+                                );
+                              }
+                            }}
+                          />
+                          <div>
+                            <div className="font-medium">{annotator.name}</div>
+                            <div className="text-sm text-gray-500">
+                              {annotator.email}
+                            </div>
+                          </div>
+                        </label>
+                      ))}
                     </div>
-                  ))}
+                  )}
                   <button
-                    type="button"
-                    className="px-3 py-1 text-sm border rounded"
-                    onClick={() =>
-                      setChatMessages((prev) => [
-                        ...prev,
-                        { role: "user", content: "" },
-                      ])
-                    }
+                    className="btn btn-primary"
+                    onClick={updateQaAnnotators}
+                    disabled={projectAnnotators.length === 0}
                   >
-                    + Add Message
+                    Save QA Reviewers
                   </button>
                 </div>
-                <div className="grid sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className="block mb-1">Model Name (optional)</label>
-                    <input
-                      className="w-full border rounded px-2 py-1"
-                      value={chat_model}
-                      onChange={(e) => setChatModel(e.target.value)}
-                    />
-                  </div>
-                  <div>
-                    <label className="block mb-1">Assessment Title</label>
-                    <input
-                      className="w-full border rounded px-2 py-1"
-                      value={chat_title}
-                      onChange={(e) => setChatTitle(e.target.value)}
-                    />
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {category === "conversational_ai_response_selection" && (
-              <div className="space-y-3">
-                <div className="space-y-2">
-                  <div className="font-medium">Dialogue</div>
-                  {rs_dialogue.map((m, i) => (
-                    <div key={i} className="flex items-start gap-2">
-                      <select
-                        className="border rounded px-2 py-1"
-                        value={m.role}
-                        onChange={(e) => {
-                          const v = e.target.value as Role;
-                          setRsDialogue((prev) =>
-                            prev.map((mm, idx) =>
-                              idx === i ? { ...mm, role: v } : mm
-                            )
-                          );
-                        }}
-                      >
-                        <option value="user">user</option>
-                        <option value="assistant">assistant</option>
-                      </select>
-                      <textarea
-                        className="flex-1 border rounded p-2 h-20"
-                        value={m.content}
-                        onChange={(e) =>
-                          setRsDialogue((prev) =>
-                            prev.map((mm, idx) =>
-                              idx === i
-                                ? { ...mm, content: e.target.value }
-                                : mm
-                            )
-                          )
-                        }
-                      />
-                      <button
-                        type="button"
-                        className="px-2 py-1 text-sm border rounded"
-                        onClick={() =>
-                          setRsDialogue((prev) =>
-                            prev.filter((_, idx) => idx !== i)
-                          )
-                        }
-                      >
-                        Remove
-                      </button>
+              ) : (
+                <div className="mt-3">
+                  {qaAnnotators.length === 0 ? (
+                    <p className="text-sm text-gray-500">
+                      No QA reviewers assigned yet
+                    </p>
+                  ) : (
+                    <div className="flex flex-wrap gap-2">
+                      {qaAnnotators.map((qa) => (
+                        <div
+                          key={qa.id}
+                          className="badge badge-lg badge-primary"
+                        >
+                          {qa.name}
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                  <button
-                    type="button"
-                    className="px-3 py-1 text-sm border rounded"
-                    onClick={() =>
-                      setRsDialogue((prev) => [
-                        ...prev,
-                        { role: "user", content: "" },
-                      ])
-                    }
-                  >
-                    + Add Message
-                  </button>
+                  )}
                 </div>
-                <div className="space-y-2">
-                  <div className="font-medium">Response Options</div>
-                  {rs_options.map((o, i) => (
-                    <div key={i} className="flex items-center gap-2">
-                      <input
-                        className="flex-1 border rounded px-2 py-1"
-                        value={o}
-                        onChange={(e) =>
-                          setRsOptions((prev) =>
-                            prev.map((oo, idx) =>
-                              idx === i ? e.target.value : oo
-                            )
-                          )
-                        }
-                        placeholder={`Option ${i + 1}`}
-                      />
-                      <button
-                        type="button"
-                        className="px-2 py-1 text-sm border rounded"
-                        onClick={() =>
-                          setRsOptions((prev) =>
-                            prev.filter((_, idx) => idx !== i)
-                          )
-                        }
-                      >
-                        Remove
-                      </button>
-                    </div>
-                  ))}
-                  <button
-                    type="button"
-                    className="px-3 py-1 text-sm border rounded"
-                    onClick={() => setRsOptions((prev) => [...prev, ""])}
-                  >
-                    + Add Option
-                  </button>
-                </div>
-                <div>
-                  <label className="block mb-1">Context (optional)</label>
-                  <textarea
-                    className="w-full border rounded p-2 h-20"
-                    value={rs_context}
-                    onChange={(e) => setRsContext(e.target.value)}
-                  />
-                </div>
-              </div>
-            )}
-
-            {category === "text_classification" && (
-              <div className="space-y-3">
-                <div>
-                  <label className="block mb-1 font-medium">Text</label>
-                  <textarea
-                    className="w-full border rounded p-2 h-28"
-                    value={tc_text}
-                    onChange={(e) => setTcText(e.target.value)}
-                  />
-                </div>
-                <div>
-                  <label className="block mb-1">Labels (comma separated)</label>
-                  <input
-                    className="w-full border rounded px-2 py-1"
-                    value={tc_labels}
-                    onChange={(e) => setTcLabels(e.target.value)}
-                  />
-                </div>
-              </div>
-            )}
-
-            {category === "image_classification" && (
-              <div className="space-y-3">
-                <div>
-                  <label className="block mb-1">Image URL</label>
-                  <input
-                    className="w-full border rounded px-2 py-1"
-                    value={ic_image}
-                    onChange={(e) => setIcImage(e.target.value)}
-                  />
-                </div>
-                <div>
-                  <label className="block mb-1">Labels (comma separated)</label>
-                  <input
-                    className="w-full border rounded px-2 py-1"
-                    value={ic_labels}
-                    onChange={(e) => setIcLabels(e.target.value)}
-                  />
-                </div>
-              </div>
-            )}
-
-            {category === "object_detection" && (
-              <div className="space-y-3">
-                <div>
-                  <label className="block mb-1">Image URL</label>
-                  <input
-                    className="w-full border rounded px-2 py-1"
-                    value={od_image}
-                    onChange={(e) => setOdImage(e.target.value)}
-                  />
-                </div>
-                <div>
-                  <label className="block mb-1">
-                    Classes (comma separated)
-                  </label>
-                  <input
-                    className="w-full border rounded px-2 py-1"
-                    value={od_classes}
-                    onChange={(e) => setOdClasses(e.target.value)}
-                  />
-                </div>
-              </div>
-            )}
-
-            {category === "named_entity_recognition" && (
-              <div className="space-y-3">
-                <div>
-                  <label className="block mb-1 font-medium">Text</label>
-                  <textarea
-                    className="w-full border rounded p-2 h-28"
-                    value={ner_text}
-                    onChange={(e) => setNerText(e.target.value)}
-                  />
-                </div>
-                <div>
-                  <label className="block mb-1">
-                    Entity Types (comma separated)
-                  </label>
-                  <input
-                    className="w-full border rounded px-2 py-1"
-                    value={ner_entity_types}
-                    onChange={(e) => setNerEntityTypes(e.target.value)}
-                  />
-                </div>
-              </div>
-            )}
-
-            {(!category ||
-              [
-                "generative_ai_llm_response_grading",
-                "generative_ai_chatbot_assessment",
-                "conversational_ai_response_selection",
-                "text_classification",
-                "image_classification",
-                "object_detection",
-                "named_entity_recognition",
-              ].indexOf(category) === -1) && (
-              <div className="text-sm text-gray-600">
-                No guided form for this category. A minimal empty task will be
-                created.
-              </div>
-            )}
-
-            <div>
-              <button onClick={createTask} className="btn btn-primary">
-                Add Task
-              </button>
+              )}
             </div>
           </div>
-        </div>
+
+          {/* Task Creation Form */}
+          <div className="card">
+            <div className="card-body space-y-4">
+              <h2 className="card-title">Create Task</h2>
+              <div className="badge badge-primary w-fit">{category}</div>
+
+              {/* Category-specific forms */}
+              {category === "generative_ai_llm_response_grading" && (
+                <div className="space-y-3">
+                  <div>
+                    <label className="block mb-1 font-medium">Document</label>
+                    <textarea
+                      className="w-full border rounded p-2 h-28"
+                      value={llm_document}
+                      onChange={(e) => setLLMDocument(e.target.value)}
+                      placeholder="Paste text; enable split to make paragraphs"
+                    />
+                    <label className="inline-flex items-center gap-2 mt-2 text-sm">
+                      <input
+                        type="checkbox"
+                        checked={llm_split}
+                        onChange={(e) => setLLMSplit(e.target.checked)}
+                      />
+                      Split by blank lines into paragraphs
+                    </label>
+                  </div>
+                  <div>
+                    <label className="block mb-1 font-medium">Summary</label>
+                    <textarea
+                      className="w-full border rounded p-2 h-20"
+                      value={llm_summary}
+                      onChange={(e) => setLLMSummary(e.target.value)}
+                    />
+                  </div>
+                  <div className="grid sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block mb-1">Prompt (optional)</label>
+                      <input
+                        className="w-full border rounded px-2 py-1"
+                        value={llm_prompt}
+                        onChange={(e) => setLLMPrompt(e.target.value)}
+                      />
+                    </div>
+                    <div>
+                      <label className="block mb-1">
+                        Model Name (optional)
+                      </label>
+                      <input
+                        className="w-full border rounded px-2 py-1"
+                        value={llm_model}
+                        onChange={(e) => setLLMModel(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {category === "generative_ai_chatbot_assessment" && (
+                <div className="space-y-3">
+                  <div className="space-y-2">
+                    <div className="font-medium">Messages</div>
+                    {chat_messages.map((m, i) => (
+                      <div key={i} className="flex items-start gap-2">
+                        <select
+                          className="border rounded px-2 py-1"
+                          value={m.role}
+                          onChange={(e) => {
+                            const v = e.target.value as Role;
+                            setChatMessages((prev) =>
+                              prev.map((mm, idx) =>
+                                idx === i ? { ...mm, role: v } : mm
+                              )
+                            );
+                          }}
+                        >
+                          <option value="user">user</option>
+                          <option value="assistant">assistant</option>
+                        </select>
+                        <textarea
+                          className="flex-1 border rounded p-2 h-20"
+                          value={m.content}
+                          onChange={(e) =>
+                            setChatMessages((prev) =>
+                              prev.map((mm, idx) =>
+                                idx === i
+                                  ? { ...mm, content: e.target.value }
+                                  : mm
+                              )
+                            )
+                          }
+                        />
+                        <button
+                          type="button"
+                          className="px-2 py-1 text-sm border rounded"
+                          onClick={() =>
+                            setChatMessages((prev) =>
+                              prev.filter((_, idx) => idx !== i)
+                            )
+                          }
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    ))}
+                    <button
+                      type="button"
+                      className="px-3 py-1 text-sm border rounded"
+                      onClick={() =>
+                        setChatMessages((prev) => [
+                          ...prev,
+                          { role: "user", content: "" },
+                        ])
+                      }
+                    >
+                      + Add Message
+                    </button>
+                  </div>
+                  <div className="grid sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block mb-1">
+                        Model Name (optional)
+                      </label>
+                      <input
+                        className="w-full border rounded px-2 py-1"
+                        value={chat_model}
+                        onChange={(e) => setChatModel(e.target.value)}
+                      />
+                    </div>
+                    <div>
+                      <label className="block mb-1">Assessment Title</label>
+                      <input
+                        className="w-full border rounded px-2 py-1"
+                        value={chat_title}
+                        onChange={(e) => setChatTitle(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {category === "conversational_ai_response_selection" && (
+                <div className="space-y-3">
+                  <div className="space-y-2">
+                    <div className="font-medium">Dialogue</div>
+                    {rs_dialogue.map((m, i) => (
+                      <div key={i} className="flex items-start gap-2">
+                        <select
+                          className="border rounded px-2 py-1"
+                          value={m.role}
+                          onChange={(e) => {
+                            const v = e.target.value as Role;
+                            setRsDialogue((prev) =>
+                              prev.map((mm, idx) =>
+                                idx === i ? { ...mm, role: v } : mm
+                              )
+                            );
+                          }}
+                        >
+                          <option value="user">user</option>
+                          <option value="assistant">assistant</option>
+                        </select>
+                        <textarea
+                          className="flex-1 border rounded p-2 h-20"
+                          value={m.content}
+                          onChange={(e) =>
+                            setRsDialogue((prev) =>
+                              prev.map((mm, idx) =>
+                                idx === i
+                                  ? { ...mm, content: e.target.value }
+                                  : mm
+                              )
+                            )
+                          }
+                        />
+                        <button
+                          type="button"
+                          className="px-2 py-1 text-sm border rounded"
+                          onClick={() =>
+                            setRsDialogue((prev) =>
+                              prev.filter((_, idx) => idx !== i)
+                            )
+                          }
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    ))}
+                    <button
+                      type="button"
+                      className="px-3 py-1 text-sm border rounded"
+                      onClick={() =>
+                        setRsDialogue((prev) => [
+                          ...prev,
+                          { role: "user", content: "" },
+                        ])
+                      }
+                    >
+                      + Add Message
+                    </button>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="font-medium">Response Options</div>
+                    {rs_options.map((o, i) => (
+                      <div key={i} className="flex items-center gap-2">
+                        <input
+                          className="flex-1 border rounded px-2 py-1"
+                          value={o}
+                          onChange={(e) =>
+                            setRsOptions((prev) =>
+                              prev.map((oo, idx) =>
+                                idx === i ? e.target.value : oo
+                              )
+                            )
+                          }
+                          placeholder={`Option ${i + 1}`}
+                        />
+                        <button
+                          type="button"
+                          className="px-2 py-1 text-sm border rounded"
+                          onClick={() =>
+                            setRsOptions((prev) =>
+                              prev.filter((_, idx) => idx !== i)
+                            )
+                          }
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    ))}
+                    <button
+                      type="button"
+                      className="px-3 py-1 text-sm border rounded"
+                      onClick={() => setRsOptions((prev) => [...prev, ""])}
+                    >
+                      + Add Option
+                    </button>
+                  </div>
+                  <div>
+                    <label className="block mb-1">Context (optional)</label>
+                    <textarea
+                      className="w-full border rounded p-2 h-20"
+                      value={rs_context}
+                      onChange={(e) => setRsContext(e.target.value)}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {category === "text_classification" && (
+                <div className="space-y-3">
+                  <div>
+                    <label className="block mb-1 font-medium">Text</label>
+                    <textarea
+                      className="w-full border rounded p-2 h-28"
+                      value={tc_text}
+                      onChange={(e) => setTcText(e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <label className="block mb-1">
+                      Labels (comma separated)
+                    </label>
+                    <input
+                      className="w-full border rounded px-2 py-1"
+                      value={tc_labels}
+                      onChange={(e) => setTcLabels(e.target.value)}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {category === "image_classification" && (
+                <div className="space-y-3">
+                  <div>
+                    <label className="block mb-1">Image URL</label>
+                    <input
+                      className="w-full border rounded px-2 py-1"
+                      value={ic_image}
+                      onChange={(e) => setIcImage(e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <label className="block mb-1">
+                      Labels (comma separated)
+                    </label>
+                    <input
+                      className="w-full border rounded px-2 py-1"
+                      value={ic_labels}
+                      onChange={(e) => setIcLabels(e.target.value)}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {category === "object_detection" && (
+                <div className="space-y-3">
+                  <div>
+                    <label className="block mb-1">Image URL</label>
+                    <input
+                      className="w-full border rounded px-2 py-1"
+                      value={od_image}
+                      onChange={(e) => setOdImage(e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <label className="block mb-1">
+                      Classes (comma separated)
+                    </label>
+                    <input
+                      className="w-full border rounded px-2 py-1"
+                      value={od_classes}
+                      onChange={(e) => setOdClasses(e.target.value)}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {category === "named_entity_recognition" && (
+                <div className="space-y-3">
+                  <div>
+                    <label className="block mb-1 font-medium">Text</label>
+                    <textarea
+                      className="w-full border rounded p-2 h-28"
+                      value={ner_text}
+                      onChange={(e) => setNerText(e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <label className="block mb-1">
+                      Entity Types (comma separated)
+                    </label>
+                    <input
+                      className="w-full border rounded px-2 py-1"
+                      value={ner_entity_types}
+                      onChange={(e) => setNerEntityTypes(e.target.value)}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {(!category ||
+                [
+                  "generative_ai_llm_response_grading",
+                  "generative_ai_chatbot_assessment",
+                  "conversational_ai_response_selection",
+                  "text_classification",
+                  "image_classification",
+                  "object_detection",
+                  "named_entity_recognition",
+                ].indexOf(category) === -1) && (
+                <div className="text-sm text-gray-600">
+                  No guided form for this category. A minimal empty task will be
+                  created.
+                </div>
+              )}
+
+              <div>
+                <button onClick={createTask} className="btn btn-primary">
+                  Add Task
+                </button>
+              </div>
+            </div>
+          </div>
+        </>
       )}
 
       {error && (
