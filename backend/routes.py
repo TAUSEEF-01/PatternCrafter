@@ -310,6 +310,169 @@ async def get_project(
     return as_response(ProjectResponse, project)
 
 
+@router.put(
+    "/projects/{project_id}/complete",
+    response_model=ProjectResponse,
+    response_model_by_alias=False,
+)
+async def mark_project_complete(
+    project_id: str, current_user: UserInDB = Depends(get_current_user)
+):
+    """Mark project as completed (manager only)"""
+    if current_user.role != "manager":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only managers can mark projects as complete",
+        )
+
+    if not ObjectId.is_valid(project_id):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid project ID"
+        )
+
+    project = await database.projects_collection.find_one({"_id": ObjectId(project_id)})
+    if not project:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Project not found"
+        )
+
+    if project["manager_id"] != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to modify this project",
+        )
+
+    # Check if all tasks are completed
+    tasks = await database.tasks_collection.find(
+        {"project_id": ObjectId(project_id)}
+    ).to_list(None)
+
+    if len(tasks) == 0:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot mark project as complete. Project has no tasks.",
+        )
+
+    incomplete_tasks = [
+        t
+        for t in tasks
+        if not t.get("completed_status", {}).get("annotator_part", False)
+    ]
+
+    if incomplete_tasks:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Cannot mark project as complete. {len(incomplete_tasks)} task(s) are still incomplete.",
+        )
+
+    # Mark project as completed
+    await database.projects_collection.update_one(
+        {"_id": ObjectId(project_id)}, {"$set": {"is_completed": True}}
+    )
+
+    updated_project = await database.projects_collection.find_one(
+        {"_id": ObjectId(project_id)}
+    )
+    return as_response(ProjectResponse, updated_project)
+
+
+@router.put(
+    "/projects/{project_id}/reopen",
+    response_model=ProjectResponse,
+    response_model_by_alias=False,
+)
+async def reopen_project(
+    project_id: str, current_user: UserInDB = Depends(get_current_user)
+):
+    """Reopen a completed project (manager only)"""
+    if current_user.role != "manager":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only managers can reopen projects",
+        )
+
+    if not ObjectId.is_valid(project_id):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid project ID"
+        )
+
+    project = await database.projects_collection.find_one({"_id": ObjectId(project_id)})
+    if not project:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Project not found"
+        )
+
+    if project["manager_id"] != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to modify this project",
+        )
+
+    # Reopen project
+    await database.projects_collection.update_one(
+        {"_id": ObjectId(project_id)}, {"$set": {"is_completed": False}}
+    )
+
+    updated_project = await database.projects_collection.find_one(
+        {"_id": ObjectId(project_id)}
+    )
+    return as_response(ProjectResponse, updated_project)
+
+
+@router.delete("/projects/{project_id}")
+async def delete_project(
+    project_id: str, current_user: UserInDB = Depends(get_current_user)
+):
+    """Delete a project (manager only, only if project has no tasks)"""
+    if current_user.role != "manager":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only managers can delete projects",
+        )
+
+    if not ObjectId.is_valid(project_id):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid project ID"
+        )
+
+    project = await database.projects_collection.find_one({"_id": ObjectId(project_id)})
+    if not project:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Project not found"
+        )
+
+    if project["manager_id"] != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to delete this project",
+        )
+
+    # Check if project has any tasks
+    tasks_count = await database.tasks_collection.count_documents(
+        {"project_id": ObjectId(project_id)}
+    )
+
+    if tasks_count > 0:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot delete project with existing tasks. Please complete or remove all tasks first.",
+        )
+
+    # Delete related data
+    await database.invites_collection.delete_many({"project_id": ObjectId(project_id)})
+    await database.project_working_collection.delete_many(
+        {"project_id": ObjectId(project_id)}
+    )
+    await database.annotator_tasks_collection.delete_many(
+        {"project_id": ObjectId(project_id)}
+    )
+
+    # Delete the project
+    await database.projects_collection.delete_one({"_id": ObjectId(project_id)})
+
+    return {"message": "Project deleted successfully"}
+
+
 # Project invites listing for managers/admins
 @router.get(
     "/projects/{project_id}/invites",
