@@ -1019,6 +1019,7 @@ async def submit_annotation(
         "annotation": annotation_dict,
         "completed_status.annotator_part": True,
         "annotator_completed_at": completed_at,
+        "is_returned": False,  # Clear returned status when resubmitted
     }
 
     await database.tasks_collection.update_one(
@@ -1036,8 +1037,10 @@ async def submit_annotation(
         )
 
         # Update annotator_tasks_collection with completion time from frontend timer
-        # Use the completion_time sent from frontend (in seconds)
+        # If task was returned, add the new completion time to accumulated time
         completion_time = payload.completion_time if payload.completion_time else 0
+        accumulated_time = task.get("accumulated_time", 0) or 0
+        total_time = accumulated_time + completion_time
 
         await database.annotator_tasks_collection.update_one(
             {
@@ -1046,7 +1049,7 @@ async def submit_annotation(
             },
             {
                 "$set": {
-                    "completion_time": completion_time,
+                    "completion_time": total_time,  # Store total accumulated time
                 }
             },
         )
@@ -1102,6 +1105,99 @@ async def submit_qa(
         {"_id": ObjectId(task_id)}, {"$set": updates}
     )
     return {"message": "QA submitted"}
+
+
+# Return task to annotator
+@router.put("/tasks/{task_id}/return")
+async def return_task_to_annotator(
+    task_id: str,
+    current_user: UserInDB = Depends(get_current_user),
+):
+    """Return a completed task back to the annotator for revision (manager or admin only)"""
+    if not ObjectId.is_valid(task_id):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid task ID"
+        )
+
+    task = await database.tasks_collection.find_one({"_id": ObjectId(task_id)})
+    if not task:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Task not found"
+        )
+
+    # Only admins or the project's manager can return tasks
+    project = await database.projects_collection.find_one({"_id": task["project_id"]})
+    if current_user.role not in ["admin", "manager"] or (
+        current_user.role == "manager"
+        and project
+        and project["manager_id"] != current_user.id
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to return this task",
+        )
+
+    # Task must be completed by annotator to be returnable
+    if not task.get("completed_status", {}).get("annotator_part"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Task must be completed by annotator before it can be returned",
+        )
+
+    # Get the completion time from annotator_tasks_collection
+    annotator_task = await database.annotator_tasks_collection.find_one(
+        {
+            "task_id": ObjectId(task_id),
+            "annotator_id": task.get("assigned_annotator_id"),
+        }
+    )
+
+    current_completion_time = (
+        annotator_task.get("completion_time", 0) if annotator_task else 0
+    )
+
+    # Calculate accumulated time (add previous accumulated time if task was already returned before)
+    previous_accumulated_time = task.get("accumulated_time", 0) or 0
+    new_accumulated_time = previous_accumulated_time + current_completion_time
+
+    updates = {
+        "completed_status.annotator_part": False,
+        "is_returned": True,
+        "accumulated_time": new_accumulated_time,
+        "annotator_completed_at": None,
+        # Keep the annotation field so annotator can see and modify their previous work
+    }
+
+    await database.tasks_collection.update_one(
+        {"_id": ObjectId(task_id)}, {"$set": updates}
+    )
+
+    # Add task back to project_working for the annotator
+    if task.get("assigned_annotator_id"):
+        await database.project_working_collection.update_one(
+            {
+                "project_id": task["project_id"],
+                "annotator_assignments.annotator_id": task["assigned_annotator_id"],
+            },
+            {
+                "$addToSet": {"annotator_assignments.$.task_ids": ObjectId(task_id)},
+            },
+        )
+
+        # Reset completion time in annotator_tasks_collection (will accumulate on next submission)
+        await database.annotator_tasks_collection.update_one(
+            {
+                "task_id": ObjectId(task_id),
+                "annotator_id": task["assigned_annotator_id"],
+            },
+            {
+                "$set": {
+                    "completion_time": None,
+                }
+            },
+        )
+
+    return {"message": "Task returned to annotator"}
 
 
 # Invite endpoints

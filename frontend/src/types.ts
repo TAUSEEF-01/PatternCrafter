@@ -21,6 +21,8 @@ export type Task = {
     annotator_part?: boolean;
     qa_part?: boolean;
   };
+  is_returned?: boolean;
+  accumulated_time?: number | null;
   created_at?: string;
   annotator_started_at?: string | null;
   annotator_completed_at?: string | null;
