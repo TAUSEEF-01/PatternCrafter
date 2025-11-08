@@ -22,6 +22,25 @@ export default function ProjectDetailPage() {
     { id: string; name: string; email: string }[]
   >([]);
 
+  // Delete task functionality
+  const [deletingTaskId, setDeletingTaskId] = useState<string | null>(null);
+  const [deleteTaskModal, setDeleteTaskModal] = useState<{
+    taskId: string;
+    taskName: string;
+  } | null>(null);
+  const [notification, setNotification] = useState<{
+    message: string;
+    type: "success" | "error" | "info";
+  } | null>(null);
+
+  // Auto-dismiss notification after 5 seconds
+  useEffect(() => {
+    if (notification) {
+      const timer = setTimeout(() => setNotification(null), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [notification]);
+
   useEffect(() => {
     if (!projectId) return;
     apiFetch<Project>(`/projects/${projectId}`)
@@ -59,8 +78,225 @@ export default function ProjectDetailPage() {
     returned: tasks.filter((t) => t.is_returned).length,
   };
 
+  const handleDeleteTask = async (taskId: string) => {
+    setDeletingTaskId(taskId);
+    try {
+      await apiFetch(`/tasks/${taskId}`, { method: "DELETE" });
+      setTasks((prev) => prev.filter((t) => t.id !== taskId));
+      setNotification({
+        message: "Task deleted successfully!",
+        type: "success",
+      });
+      setDeleteTaskModal(null);
+    } catch (e: any) {
+      setNotification({
+        message: e?.message || "Failed to delete task",
+        type: "error",
+      });
+    } finally {
+      setDeletingTaskId(null);
+    }
+  };
+
+  const getTaskStatus = (task: Task) => {
+    if (task.is_returned) {
+      return { label: "Returned", color: "amber" };
+    }
+    if (task.completed_status?.qa_part) {
+      return { label: "Completed", color: "green" };
+    }
+    if (task.completed_status?.annotator_part) {
+      return { label: "Awaiting QA", color: "blue" };
+    }
+    if (task.assigned_annotator_id) {
+      return { label: "In Progress", color: "yellow" };
+    }
+    return { label: "Unassigned", color: "gray" };
+  };
+
   return (
     <div className="space-y-6">
+      {/* Delete Task Confirmation Modal */}
+      {deleteTaskModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in">
+          <div className="relative max-w-md w-full rounded-2xl shadow-2xl border-2 bg-white dark:bg-gray-900 border-red-300 dark:border-red-700 p-6 animate-scale-in">
+            {/* Warning Icon */}
+            <div className="flex justify-center mb-4">
+              <div className="rounded-full p-3 bg-red-100 dark:bg-red-900/30">
+                <svg
+                  width="48"
+                  height="48"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="#dc2626"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                  <line x1="12" y1="9" x2="12" y2="13" />
+                  <line x1="12" y1="17" x2="12.01" y2="17" />
+                </svg>
+              </div>
+            </div>
+
+            {/* Title */}
+            <h3 className="text-2xl font-bold text-center mb-2 text-red-600 dark:text-red-400">
+              Delete Task?
+            </h3>
+
+            {/* Message */}
+            <p className="text-center mb-2 text-gray-700 dark:text-gray-300">
+              You're about to delete task{" "}
+              <span className="font-semibold">
+                "{deleteTaskModal.taskName}"
+              </span>
+            </p>
+            <p className="text-sm text-center mb-6 text-gray-600 dark:text-gray-400">
+              This action cannot be undone. All task data will be permanently
+              removed.
+            </p>
+
+            {/* Action Buttons */}
+            <div className="flex gap-3">
+              <button
+                onClick={() => setDeleteTaskModal(null)}
+                disabled={deletingTaskId === deleteTaskModal.taskId}
+                className="flex-1 py-3 px-4 rounded-xl font-semibold transition-all bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 border-2 border-gray-300 dark:border-gray-700"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => handleDeleteTask(deleteTaskModal.taskId)}
+                disabled={deletingTaskId === deleteTaskModal.taskId}
+                className={`flex-1 py-3 px-4 rounded-xl font-semibold text-white transition-all shadow-md hover:shadow-lg ${
+                  deletingTaskId === deleteTaskModal.taskId
+                    ? "bg-red-400 cursor-not-allowed"
+                    : "bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800"
+                }`}
+              >
+                {deletingTaskId === deleteTaskModal.taskId ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <svg
+                      className="animate-spin"
+                      width="20"
+                      height="20"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                    >
+                      <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+                    </svg>
+                    Deleting...
+                  </span>
+                ) : (
+                  "Delete Task"
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Toast Notification */}
+      {notification && (
+        <div
+          className={`fixed top-20 right-6 z-50 max-w-md animate-slide-in-right shadow-2xl rounded-xl border-2 p-4 flex items-start gap-3 ${
+            notification.type === "success"
+              ? "bg-green-50 dark:bg-green-900/90 border-green-300 dark:border-green-700 backdrop-blur-sm"
+              : notification.type === "error"
+              ? "bg-red-50 dark:bg-red-900/90 border-red-300 dark:border-red-700 backdrop-blur-sm"
+              : "bg-blue-50 dark:bg-blue-900/90 border-blue-300 dark:border-blue-700 backdrop-blur-sm"
+          }`}
+        >
+          <div className="flex-shrink-0">
+            {notification.type === "success" ? (
+              <svg
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="#16a34a"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                <polyline points="22 4 12 14.01 9 11.01" />
+              </svg>
+            ) : notification.type === "error" ? (
+              <svg
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="#dc2626"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <circle cx="12" cy="12" r="10" />
+                <line x1="15" y1="9" x2="9" y2="15" />
+                <line x1="9" y1="9" x2="15" y2="15" />
+              </svg>
+            ) : (
+              <svg
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="#2563eb"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <circle cx="12" cy="12" r="10" />
+                <line x1="12" y1="16" x2="12" y2="12" />
+                <line x1="12" y1="8" x2="12.01" y2="8" />
+              </svg>
+            )}
+          </div>
+          <div className="flex-1 min-w-0">
+            <p
+              className={`text-sm font-semibold ${
+                notification.type === "success"
+                  ? "text-green-800 dark:text-green-400"
+                  : notification.type === "error"
+                  ? "text-red-800 dark:text-red-400"
+                  : "text-blue-800 dark:text-blue-400"
+              }`}
+            >
+              {notification.message}
+            </p>
+          </div>
+          <button
+            onClick={() => setNotification(null)}
+            className={`flex-shrink-0 rounded-lg p-1 transition-colors ${
+              notification.type === "success"
+                ? "hover:bg-green-200 dark:hover:bg-green-800/50 text-green-600 dark:text-green-400"
+                : notification.type === "error"
+                ? "hover:bg-red-200 dark:hover:bg-red-800/50 text-red-600 dark:text-red-400"
+                : "hover:bg-blue-200 dark:hover:bg-blue-800/50 text-blue-600 dark:text-blue-400"
+            }`}
+          >
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
+        </div>
+      )}
+
       <div className="flex items-center justify-between">
         <div>
           <h1>{project?.details || "Project Details"}</h1>
@@ -361,6 +597,159 @@ export default function ProjectDetailPage() {
           </div>
         )}
       </div>
+
+      {/* All Tasks Section - Manager Only */}
+      {user?.role !== "annotator" && (
+        <div className="card">
+          <div className="card-body">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-xl font-semibold">
+                📋 All Tasks ({tasks.length})
+              </h3>
+            </div>
+
+            {tasks.length === 0 ? (
+              <div className="text-center py-8">
+                <div className="text-gray-400 mb-2">
+                  <svg
+                    className="mx-auto"
+                    width="64"
+                    height="64"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1"
+                  >
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                    <polyline points="14 2 14 8 20 8" />
+                    <line x1="12" y1="18" x2="12" y2="12" />
+                    <line x1="9" y1="15" x2="15" y2="15" />
+                  </svg>
+                </div>
+                <p className="text-gray-500">No tasks created yet</p>
+                <LinkFix
+                  to={`/projects/${projectId}/tasks/create`}
+                  className="btn btn-primary btn-sm mt-3"
+                >
+                  Create First Task
+                </LinkFix>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="table">
+                  <thead>
+                    <tr>
+                      <th>Task ID</th>
+                      <th>Status</th>
+                      <th>Assigned To</th>
+                      <th>QA Reviewer</th>
+                      <th>Created</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {tasks.map((task) => {
+                      const status = getTaskStatus(task);
+                      const assignedAnnotator = projectAnnotators.find(
+                        (a) => a.id === task.assigned_annotator_id
+                      );
+                      const assignedQA = qaAnnotators.find(
+                        (q) => q.id === task.assigned_qa_id
+                      );
+
+                      return (
+                        <tr key={task.id}>
+                          <td>
+                            <code className="text-xs bg-gray-100 px-2 py-1 rounded">
+                              {task.id.slice(0, 8)}...
+                            </code>
+                          </td>
+                          <td>
+                            <span
+                              className={`badge ${
+                                status.color === "green"
+                                  ? "badge-green"
+                                  : status.color === "blue"
+                                  ? "badge-primary"
+                                  : status.color === "yellow"
+                                  ? "badge-yellow"
+                                  : status.color === "amber"
+                                  ? "bg-amber-100 text-amber-700"
+                                  : "bg-gray-100 text-gray-700"
+                              }`}
+                            >
+                              {status.label}
+                            </span>
+                          </td>
+                          <td>
+                            {assignedAnnotator ? (
+                              <div className="text-sm">
+                                <div className="font-medium">
+                                  {assignedAnnotator.name}
+                                </div>
+                                <div className="text-xs text-gray-500">
+                                  {assignedAnnotator.email}
+                                </div>
+                              </div>
+                            ) : (
+                              <span className="text-gray-400 text-sm">
+                                Unassigned
+                              </span>
+                            )}
+                          </td>
+                          <td>
+                            {assignedQA ? (
+                              <div className="text-sm">
+                                <div className="font-medium">
+                                  {assignedQA.name}
+                                </div>
+                                <div className="text-xs text-gray-500">
+                                  {assignedQA.email}
+                                </div>
+                              </div>
+                            ) : (
+                              <span className="text-gray-400 text-sm">-</span>
+                            )}
+                          </td>
+                          <td>
+                            <span className="text-sm text-gray-600">
+                              {task.created_at
+                                ? new Date(task.created_at).toLocaleDateString()
+                                : "-"}
+                            </span>
+                          </td>
+                          <td>
+                            <div className="flex gap-2">
+                              <LinkFix
+                                to={`/tasks/${task.id}/view`}
+                                className="btn btn-ghost btn-sm"
+                              >
+                                👁️ View
+                              </LinkFix>
+                              <button
+                                onClick={() =>
+                                  setDeleteTaskModal({
+                                    taskId: task.id,
+                                    taskName: `Task ${task.id.slice(0, 8)}`,
+                                  })
+                                }
+                                disabled={deletingTaskId === task.id}
+                                className="btn btn-ghost btn-sm text-red-600 hover:bg-red-50"
+                              >
+                                🗑️
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
