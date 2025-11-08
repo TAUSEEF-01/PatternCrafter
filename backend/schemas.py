@@ -389,6 +389,9 @@ class ProjectWorking(BaseModel):
     id: PyObjectId = Field(default_factory=PyObjectId, alias="_id")
     project_id: PyObjectId
     annotator_assignments: List[AnnotatorTaskAssignment] = []
+    qa_annotator_ids: List[PyObjectId] = (
+        []
+    )  # Annotators designated as QA for this project
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
     class Config:

@@ -3,14 +3,11 @@ import { useParams } from "react-router-dom";
 import { apiFetch } from "@/api/client";
 import { Task } from "@/types";
 
-export default function AssignTaskPage() {
+export default function AssignQAPage() {
   const { taskId } = useParams();
   const [task, setTask] = useState<Task | null>(null);
-  const [annotatorId, setAnnotatorId] = useState("");
-  const [annotators, setAnnotators] = useState<
-    { id: string; name: string; email: string }[]
-  >([]);
-  const [availableAnnotators, setAvailableAnnotators] = useState<
+  const [qaId, setQaId] = useState("");
+  const [qaUsers, setQaUsers] = useState<
     { id: string; name: string; email: string }[]
   >([]);
   const [error, setError] = useState<string | null>(null);
@@ -21,33 +18,16 @@ export default function AssignTaskPage() {
     apiFetch<Task>(`/tasks/${taskId}`)
       .then(async (t) => {
         setTask(t);
-
-        // Load project annotators for assignment dropdown
+        // Load QA annotators for assignment dropdown
         try {
-          const list = await apiFetch<
+          const qaList = await apiFetch<
             { id: string; name: string; email: string }[]
-          >(`/projects/${t.project_id}/annotators`);
-          setAnnotators(list);
-
-          // Load QA annotators to filter them out
-          try {
-            const qaList = await apiFetch<
-              { id: string; name: string; email: string }[]
-            >(`/projects/${t.project_id}/qa-annotators`);
-
-            // Filter out QA annotators from the annotators list
-            const qaIds = new Set(qaList.map((qa) => qa.id));
-            const filteredAnnotators = list.filter((a) => !qaIds.has(a.id));
-            setAvailableAnnotators(filteredAnnotators);
-          } catch (e: any) {
-            // If QA list fails to load, show all annotators
-            console.warn("Failed to load QA annotators:", e);
-            setAvailableAnnotators(list);
-          }
+          >(`/projects/${t.project_id}/qa-annotators`);
+          setQaUsers(qaList);
         } catch (e: any) {
           // don't hard fail UI; show error banner
           setError(
-            (prev) => prev || e?.message || "Failed to load project annotators"
+            (prev) => prev || e?.message || "Failed to load QA annotators"
           );
         }
       })
@@ -59,19 +39,19 @@ export default function AssignTaskPage() {
     if (!taskId) return;
     try {
       const body: any = {};
-      if (annotatorId) body.annotator_id = annotatorId;
+      if (qaId) body.qa_id = qaId;
       await apiFetch(`/tasks/${taskId}/assign`, { method: "PUT", body });
-      setSuccess("Annotator assigned successfully");
+      setSuccess("QA reviewer assigned successfully");
     } catch (e: any) {
-      setError(e?.message || "Failed to assign annotator");
+      setError(e?.message || "Failed to assign QA reviewer");
     }
   };
 
   return (
     <div className="space-y-6">
       <div>
-        <h1>Assign Annotator</h1>
-        <p className="muted mt-1">Assign an annotator to work on this task</p>
+        <h1>Assign QA Reviewer</h1>
+        <p className="muted mt-1">Assign a QA reviewer to review this task</p>
       </div>
       {error && (
         <div className="rounded-md bg-red-50 border border-red-200 p-3 text-sm text-red-700">
@@ -87,7 +67,7 @@ export default function AssignTaskPage() {
       {task && (
         <div className="card">
           <div className="card-body">
-            <h2 className="card-title mb-3">Current Assignments</h2>
+            <h2 className="card-title mb-3">Current Assignment</h2>
             <div className="space-y-2 text-sm">
               <div className="flex items-center gap-2">
                 <span className="text-gray-600">Task ID:</span>
@@ -98,9 +78,9 @@ export default function AssignTaskPage() {
                 <span className="badge badge-primary">{task.category}</span>
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-gray-600">Annotator:</span>
+                <span className="text-gray-600">QA Reviewer:</span>
                 <span className="font-medium">
-                  {task.assigned_annotator_id || "—"}
+                  {task.assigned_qa_id || "—"}
                 </span>
               </div>
             </div>
@@ -110,41 +90,42 @@ export default function AssignTaskPage() {
 
       <div className="card">
         <div className="card-body">
-          <h2 className="card-title mb-4">Assign Annotator</h2>
-          {availableAnnotators.length === 0 ? (
+          <h2 className="card-title mb-4">Assign QA Reviewer</h2>
+          {qaUsers.length === 0 ? (
             <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-sm">
               <p className="font-medium text-yellow-800 mb-1">
-                ⚠️ No Annotators Available
+                ⚠️ No QA Reviewers Available
               </p>
               <p className="text-yellow-700">
-                All annotators in this project are designated as QA reviewers.
-                You need to invite more annotators or remove some from the QA
-                reviewer list.
+                You need to designate QA reviewers for this project first. Go to
+                the project details page and use the "Manage QA" section to
+                assign annotators as QA reviewers.
               </p>
             </div>
           ) : (
             <form onSubmit={submit} className="space-y-4">
               <div>
-                <label className="label">Annotator</label>
+                <label className="label">QA Reviewer</label>
                 <select
                   className="select"
-                  value={annotatorId}
-                  onChange={(e) => setAnnotatorId(e.target.value)}
+                  value={qaId}
+                  onChange={(e) => setQaId(e.target.value)}
                   required
                 >
-                  <option value="">— Select Annotator —</option>
-                  {availableAnnotators.map((a) => (
-                    <option key={a.id} value={a.id}>
-                      {a.name} ({a.email})
+                  <option value="">— Select QA Reviewer —</option>
+                  {qaUsers.map((q) => (
+                    <option key={q.id} value={q.id}>
+                      {q.name} ({q.email})
                     </option>
                   ))}
                 </select>
                 <p className="text-xs text-gray-500 mt-2">
-                  QA reviewers are excluded from this list
+                  Only annotators designated as QA reviewers for this project
+                  are shown
                 </p>
               </div>
               <button type="submit" className="btn btn-primary">
-                Assign Annotator
+                Assign QA Reviewer
               </button>
             </form>
           )}
