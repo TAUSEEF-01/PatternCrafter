@@ -964,9 +964,9 @@ function TaskCard({ t, isManager }: { t: Task; isManager: boolean }) {
                 </LinkFix>
                 <LinkFix
                   className="btn btn-outline btn-sm"
-                  to={`/tasks/${t.id}/qa`}
+                  to={`/tasks/${t.id}/assign-qa`}
                 >
-                  QA
+                  Assign QA
                 </LinkFix>
                 {t.completed_status?.annotator_part && (
                   <button

@@ -1,18 +1,27 @@
-import { Navigate, Route as RRRoute, Routes as RRRoutes } from 'react-router-dom';
-import NavBar, { ThemeProvider, AnimatedBackground, useTheme } from '@/components/NavBar';
-import { useAuth } from '@/auth/AuthContext';
-import LoginPage from '@/pages/LoginPage';
-import RegisterPage from '@/pages/RegisterPage';
-import ProjectsPage from '@/pages/ProjectsPage';
-import ProjectDetailPage from '@/pages/ProjectDetailPage';
-import InvitesPage from '@/pages/InvitesPage';
-import TaskAnnotatePage from '@/pages/TaskAnnotatePage';
-import TaskQAPage from '@/pages/TaskQAPage';
-import AssignTaskPage from '@/pages/AssignTaskPage';
-import ProfilePage from '@/pages/ProfilePage';
-import ProjectInvitesPage from '@/pages/ProjectInvitesPage';
-import CompletedTasksPage from '@/pages/CompletedTasksPage';
-import WelcomePage from '@/pages/WelcomePage';
+import {
+  Navigate,
+  Route as RRRoute,
+  Routes as RRRoutes,
+} from "react-router-dom";
+import NavBar, {
+  ThemeProvider,
+  AnimatedBackground,
+  useTheme,
+} from "@/components/NavBar";
+import { useAuth } from "@/auth/AuthContext";
+import LoginPage from "@/pages/LoginPage";
+import RegisterPage from "@/pages/RegisterPage";
+import ProjectsPage from "@/pages/ProjectsPage";
+import ProjectDetailPage from "@/pages/ProjectDetailPage";
+import InvitesPage from "@/pages/InvitesPage";
+import TaskAnnotatePage from "@/pages/TaskAnnotatePage";
+import TaskQAPage from "@/pages/TaskQAPage";
+import AssignTaskPage from "@/pages/AssignTaskPage";
+import AssignQAPage from "@/pages/AssignQAPage";
+import ProfilePage from "@/pages/ProfilePage";
+import ProjectInvitesPage from "@/pages/ProjectInvitesPage";
+import CompletedTasksPage from "@/pages/CompletedTasksPage";
+import WelcomePage from "@/pages/WelcomePage";
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -23,7 +32,7 @@ function RequireAuth({ children }: { children: React.ReactNode }) {
 
 function RequireNonAnnotator({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
-  if (user?.role === 'annotator') return <Navigate to="/projects" replace />;
+  if (user?.role === "annotator") return <Navigate to="/projects" replace />;
   return <>{children}</>;
 }
 
@@ -33,18 +42,21 @@ function AppContent() {
   const Route = RRRoute as unknown as any;
 
   return (
-    <div 
+    <div
       className="min-h-full"
       style={{
-        backgroundColor: darkMode ? '#0f172a' : '#f8fafc',
-        color: darkMode ? '#e2e8f0' : '#1e293b',
-        minHeight: '100vh',
-        position: 'relative',
+        backgroundColor: darkMode ? "#0f172a" : "#f8fafc",
+        color: darkMode ? "#e2e8f0" : "#1e293b",
+        minHeight: "100vh",
+        position: "relative",
       }}
     >
       <AnimatedBackground />
       <NavBar />
-      <div className="container-app py-6" style={{ position: 'relative', zIndex: 1 }}>
+      <div
+        className="container-app py-6"
+        style={{ position: "relative", zIndex: 1 }}
+      >
         <Routes>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
@@ -122,6 +134,14 @@ function AppContent() {
             element={
               <RequireAuth>
                 <AssignTaskPage />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/tasks/:taskId/assign-qa"
+            element={
+              <RequireAuth>
+                <AssignQAPage />
               </RequireAuth>
             }
           />
