@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { apiFetch } from "@/api/client";
 import { Task } from "@/types";
 
@@ -88,6 +88,7 @@ function TaskDataViewer({ data }: { data: any }) {
 
 export default function TaskAnnotatePage() {
   const { taskId } = useParams();
+  const navigate = useNavigate();
   const [task, setTask] = useState<Task | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -152,6 +153,67 @@ export default function TaskAnnotatePage() {
     apiFetch<Task>(`/tasks/${taskId}`)
       .then((taskData) => {
         setTask(taskData);
+
+        // If task was returned, start timer from accumulated time
+        if (taskData.is_returned && taskData.accumulated_time) {
+          setElapsedTime(Math.floor(taskData.accumulated_time));
+        }
+
+        // If task has existing annotation (returned task), populate the form fields
+        if (taskData.annotation) {
+          const ann = taskData.annotation;
+
+          // Common fields
+          if (ann.confidence !== undefined)
+            setConfidence(String(ann.confidence));
+          if (ann.notes) setNotes(ann.notes);
+
+          // Category-specific fields
+          switch (taskData.category) {
+            case "text_classification":
+              if (ann.label) setLabel(ann.label);
+              if (ann.category) setCategory(ann.category);
+              break;
+            case "image_classification":
+              if (ann.predicted_class) setPredictedClass(ann.predicted_class);
+              break;
+            case "object_detection":
+              if (ann.objects) setObjects(JSON.stringify(ann.objects, null, 2));
+              break;
+            case "named_entity_recognition":
+              if (ann.entities && Array.isArray(ann.entities)) {
+                setNerEntities(ann.entities);
+              }
+              break;
+            case "sentiment_analysis":
+              if (ann.sentiment) setSentiment(ann.sentiment);
+              if (ann.label) setLabel(ann.label);
+              break;
+            case "text_summarization":
+              if (ann.summary) setSummary(ann.summary);
+              break;
+            case "qa_evaluation":
+              if (ann.accuracy) setAccuracy(ann.accuracy);
+              if (ann.relevance) setRelevance(ann.relevance);
+              if (ann.completeness) setCompleteness(ann.completeness);
+              break;
+            case "generative_ai_llm_response_grading":
+              if (ann.grade) setGrade(ann.grade);
+              if (ann.reasoning) setReasoning(ann.reasoning);
+              break;
+            case "generative_ai_chatbot_assessment":
+              if (ann.coherence) setCoherence(ann.coherence);
+              if (ann.helpfulness) setHelpfulness(ann.helpfulness);
+              break;
+            case "conversational_ai_response_selection":
+              if (ann.selected_response)
+                setSelectedResponse(ann.selected_response);
+              if (ann.selection_reason)
+                setSelectionReason(ann.selection_reason);
+              break;
+          }
+        }
+
         // Start timer when task loads
         setIsTimerActive(true);
       })
@@ -258,11 +320,18 @@ export default function TaskAnnotatePage() {
       };
       await apiFetch(`/tasks/${taskId}/annotation`, { method: "PUT", body });
       setSuccess(
-        `Annotation submitted successfully! Time taken: ${formatTime(
+        `Annotation sent to QA successfully! Time taken: ${formatTime(
           elapsedTime
         )}`
       );
       setError(null);
+
+      // Redirect to project details page after 1.5 seconds
+      setTimeout(() => {
+        if (task?.project_id) {
+          navigate(`/projects/${task.project_id}`);
+        }
+      }, 1500);
     } catch (e: any) {
       setError(e?.message || "Failed to submit annotation");
       setSuccess(null);
@@ -299,7 +368,18 @@ export default function TaskAnnotatePage() {
                     {task.id.slice(0, 8)}
                   </span>
                   <span className="badge badge-primary">{task.category}</span>
+                  {task.is_returned && (
+                    <span className="badge badge-warning">
+                      ⚠️ Returned - Needs Revision
+                    </span>
+                  )}
                 </div>
+                {task.is_returned && task.accumulated_time && (
+                  <div className="text-xs text-amber-600 mt-2">
+                    Previous time spent:{" "}
+                    {formatTime(Math.floor(task.accumulated_time))}
+                  </div>
+                )}
               </div>
               {/* Timer Display */}
               <div className="flex flex-col items-end">
@@ -336,7 +416,27 @@ export default function TaskAnnotatePage() {
 
       <div className="card">
         <div className="card-body">
-          <h2 className="card-title mb-4">Submit Annotation</h2>
+          <h2 className="card-title mb-4">Review & Send to QA</h2>
+          {task?.is_returned && task?.annotation && (
+            <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
+              <p className="text-sm text-blue-800">
+                <strong>📝 Note:</strong> This task was returned for revision.
+                The form below is pre-filled with your previous submission.
+                Please review and update as needed.
+              </p>
+            </div>
+          )}
+          {!task?.is_returned &&
+            task?.annotation &&
+            task?.completed_status?.annotator_part && (
+              <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-md">
+                <p className="text-sm text-green-800">
+                  <strong>✅ Viewing Completed Task:</strong> This task has been
+                  completed by the annotator. The form below shows their
+                  submitted work. You can review and modify if needed.
+                </p>
+              </div>
+            )}
           <form onSubmit={submit} className="space-y-4">
             {/* Text Classification */}
             {task?.category === "text_classification" && (
@@ -882,7 +982,7 @@ export default function TaskAnnotatePage() {
             </div>
 
             <button type="submit" className="btn btn-primary w-full">
-              Submit Annotation
+              Send to QA
             </button>
           </form>
         </div>

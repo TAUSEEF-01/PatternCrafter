@@ -319,6 +319,10 @@ class Task(BaseModel):
     assigned_annotator_id: Optional[PyObjectId] = None
     assigned_qa_id: Optional[PyObjectId] = None
 
+    # Return status and accumulated time
+    is_returned: bool = False  # Whether task has been returned to annotator
+    accumulated_time: Optional[float] = None  # Time spent before return (in seconds)
+
     # Timestamps
     created_at: datetime = Field(default_factory=datetime.utcnow)
     annotator_started_at: Optional[datetime] = None
@@ -431,6 +435,8 @@ class TaskResponse(BaseModel):
     tag_task: Optional[str] = None
     assigned_annotator_id: Optional[str] = None
     assigned_qa_id: Optional[str] = None
+    is_returned: bool = False
+    accumulated_time: Optional[float] = None
     created_at: datetime
     annotator_started_at: Optional[datetime] = None
     annotator_completed_at: Optional[datetime] = None

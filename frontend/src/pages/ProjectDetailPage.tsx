@@ -1,10 +1,10 @@
-import { Fragment, useEffect, useMemo, useState } from 'react';
-import { Link as RouterLink, useParams } from 'react-router-dom';
-import { apiFetch } from '@/api/client';
-import { Project, Task } from '@/types';
-import { useAuth } from '@/auth/AuthContext';
+import { Fragment, useEffect, useMemo, useState } from "react";
+import { Link as RouterLink, useParams } from "react-router-dom";
+import { apiFetch } from "@/api/client";
+import { Project, Task } from "@/types";
+import { useAuth } from "@/auth/AuthContext";
 
-type Role = 'user' | 'assistant';
+type Role = "user" | "assistant";
 type DialogueMessage = { role: Role; content: string };
 
 // Temporary workaround for react-router-dom Link typing mismatch across the file
@@ -23,45 +23,49 @@ export default function ProjectDetailPage() {
   // Common helpers
   const parseList = (s: string) =>
     s
-      .split(',')
+      .split(",")
       .map((x) => x.trim())
       .filter(Boolean);
 
   // LLM Response Grading
-  const [llm_document, setLLMDocument] = useState('');
+  const [llm_document, setLLMDocument] = useState("");
   const [llm_split, setLLMSplit] = useState(false);
-  const [llm_summary, setLLMSummary] = useState('');
-  const [llm_prompt, setLLMPrompt] = useState('');
-  const [llm_model, setLLMModel] = useState('');
+  const [llm_summary, setLLMSummary] = useState("");
+  const [llm_prompt, setLLMPrompt] = useState("");
+  const [llm_model, setLLMModel] = useState("");
 
   // Chatbot Model Assessment
   const [chat_messages, setChatMessages] = useState<DialogueMessage[]>([
-    { role: 'user', content: '' },
-    { role: 'assistant', content: '' },
+    { role: "user", content: "" },
+    { role: "assistant", content: "" },
   ]);
-  const [chat_model, setChatModel] = useState('');
-  const [chat_title, setChatTitle] = useState('InstructGPT Assessment');
+  const [chat_model, setChatModel] = useState("");
+  const [chat_title, setChatTitle] = useState("InstructGPT Assessment");
 
   // Response Selection
-  const [rs_dialogue, setRsDialogue] = useState<DialogueMessage[]>([{ role: 'user', content: '' }]);
-  const [rs_options, setRsOptions] = useState<string[]>(['', '', '']);
-  const [rs_context, setRsContext] = useState('');
+  const [rs_dialogue, setRsDialogue] = useState<DialogueMessage[]>([
+    { role: "user", content: "" },
+  ]);
+  const [rs_options, setRsOptions] = useState<string[]>(["", "", ""]);
+  const [rs_context, setRsContext] = useState("");
 
   // Text Classification
-  const [tc_text, setTcText] = useState('');
-  const [tc_labels, setTcLabels] = useState('positive, negative');
+  const [tc_text, setTcText] = useState("");
+  const [tc_labels, setTcLabels] = useState("positive, negative");
 
   // Image Classification
-  const [ic_image, setIcImage] = useState('');
-  const [ic_labels, setIcLabels] = useState('cat, dog');
+  const [ic_image, setIcImage] = useState("");
+  const [ic_labels, setIcLabels] = useState("cat, dog");
 
   // Object Detection
-  const [od_image, setOdImage] = useState('');
-  const [od_classes, setOdClasses] = useState('person, car');
+  const [od_image, setOdImage] = useState("");
+  const [od_classes, setOdClasses] = useState("person, car");
 
   // NER
-  const [ner_text, setNerText] = useState('');
-  const [ner_entity_types, setNerEntityTypes] = useState('PERSON, ORG, LOCATION');
+  const [ner_text, setNerText] = useState("");
+  const [ner_entity_types, setNerEntityTypes] = useState(
+    "PERSON, ORG, LOCATION"
+  );
 
   useEffect(() => {
     if (!projectId) return;
@@ -69,7 +73,7 @@ export default function ProjectDetailPage() {
       .then(setProject)
       .catch((e) => setError(String(e)));
     const tasksPath =
-      user?.role === 'annotator'
+      user?.role === "annotator"
         ? `/projects/${projectId}/my-tasks`
         : `/projects/${projectId}/tasks`;
     apiFetch<Task[]>(tasksPath)
@@ -82,7 +86,7 @@ export default function ProjectDetailPage() {
     try {
       let task_data: any = {};
       switch (category) {
-        case 'generative_ai_llm_response_grading': {
+        case "generative_ai_llm_response_grading": {
           const paragraphs = llm_document
             .split(/\n\n+/)
             .map((x) => x.trim())
@@ -95,7 +99,7 @@ export default function ProjectDetailPage() {
           };
           break;
         }
-        case 'generative_ai_chatbot_assessment': {
+        case "generative_ai_chatbot_assessment": {
           task_data = {
             messages: chat_messages.filter((m) => m.content.trim().length),
             ...(chat_model ? { model_name: chat_model } : {}),
@@ -103,7 +107,7 @@ export default function ProjectDetailPage() {
           };
           break;
         }
-        case 'conversational_ai_response_selection': {
+        case "conversational_ai_response_selection": {
           task_data = {
             dialogue: rs_dialogue.filter((m) => m.content.trim().length),
             response_options: rs_options.map((o) => o.trim()).filter(Boolean),
@@ -111,20 +115,23 @@ export default function ProjectDetailPage() {
           };
           break;
         }
-        case 'text_classification': {
+        case "text_classification": {
           task_data = { text: tc_text, labels: parseList(tc_labels) };
           break;
         }
-        case 'image_classification': {
+        case "image_classification": {
           task_data = { image_url: ic_image, labels: parseList(ic_labels) };
           break;
         }
-        case 'object_detection': {
+        case "object_detection": {
           task_data = { image_url: od_image, classes: parseList(od_classes) };
           break;
         }
-        case 'named_entity_recognition': {
-          task_data = { text: ner_text, entity_types: parseList(ner_entity_types) };
+        case "named_entity_recognition": {
+          task_data = {
+            text: ner_text,
+            entity_types: parseList(ner_entity_types),
+          };
           break;
         }
         default: {
@@ -134,32 +141,35 @@ export default function ProjectDetailPage() {
       }
 
       const body = { category, task_data };
-      const t = await apiFetch<Task>(`/projects/${projectId}/tasks`, { method: 'POST', body });
+      const t = await apiFetch<Task>(`/projects/${projectId}/tasks`, {
+        method: "POST",
+        body,
+      });
       setTasks((prev) => [t, ...prev]);
       // reset simple fields
-      setLLMDocument('');
-      setLLMSummary('');
-      setLLMPrompt('');
-      setLLMModel('');
+      setLLMDocument("");
+      setLLMSummary("");
+      setLLMPrompt("");
+      setLLMModel("");
       setChatMessages([
-        { role: 'user', content: '' },
-        { role: 'assistant', content: '' },
+        { role: "user", content: "" },
+        { role: "assistant", content: "" },
       ]);
-      setChatModel('');
-      setChatTitle('InstructGPT Assessment');
-      setRsDialogue([{ role: 'user', content: '' }]);
-      setRsOptions(['', '', '']);
-      setRsContext('');
-      setTcText('');
-      setTcLabels('positive, negative');
-      setIcImage('');
-      setIcLabels('cat, dog');
-      setOdImage('');
-      setOdClasses('person, car');
-      setNerText('');
-      setNerEntityTypes('PERSON, ORG, LOCATION');
+      setChatModel("");
+      setChatTitle("InstructGPT Assessment");
+      setRsDialogue([{ role: "user", content: "" }]);
+      setRsOptions(["", "", ""]);
+      setRsContext("");
+      setTcText("");
+      setTcLabels("positive, negative");
+      setIcImage("");
+      setIcLabels("cat, dog");
+      setOdImage("");
+      setOdClasses("person, car");
+      setNerText("");
+      setNerEntityTypes("PERSON, ORG, LOCATION");
     } catch (e: any) {
-      setError(e?.message || 'Failed to create task');
+      setError(e?.message || "Failed to create task");
     }
   };
 
@@ -176,8 +186,11 @@ export default function ProjectDetailPage() {
           )}
         </div>
         <div className="flex items-center gap-4">
-          {user?.role !== 'annotator' && projectId && (
-            <LinkFix className="btn btn-outline" to={`/projects/${projectId}/completed`}>
+          {user?.role !== "annotator" && projectId && (
+            <LinkFix
+              className="btn btn-outline"
+              to={`/projects/${projectId}/completed`}
+            >
               Completed Tasks
             </LinkFix>
           )}
@@ -187,14 +200,14 @@ export default function ProjectDetailPage() {
         </div>
       </div>
 
-      {user?.role !== 'annotator' && (
+      {user?.role !== "annotator" && (
         <div className="card">
           <div className="card-body space-y-4">
             <h2 className="card-title">Create Task</h2>
             <div className="badge badge-primary w-fit">{category}</div>
 
             {/* Category-specific forms */}
-            {category === 'generative_ai_llm_response_grading' && (
+            {category === "generative_ai_llm_response_grading" && (
               <div className="space-y-3">
                 <div>
                   <label className="block mb-1 font-medium">Document</label>
@@ -242,7 +255,7 @@ export default function ProjectDetailPage() {
               </div>
             )}
 
-            {category === 'generative_ai_chatbot_assessment' && (
+            {category === "generative_ai_chatbot_assessment" && (
               <div className="space-y-3">
                 <div className="space-y-2">
                   <div className="font-medium">Messages</div>
@@ -254,7 +267,9 @@ export default function ProjectDetailPage() {
                         onChange={(e) => {
                           const v = e.target.value as Role;
                           setChatMessages((prev) =>
-                            prev.map((mm, idx) => (idx === i ? { ...mm, role: v } : mm))
+                            prev.map((mm, idx) =>
+                              idx === i ? { ...mm, role: v } : mm
+                            )
                           );
                         }}
                       >
@@ -267,7 +282,9 @@ export default function ProjectDetailPage() {
                         onChange={(e) =>
                           setChatMessages((prev) =>
                             prev.map((mm, idx) =>
-                              idx === i ? { ...mm, content: e.target.value } : mm
+                              idx === i
+                                ? { ...mm, content: e.target.value }
+                                : mm
                             )
                           )
                         }
@@ -276,7 +293,9 @@ export default function ProjectDetailPage() {
                         type="button"
                         className="px-2 py-1 text-sm border rounded"
                         onClick={() =>
-                          setChatMessages((prev) => prev.filter((_, idx) => idx !== i))
+                          setChatMessages((prev) =>
+                            prev.filter((_, idx) => idx !== i)
+                          )
                         }
                       >
                         Remove
@@ -287,7 +306,10 @@ export default function ProjectDetailPage() {
                     type="button"
                     className="px-3 py-1 text-sm border rounded"
                     onClick={() =>
-                      setChatMessages((prev) => [...prev, { role: 'user', content: '' }])
+                      setChatMessages((prev) => [
+                        ...prev,
+                        { role: "user", content: "" },
+                      ])
                     }
                   >
                     + Add Message
@@ -314,7 +336,7 @@ export default function ProjectDetailPage() {
               </div>
             )}
 
-            {category === 'conversational_ai_response_selection' && (
+            {category === "conversational_ai_response_selection" && (
               <div className="space-y-3">
                 <div className="space-y-2">
                   <div className="font-medium">Dialogue</div>
@@ -326,7 +348,9 @@ export default function ProjectDetailPage() {
                         onChange={(e) => {
                           const v = e.target.value as Role;
                           setRsDialogue((prev) =>
-                            prev.map((mm, idx) => (idx === i ? { ...mm, role: v } : mm))
+                            prev.map((mm, idx) =>
+                              idx === i ? { ...mm, role: v } : mm
+                            )
                           );
                         }}
                       >
@@ -339,7 +363,9 @@ export default function ProjectDetailPage() {
                         onChange={(e) =>
                           setRsDialogue((prev) =>
                             prev.map((mm, idx) =>
-                              idx === i ? { ...mm, content: e.target.value } : mm
+                              idx === i
+                                ? { ...mm, content: e.target.value }
+                                : mm
                             )
                           )
                         }
@@ -347,7 +373,11 @@ export default function ProjectDetailPage() {
                       <button
                         type="button"
                         className="px-2 py-1 text-sm border rounded"
-                        onClick={() => setRsDialogue((prev) => prev.filter((_, idx) => idx !== i))}
+                        onClick={() =>
+                          setRsDialogue((prev) =>
+                            prev.filter((_, idx) => idx !== i)
+                          )
+                        }
                       >
                         Remove
                       </button>
@@ -357,7 +387,10 @@ export default function ProjectDetailPage() {
                     type="button"
                     className="px-3 py-1 text-sm border rounded"
                     onClick={() =>
-                      setRsDialogue((prev) => [...prev, { role: 'user', content: '' }])
+                      setRsDialogue((prev) => [
+                        ...prev,
+                        { role: "user", content: "" },
+                      ])
                     }
                   >
                     + Add Message
@@ -372,7 +405,9 @@ export default function ProjectDetailPage() {
                         value={o}
                         onChange={(e) =>
                           setRsOptions((prev) =>
-                            prev.map((oo, idx) => (idx === i ? e.target.value : oo))
+                            prev.map((oo, idx) =>
+                              idx === i ? e.target.value : oo
+                            )
                           )
                         }
                         placeholder={`Option ${i + 1}`}
@@ -380,7 +415,11 @@ export default function ProjectDetailPage() {
                       <button
                         type="button"
                         className="px-2 py-1 text-sm border rounded"
-                        onClick={() => setRsOptions((prev) => prev.filter((_, idx) => idx !== i))}
+                        onClick={() =>
+                          setRsOptions((prev) =>
+                            prev.filter((_, idx) => idx !== i)
+                          )
+                        }
                       >
                         Remove
                       </button>
@@ -389,7 +428,7 @@ export default function ProjectDetailPage() {
                   <button
                     type="button"
                     className="px-3 py-1 text-sm border rounded"
-                    onClick={() => setRsOptions((prev) => [...prev, ''])}
+                    onClick={() => setRsOptions((prev) => [...prev, ""])}
                   >
                     + Add Option
                   </button>
@@ -405,7 +444,7 @@ export default function ProjectDetailPage() {
               </div>
             )}
 
-            {category === 'text_classification' && (
+            {category === "text_classification" && (
               <div className="space-y-3">
                 <div>
                   <label className="block mb-1 font-medium">Text</label>
@@ -426,7 +465,7 @@ export default function ProjectDetailPage() {
               </div>
             )}
 
-            {category === 'image_classification' && (
+            {category === "image_classification" && (
               <div className="space-y-3">
                 <div>
                   <label className="block mb-1">Image URL</label>
@@ -447,7 +486,7 @@ export default function ProjectDetailPage() {
               </div>
             )}
 
-            {category === 'object_detection' && (
+            {category === "object_detection" && (
               <div className="space-y-3">
                 <div>
                   <label className="block mb-1">Image URL</label>
@@ -458,7 +497,9 @@ export default function ProjectDetailPage() {
                   />
                 </div>
                 <div>
-                  <label className="block mb-1">Classes (comma separated)</label>
+                  <label className="block mb-1">
+                    Classes (comma separated)
+                  </label>
                   <input
                     className="w-full border rounded px-2 py-1"
                     value={od_classes}
@@ -468,7 +509,7 @@ export default function ProjectDetailPage() {
               </div>
             )}
 
-            {category === 'named_entity_recognition' && (
+            {category === "named_entity_recognition" && (
               <div className="space-y-3">
                 <div>
                   <label className="block mb-1 font-medium">Text</label>
@@ -479,7 +520,9 @@ export default function ProjectDetailPage() {
                   />
                 </div>
                 <div>
-                  <label className="block mb-1">Entity Types (comma separated)</label>
+                  <label className="block mb-1">
+                    Entity Types (comma separated)
+                  </label>
                   <input
                     className="w-full border rounded px-2 py-1"
                     value={ner_entity_types}
@@ -491,16 +534,17 @@ export default function ProjectDetailPage() {
 
             {(!category ||
               [
-                'generative_ai_llm_response_grading',
-                'generative_ai_chatbot_assessment',
-                'conversational_ai_response_selection',
-                'text_classification',
-                'image_classification',
-                'object_detection',
-                'named_entity_recognition',
+                "generative_ai_llm_response_grading",
+                "generative_ai_chatbot_assessment",
+                "conversational_ai_response_selection",
+                "text_classification",
+                "image_classification",
+                "object_detection",
+                "named_entity_recognition",
               ].indexOf(category) === -1) && (
               <div className="text-sm text-gray-600">
-                No guided form for this category. A minimal empty task will be created.
+                No guided form for this category. A minimal empty task will be
+                created.
               </div>
             )}
 
@@ -520,26 +564,78 @@ export default function ProjectDetailPage() {
       )}
 
       <div className="space-y-4">
-        {user?.role === 'annotator' ? (
+        {user?.role === "annotator" ? (
           <>
-            <h2>Your assigned tasks</h2>
-            {tasks.length === 0 ? (
-              <div className="card">
-                <div className="card-body text-center py-12">
-                  <p className="muted">No tasks assigned yet</p>
+            {/* Returned tasks section for annotators */}
+            {tasks.filter((t) => t.is_returned).length > 0 && (
+              <div>
+                <h2 className="text-amber-600">⚠️ Tasks Needing Revision</h2>
+                <p className="text-sm text-gray-600 mb-3">
+                  These tasks were returned and need to be reworked
+                </p>
+                <div className="grid gap-3">
+                  {tasks
+                    .filter((t) => t.is_returned)
+                    .map((t) => (
+                      <TaskCard key={t.id} t={t} isManager={false} />
+                    ))}
                 </div>
               </div>
-            ) : (
-              tasks.map((t) => <TaskCard key={t.id} t={t} isManager={false} />)
+            )}
+
+            <div>
+              <h2>Your assigned tasks</h2>
+              {tasks.filter(
+                (t) => !t.is_returned && !t.completed_status?.annotator_part
+              ).length === 0 ? (
+                <div className="card">
+                  <div className="card-body text-center py-12">
+                    <p className="muted">No tasks assigned yet</p>
+                  </div>
+                </div>
+              ) : (
+                <div className="grid gap-3 mt-3">
+                  {tasks
+                    .filter(
+                      (t) =>
+                        !t.is_returned && !t.completed_status?.annotator_part
+                    )
+                    .map((t) => (
+                      <TaskCard key={t.id} t={t} isManager={false} />
+                    ))}
+                </div>
+              )}
+            </div>
+
+            {/* Completed tasks for annotators */}
+            {tasks.filter(
+              (t) => t.completed_status?.annotator_part && !t.is_returned
+            ).length > 0 && (
+              <div>
+                <h2>Completed tasks</h2>
+                <div className="grid gap-3 mt-3">
+                  {tasks
+                    .filter(
+                      (t) =>
+                        t.completed_status?.annotator_part && !t.is_returned
+                    )
+                    .map((t) => (
+                      <TaskCard key={t.id} t={t} isManager={false} />
+                    ))}
+                </div>
+              </div>
             )}
           </>
         ) : (
           <>
             <div>
               <h2>In progress</h2>
-              {tasks.filter((t) => !t.completed_status?.annotator_part).length === 0 ? (
+              {tasks.filter((t) => !t.completed_status?.annotator_part)
+                .length === 0 ? (
                 <div className="card mt-3">
-                  <div className="card-body text-center py-8 muted">No tasks in progress</div>
+                  <div className="card-body text-center py-8 muted">
+                    No tasks in progress
+                  </div>
                 </div>
               ) : (
                 <div className="grid gap-3 mt-3">
@@ -553,9 +649,12 @@ export default function ProjectDetailPage() {
             </div>
             <div>
               <h2>Completed by annotator</h2>
-              {tasks.filter((t) => t.completed_status?.annotator_part).length === 0 ? (
+              {tasks.filter((t) => t.completed_status?.annotator_part)
+                .length === 0 ? (
                 <div className="card mt-3">
-                  <div className="card-body text-center py-8 muted">No completed tasks yet</div>
+                  <div className="card-body text-center py-8 muted">
+                    No completed tasks yet
+                  </div>
                 </div>
               ) : (
                 <div className="grid gap-3 mt-3">
@@ -575,35 +674,42 @@ export default function ProjectDetailPage() {
 }
 
 function TaskDataViewer({ data }: { data: any }) {
-  if (!data || typeof data !== 'object') {
+  if (!data || typeof data !== "object") {
     return <div className="text-gray-500 text-sm">No data available</div>;
   }
 
   const renderValue = (value: any): React.ReactNode => {
-    if (value === null || value === undefined) return <span className="text-gray-400">—</span>;
-    if (typeof value === 'boolean') return value ? 'Yes' : 'No';
+    if (value === null || value === undefined)
+      return <span className="text-gray-400">—</span>;
+    if (typeof value === "boolean") return value ? "Yes" : "No";
     if (Array.isArray(value)) {
-      if (value.length === 0) return <span className="text-gray-400">Empty</span>;
-      if (typeof value[0] === 'string') {
+      if (value.length === 0)
+        return <span className="text-gray-400">Empty</span>;
+      if (typeof value[0] === "string") {
         return (
           <div className="space-y-1">
             {value.map((item, idx) => (
-              <div key={idx} className="text-sm text-gray-700 whitespace-pre-wrap break-words">
+              <div
+                key={idx}
+                className="text-sm text-gray-700 whitespace-pre-wrap break-words"
+              >
                 • {item}
               </div>
             ))}
           </div>
         );
       }
-      if (typeof value[0] === 'object') {
+      if (typeof value[0] === "object") {
         return (
           <div className="space-y-2">
             {value.map((item, idx) => (
               <div key={idx} className="pl-3 border-l-2 border-gray-200">
-                <div className="text-xs font-semibold text-gray-500 mb-1">Item {idx + 1}</div>
+                <div className="text-xs font-semibold text-gray-500 mb-1">
+                  Item {idx + 1}
+                </div>
                 {Object.entries(item).map(([k, v]) => (
                   <div key={k} className="text-sm mb-1">
-                    <span className="font-medium text-gray-600">{k}:</span>{' '}
+                    <span className="font-medium text-gray-600">{k}:</span>{" "}
                     <span className="text-gray-700">{String(v)}</span>
                   </div>
                 ))}
@@ -612,29 +718,36 @@ function TaskDataViewer({ data }: { data: any }) {
           </div>
         );
       }
-      return value.join(', ');
+      return value.join(", ");
     }
-    if (typeof value === 'object') {
+    if (typeof value === "object") {
       return (
         <div className="pl-3 space-y-1">
           {Object.entries(value).map(([k, v]) => (
             <div key={k} className="text-sm">
-              <span className="font-medium text-gray-600">{k}:</span>{' '}
+              <span className="font-medium text-gray-600">{k}:</span>{" "}
               <span className="text-gray-700">{renderValue(v)}</span>
             </div>
           ))}
         </div>
       );
     }
-    return <span className="text-gray-700 whitespace-pre-wrap break-words">{String(value)}</span>;
+    return (
+      <span className="text-gray-700 whitespace-pre-wrap break-words">
+        {String(value)}
+      </span>
+    );
   };
 
   return (
     <div className="space-y-3">
       {Object.entries(data).map(([key, value]) => (
-        <div key={key} className="border-b border-gray-100 pb-3 last:border-b-0 last:pb-0">
+        <div
+          key={key}
+          className="border-b border-gray-100 pb-3 last:border-b-0 last:pb-0"
+        >
           <div className="text-sm font-semibold text-gray-800 mb-1 capitalize">
-            {key.replace(/_/g, ' ')}
+            {key.replace(/_/g, " ")}
           </div>
           <div className="text-sm">{renderValue(value)}</div>
         </div>
@@ -644,41 +757,106 @@ function TaskDataViewer({ data }: { data: any }) {
 }
 
 function TaskCard({ t, isManager }: { t: Task; isManager: boolean }) {
+  const [returning, setReturning] = useState(false);
+  const [returnError, setReturnError] = useState<string | null>(null);
+
+  const handleReturn = async () => {
+    if (
+      !confirm(
+        "Are you sure you want to return this task to the annotator? The annotation will be cleared and they will need to resubmit."
+      )
+    ) {
+      return;
+    }
+
+    setReturning(true);
+    setReturnError(null);
+
+    try {
+      await apiFetch(`/tasks/${t.id}/return`, { method: "PUT" });
+      // Refresh the page to show updated task status
+      window.location.reload();
+    } catch (e: any) {
+      setReturnError(e?.message || "Failed to return task");
+      setReturning(false);
+    }
+  };
+
   return (
     <div className="card hover:shadow-lg transition-shadow">
       <div className="card-body">
         <div className="flex items-center justify-between mb-3">
           <div>
-            <div className="font-semibold text-base">Task {t.id.slice(0, 8)}</div>
+            <div className="font-semibold text-base">
+              Task {t.id.slice(0, 8)}
+            </div>
             <span className="badge mt-1">{t.category}</span>
             {t.completed_status?.annotator_part && (
               <span className="badge badge-green ml-2">Completed</span>
+            )}
+            {t.is_returned && (
+              <span className="badge badge-warning ml-2">Returned</span>
             )}
           </div>
           <div className="flex items-center gap-3">
             {isManager && (
               <>
-                <LinkFix className="btn btn-outline btn-sm" to={`/tasks/${t.id}/assign`}>
+                <LinkFix
+                  className="btn btn-outline btn-sm"
+                  to={`/tasks/${t.id}/assign`}
+                >
                   Assign
                 </LinkFix>
-                <LinkFix className="btn btn-outline btn-sm" to={`/tasks/${t.id}/qa`}>
+                <LinkFix
+                  className="btn btn-outline btn-sm"
+                  to={`/tasks/${t.id}/qa`}
+                >
                   QA
                 </LinkFix>
+                {t.completed_status?.annotator_part && (
+                  <button
+                    className="btn btn-warning btn-sm"
+                    onClick={handleReturn}
+                    disabled={returning}
+                  >
+                    {returning ? "Returning..." : "Return"}
+                  </button>
+                )}
               </>
             )}
-            <LinkFix className="btn btn-primary btn-sm" to={`/tasks/${t.id}/annotate`}>
+            <LinkFix
+              className="btn btn-primary btn-sm"
+              to={`/tasks/${t.id}/annotate`}
+            >
               Annotate
             </LinkFix>
           </div>
         </div>
-        <details className="mt-2">
-          <summary className="cursor-pointer text-sm font-medium text-gray-700 hover:text-gray-900">
-            View task data
-          </summary>
-          <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mt-2 max-h-96 overflow-auto scrollbar-thin">
-            <TaskDataViewer data={t.task_data} />
-          </div>
-        </details>
+        {returnError && (
+          <div className="text-sm text-red-600 mb-2">{returnError}</div>
+        )}
+        <div className="space-y-2">
+          <details className="mt-2">
+            <summary className="cursor-pointer text-sm font-medium text-gray-700 hover:text-gray-900">
+              View task data
+            </summary>
+            <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mt-2 max-h-96 overflow-auto scrollbar-thin">
+              <TaskDataViewer data={t.task_data} />
+            </div>
+          </details>
+
+          {/* Show annotator's work if task is completed */}
+          {t.annotation && t.completed_status?.annotator_part && (
+            <details className="mt-2">
+              <summary className="cursor-pointer text-sm font-medium text-green-700 hover:text-green-900">
+                📝 View annotator's work
+              </summary>
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4 mt-2 max-h-96 overflow-auto scrollbar-thin">
+                <TaskDataViewer data={t.annotation} />
+              </div>
+            </details>
+          )}
+        </div>
       </div>
     </div>
   );
