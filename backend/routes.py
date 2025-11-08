@@ -1517,6 +1517,52 @@ async def return_task_to_annotator(
     return {"message": "Task returned to annotator"}
 
 
+# Delete task
+@router.delete("/tasks/{task_id}")
+async def delete_task(task_id: str, current_user: UserInDB = Depends(get_current_user)):
+    """Delete a task (manager only)"""
+    if current_user.role != "manager":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only managers can delete tasks",
+        )
+
+    if not ObjectId.is_valid(task_id):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid task ID"
+        )
+
+    task = await database.tasks_collection.find_one({"_id": ObjectId(task_id)})
+    if not task:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Task not found"
+        )
+
+    # Verify the manager owns the project
+    project = await database.projects_collection.find_one({"_id": task["project_id"]})
+    if not project or project["manager_id"] != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to delete this task",
+        )
+
+    # Remove task from project_working assignments
+    await database.project_working_collection.update_many(
+        {"project_id": task["project_id"]},
+        {"$pull": {"annotator_assignments.$[].task_ids": ObjectId(task_id)}},
+    )
+
+    # Delete related annotator_tasks records
+    await database.annotator_tasks_collection.delete_many(
+        {"task_id": ObjectId(task_id)}
+    )
+
+    # Delete the task
+    await database.tasks_collection.delete_one({"_id": ObjectId(task_id)})
+
+    return {"message": "Task deleted successfully"}
+
+
 # Invite endpoints
 @router.post(
     "/projects/{project_id}/invites",

@@ -26,6 +26,7 @@ import CreateTaskPage from "@/pages/CreateTaskPage";
 import ManageRolesPage from "@/pages/ManageRolesPage";
 import InProgressTasksPage from "@/pages/InProgressTasksPage";
 import AnnotatorCompletedTasksPage from "@/pages/AnnotatorCompletedTasksPage";
+import TaskViewPage from "@/pages/TaskViewPage";
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -160,6 +161,14 @@ function AppContent() {
             element={
               <RequireAuth>
                 <TaskAnnotatePage />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/tasks/:taskId/view"
+            element={
+              <RequireAuth>
+                <TaskViewPage />
               </RequireAuth>
             }
           />
