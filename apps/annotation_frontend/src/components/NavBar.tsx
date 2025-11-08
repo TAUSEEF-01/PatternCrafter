@@ -151,7 +151,7 @@ export function AnimatedBackground() {
 
 // NavBar Component
 export default function NavBar() {
-  const { user, logout } = useAuth();
+  const { user, logout, unseenInvites, markInvitesSeen } = useAuth();
   const { darkMode, toggleTheme } = useTheme();
   
   const Link = RRLink as unknown as any;
@@ -209,8 +209,37 @@ export default function NavBar() {
                   textDecoration: 'none',
                 })}
                 to="/invites"
+                onClick={() => {
+                  // when user clicks invites, mark them as seen
+                  try {
+                    markInvitesSeen();
+                  } catch {}
+                }}
               >
-                Invites
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
+                  Invites
+                  {unseenInvites && (
+                    <span aria-hidden="true" title="New invite" style={{ display: 'inline-block' }}>
+                      {/* Bell wrapper so we can position the red dot */}
+                      <span style={{ position: 'relative', display: 'inline-block', lineHeight: 0 }}>
+                        <svg
+                          className="invite-bell"
+                          width="22"
+                          height="22"
+                          viewBox="0 0 24 24"
+                          fill="white"
+                          xmlns="http://www.w3.org/2000/svg"
+                          style={{ color: '#EBD3F8' }}
+                        >
+                          <path d="M15 17H9M12 3C10.8954 3 10 3.89543 10 5V6.15385C7.834 7.01084 6.33333 9.0625 6.33333 11.5V15L5 16.5V17H19V16.5L17.6667 15V11.5C17.6667 9.0625 16.166 7.01084 14 6.15385V5C14 3.89543 13.1046 3 12 3Z" fill="#EBD3F8" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+
+                        {/* small pulsing red dot */}
+                        <span className="invite-dot" aria-hidden="true" />
+                      </span>
+                    </span>
+                  )}
+                </span>
               </NavLink>
               <NavLink
                 className={({ isActive }: any) =>

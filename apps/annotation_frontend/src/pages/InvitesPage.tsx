@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { apiFetch } from '@/api/client';
 import { Invite } from '@/types';
+import { useAuth } from '@/auth/AuthContext';
 
 export default function InvitesPage() {
   const [invites, setInvites] = useState<Invite[]>([]);
@@ -10,6 +11,16 @@ export default function InvitesPage() {
     apiFetch<Invite[]>('/invites')
       .then(setInvites)
       .catch((e) => setError(String(e)));
+  }, []);
+
+  // mark invites as seen when this page is open
+  const { markInvitesSeen } = useAuth();
+  useEffect(() => {
+    try {
+      markInvitesSeen();
+    } catch {}
+    // intentionally run on mount only
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const accept = async (id: string) => {
