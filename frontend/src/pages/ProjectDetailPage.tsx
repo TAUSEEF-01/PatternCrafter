@@ -1,5 +1,9 @@
 import { Fragment, useEffect, useMemo, useState, useRef } from "react";
-import { Link as RouterLink, useParams, useSearchParams } from "react-router-dom";
+import {
+  Link as RouterLink,
+  useParams,
+  useSearchParams,
+} from "react-router-dom";
 import { apiFetch } from "@/api/client";
 import { Project, Task } from "@/types";
 import { useAuth } from "@/auth/AuthContext";
@@ -14,7 +18,7 @@ export default function ProjectDetailPage() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [searchParams] = useSearchParams();
-  const highlightTaskId = searchParams.get('highlightTask');
+  const highlightTaskId = searchParams.get("highlightTask");
   const taskCardRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
 
   // QA Management
@@ -82,76 +86,48 @@ export default function ProjectDetailPage() {
         if (cardElement) {
           // Scroll to card with smooth behavior after a short delay
           setTimeout(() => {
-            cardElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            cardElement.scrollIntoView({ behavior: "smooth", block: "center" });
           }, 100);
         }
       }
     }
   }, [highlightTaskId, tasks]);
 
-  const createTask = async () => {
-    if (!projectId) return;
-    try {
-      let task_data: any = {};
-      switch (category) {
-        case "generative_ai_llm_response_grading": {
-          const paragraphs = llm_document
-            .split(/\n\n+/)
-            .map((x) => x.trim())
-            .filter(Boolean);
-          task_data = {
-            document: llm_split ? paragraphs : llm_document,
-            summary: llm_summary,
-            ...(llm_prompt ? { prompt: llm_prompt } : {}),
-            ...(llm_model ? { model_name: llm_model } : {}),
-          };
-          break;
-        }
-        case "generative_ai_chatbot_assessment": {
-          task_data = {
-            messages: chat_messages.filter((m) => m.content.trim().length),
-            ...(chat_model ? { model_name: chat_model } : {}),
-            ...(chat_title ? { assessment_title: chat_title } : {}),
-          };
-          break;
-        }
-        case "conversational_ai_response_selection": {
-          task_data = {
-            dialogue: rs_dialogue.filter((m) => m.content.trim().length),
-            response_options: rs_options.map((o) => o.trim()).filter(Boolean),
-            ...(rs_context ? { context: rs_context } : {}),
-          };
-          break;
-        }
-        case "text_classification": {
-          task_data = { text: tc_text, labels: parseList(tc_labels) };
-          break;
-        }
-        case "image_classification": {
-          task_data = { image_url: ic_image, labels: parseList(ic_labels) };
-          break;
-        }
-        case "object_detection": {
-          task_data = { image_url: od_image, classes: parseList(od_classes) };
-          break;
-        }
-        case "named_entity_recognition": {
-          task_data = {
-            text: ner_text,
-            entity_types: parseList(ner_entity_types),
-          };
-          break;
-        }
-        default: {
-          // Fallback for categories without a dedicated form
-          task_data = {};
-        }
-      }
-  // Task statistics
+  // Task statistics - properly handle both annotation and QA tasks
   const taskStats = {
     total: tasks.length,
-    inProgress: tasks.filter((t) => !t.completed_status?.annotator_part).length,
-    completed: tasks.filter((t) => t.completed_status?.annotator_part).length,
+    inProgress: tasks.filter((t) => {
+      // If user is annotator and annotation not done
+      if (
+        t.assigned_annotator_id === user?.id &&
+        !t.completed_status?.annotator_part
+      ) {
+        return true;
+      }
+      // If user is QA, annotation done but QA not done
+      if (
+        t.assigned_qa_id === user?.id &&
+        t.completed_status?.annotator_part &&
+        !t.completed_status?.qa_part
+      ) {
+        return true;
+      }
+      return false;
+    }).length,
+    completed: tasks.filter((t) => {
+      // If user is annotator and annotation is done
+      if (
+        t.assigned_annotator_id === user?.id &&
+        t.completed_status?.annotator_part
+      ) {
+        return true;
+      }
+      // If user is QA and QA is done
+      if (t.assigned_qa_id === user?.id && t.completed_status?.qa_part) {
+        return true;
+      }
+      return false;
+    }).length,
     returned: tasks.filter((t) => t.is_returned).length,
   };
 
@@ -467,10 +443,25 @@ export default function ProjectDetailPage() {
                   <h3 className="text-lg font-semibold">Your Assigned Tasks</h3>
                   <p className="text-sm text-gray-600 mt-1">
                     {
-                      tasks.filter(
-                        (t) =>
-                          !t.is_returned && !t.completed_status?.annotator_part
-                      ).length
+                      tasks.filter((t) => {
+                        // Annotation tasks not returned and not completed
+                        if (
+                          t.assigned_annotator_id === user?.id &&
+                          !t.is_returned &&
+                          !t.completed_status?.annotator_part
+                        ) {
+                          return true;
+                        }
+                        // QA tasks where annotation done but QA not done
+                        if (
+                          t.assigned_qa_id === user?.id &&
+                          t.completed_status?.annotator_part &&
+                          !t.completed_status?.qa_part
+                        ) {
+                          return true;
+                        }
+                        return false;
+                      }).length
                     }{" "}
                     task(s) ready to work on
                   </p>
@@ -492,10 +483,24 @@ export default function ProjectDetailPage() {
                   </h3>
                   <p className="text-sm text-gray-600 mt-1">
                     {
-                      tasks.filter(
-                        (t) =>
-                          t.completed_status?.annotator_part && !t.is_returned
-                      ).length
+                      tasks.filter((t) => {
+                        // Annotation tasks completed and not returned
+                        if (
+                          t.assigned_annotator_id === user?.id &&
+                          t.completed_status?.annotator_part &&
+                          !t.is_returned
+                        ) {
+                          return true;
+                        }
+                        // QA tasks where QA is completed
+                        if (
+                          t.assigned_qa_id === user?.id &&
+                          t.completed_status?.qa_part
+                        ) {
+                          return true;
+                        }
+                        return false;
+                      }).length
                     }{" "}
                     task(s) submitted for review
                   </p>
@@ -623,40 +628,8 @@ export default function ProjectDetailPage() {
                       />
                     ))}
                 </div>
-      {/* Team Overview */}
-      <div className="grid md:grid-cols-2 gap-4">
-        {/* Annotators */}
-        <div className="card">
-          <div className="card-body">
-            <h3 className="text-lg font-semibold mb-3">
-              👤 Annotators ({projectAnnotators.length})
-            </h3>
-            {projectAnnotators.length === 0 ? (
-              <p className="text-sm text-gray-500">No annotators yet</p>
-            ) : (
-              <div className="space-y-2 max-h-60 overflow-auto">
-                {projectAnnotators.map((annotator) => (
-                  <div
-                    key={annotator.id}
-                    className="flex items-center gap-2 p-2 bg-gray-50 rounded"
-                  >
-                    <div className="flex-1">
-                      <div className="font-medium text-sm">
-                        {annotator.name}
-                      </div>
-                      <div className="text-xs text-gray-500">
-                        {annotator.email}
-                      </div>
-                    </div>
-                    {qaAnnotators.some((qa) => qa.id === annotator.id) && (
-                      <div className="badge badge-primary badge-sm">QA</div>
-                    )}
-                  </div>
-                ))}
               </div>
             )}
-          </div>
-        </div>
 
             <div>
               <h2>Your assigned tasks</h2>
@@ -762,6 +735,48 @@ export default function ProjectDetailPage() {
                         cardRef={(el) => (taskCardRefs.current[t.id] = el)}
                       />
                     ))}
+                </div>
+              )}
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* Team Overview */}
+      <div className="grid md:grid-cols-2 gap-4">
+        {/* Annotators */}
+        <div className="card">
+          <div className="card-body">
+            <h3 className="text-lg font-semibold mb-3">
+              👤 Annotators ({projectAnnotators.length})
+            </h3>
+            {projectAnnotators.length === 0 ? (
+              <p className="text-sm text-gray-500">No annotators yet</p>
+            ) : (
+              <div className="space-y-2 max-h-60 overflow-auto">
+                {projectAnnotators.map((annotator) => (
+                  <div
+                    key={annotator.id}
+                    className="flex items-center gap-2 p-2 bg-gray-50 rounded"
+                  >
+                    <div className="flex-1">
+                      <div className="font-medium text-sm">
+                        {annotator.name}
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        {annotator.email}
+                      </div>
+                    </div>
+                    {qaAnnotators.some((qa) => qa.id === annotator.id) && (
+                      <div className="badge badge-primary badge-sm">QA</div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
         {/* QA Reviewers */}
         {user?.role !== "annotator" && (
           <div className="card">
@@ -811,109 +826,6 @@ export default function ProjectDetailPage() {
                 📋 All Tasks ({tasks.length})
               </h3>
             </div>
-          ))}
-        </div>
-      );
-    }
-    return (
-      <span className="text-gray-700 whitespace-pre-wrap break-words">
-        {String(value)}
-      </span>
-    );
-  };
-
-  return (
-    <div className="space-y-3">
-      {Object.entries(data).map(([key, value]) => (
-        <div
-          key={key}
-          className="border-b border-gray-100 pb-3 last:border-b-0 last:pb-0"
-        >
-          <div className="text-sm font-semibold text-gray-800 mb-1 capitalize">
-            {key.replace(/_/g, " ")}
-          </div>
-          <div className="text-sm">{renderValue(value)}</div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function TaskCard({
-  t,
-  isManager,
-  isHighlighted = false,
-  cardRef,
-}: {
-  t: Task;
-  isManager: boolean;
-  isHighlighted?: boolean;
-  cardRef?: (el: HTMLDivElement | null) => void;
-}) {
-  const [returning, setReturning] = useState(false);
-  const [returnError, setReturnError] = useState<string | null>(null);
-
-  const handleReturn = async () => {
-    if (
-      !confirm(
-        "Are you sure you want to return this task to the annotator? The annotation will be cleared and they will need to resubmit."
-      )
-    ) {
-      return;
-    }
-
-    setReturning(true);
-    setReturnError(null);
-
-    try {
-      await apiFetch(`/tasks/${t.id}/return`, { method: "PUT" });
-      // Refresh the page to show updated task status
-      window.location.reload();
-    } catch (e: any) {
-      setReturnError(e?.message || "Failed to return task");
-      setReturning(false);
-    }
-  };
-
-  return (
-    <div
-      ref={cardRef}
-      className="card hover:shadow-lg transition-all duration-300"
-      style={{
-        backgroundColor: isHighlighted ? '#AD49E1' : undefined,
-        transform: isHighlighted ? 'scale(1.02)' : 'scale(1)',
-        boxShadow: isHighlighted
-          ? '0 10px 30px rgba(122, 28, 172, 0.4)'
-          : undefined,
-        animation: isHighlighted ? 'pulse 2s ease-in-out 3' : undefined,
-      }}
-    >
-      <div className="card-body">
-        <div className="flex items-center justify-between mb-3">
-          <div>
-            <div
-              className="font-semibold text-base"
-              style={{ color: isHighlighted ? '#FFFFFF' : undefined }}
-            >
-              Task {t.id.slice(0, 8)}
-            </div>
-            <span className="badge mt-1">{t.category}</span>
-            {t.completed_status?.annotator_part && (
-              <span className="badge badge-green ml-2">Completed</span>
-            )}
-            {t.is_returned && (
-              <span className="badge badge-warning ml-2">Returned</span>
-            )}
-          </div>
-          <div className="flex items-center gap-3">
-            {isManager && (
-              <>
-                <LinkFix
-                  className="btn btn-outline btn-sm"
-                  to={`/tasks/${t.id}/assign`}
-                >
-                  Assign
-                </LinkFix>
 
             {tasks.length === 0 ? (
               <div className="text-center py-8">
@@ -1056,6 +968,172 @@ function TaskCard({
             )}
           </div>
         </div>
+      )}
+    </div>
+  );
+}
+
+// Helper component to display task data in a structured way
+function TaskDataViewer({ data }: { data: Record<string, any> }) {
+  const renderValue = (value: any): React.ReactNode => {
+    if (Array.isArray(value)) {
+      if (value.length === 0) return <span className="text-gray-400">[]</span>;
+      if (typeof value[0] === "object") {
+        return (
+          <div className="space-y-2">
+            {value.map((item, i) => (
+              <div key={i} className="pl-3 border-l-2 border-gray-200 text-sm">
+                <TaskDataViewer data={item} />
+              </div>
+            ))}
+          </div>
+        );
+      }
+      return (
+        <ul className="list-disc list-inside text-sm space-y-1">
+          {value.map((item, i) => (
+            <li key={i} className="text-gray-700">
+              {String(item)}
+            </li>
+          ))}
+        </ul>
+      );
+    }
+    if (typeof value === "object" && value !== null) {
+      return (
+        <div className="pl-3 border-l-2 border-gray-200">
+          <TaskDataViewer data={value} />
+        </div>
+      );
+    }
+    return (
+      <span className="text-gray-700 whitespace-pre-wrap break-words">
+        {String(value)}
+      </span>
+    );
+  };
+
+  return (
+    <div className="space-y-3">
+      {Object.entries(data).map(([key, value]) => (
+        <div
+          key={key}
+          className="border-b border-gray-100 pb-3 last:border-b-0 last:pb-0"
+        >
+          <div className="text-sm font-semibold text-gray-800 mb-1 capitalize">
+            {key.replace(/_/g, " ")}
+          </div>
+          <div className="text-sm">{renderValue(value)}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function TaskCard({
+  t,
+  isManager,
+  isHighlighted = false,
+  cardRef,
+}: {
+  t: Task;
+  isManager: boolean;
+  isHighlighted?: boolean;
+  cardRef?: (el: HTMLDivElement | null) => void;
+}) {
+  const [returning, setReturning] = useState(false);
+  const [returnError, setReturnError] = useState<string | null>(null);
+
+  const handleReturn = async () => {
+    if (
+      !confirm(
+        "Are you sure you want to return this task to the annotator? The annotation will be cleared and they will need to resubmit."
+      )
+    ) {
+      return;
+    }
+
+    setReturning(true);
+    setReturnError(null);
+
+    try {
+      await apiFetch(`/tasks/${t.id}/return`, { method: "PUT" });
+      // Refresh the page to show updated task status
+      window.location.reload();
+    } catch (e: any) {
+      setReturnError(e?.message || "Failed to return task");
+      setReturning(false);
+    }
+  };
+
+  return (
+    <div
+      ref={cardRef}
+      className="card hover:shadow-lg transition-all duration-300"
+      style={{
+        backgroundColor: isHighlighted ? "#AD49E1" : undefined,
+        transform: isHighlighted ? "scale(1.02)" : "scale(1)",
+        boxShadow: isHighlighted
+          ? "0 10px 30px rgba(122, 28, 172, 0.4)"
+          : undefined,
+        animation: isHighlighted ? "pulse 2s ease-in-out 3" : undefined,
+      }}
+    >
+      <div className="card-body">
+        <div className="flex items-center justify-between mb-3">
+          <div>
+            <div
+              className="font-semibold text-base"
+              style={{ color: isHighlighted ? "#FFFFFF" : undefined }}
+            >
+              Task {t.id.slice(0, 8)}
+            </div>
+            <span className="badge mt-1">{t.category}</span>
+            {t.completed_status?.annotator_part && (
+              <span className="badge badge-green ml-2">Completed</span>
+            )}
+            {t.is_returned && (
+              <span className="badge badge-warning ml-2">Returned</span>
+            )}
+          </div>
+          <div className="flex items-center gap-3">
+            {isManager && (
+              <>
+                <LinkFix
+                  className="btn btn-outline btn-sm"
+                  to={`/tasks/${t.id}/assign`}
+                >
+                  Assign
+                </LinkFix>
+                {t.completed_status?.annotator_part && (
+                  <button
+                    onClick={handleReturn}
+                    disabled={returning}
+                    className="btn btn-warning btn-sm"
+                  >
+                    {returning ? "Returning..." : "Return to Annotator"}
+                  </button>
+                )}
+              </>
+            )}
+            <LinkFix
+              className="btn btn-primary btn-sm"
+              to={
+                isManager
+                  ? `/tasks/${t.id}/view`
+                  : t.completed_status?.annotator_part
+                  ? `/tasks/${t.id}/view`
+                  : `/tasks/${t.id}/annotate`
+              }
+            >
+              {isManager
+                ? "👁️ View"
+                : t.completed_status?.annotator_part
+                ? "�️ View"
+                : "✏️ Work"}
+            </LinkFix>
+          </div>
+        </div>
         {returnError && (
           <div className="text-sm text-red-600 mb-2">{returnError}</div>
         )}
@@ -1064,7 +1142,7 @@ function TaskCard({
             <summary
               className="cursor-pointer text-sm font-medium hover:text-gray-900"
               style={{
-                color: isHighlighted ? '#F3E5FF' : '#374151',
+                color: isHighlighted ? "#F3E5FF" : "#374151",
               }}
             >
               View task data
@@ -1080,7 +1158,7 @@ function TaskCard({
               <summary
                 className="cursor-pointer text-sm font-medium hover:text-green-900"
                 style={{
-                  color: isHighlighted ? '#F3E5FF' : '#15803d',
+                  color: isHighlighted ? "#F3E5FF" : "#15803d",
                 }}
               >
                 📝 View annotator's work
@@ -1092,7 +1170,6 @@ function TaskCard({
           )}
         </div>
       </div>
-      )}
     </div>
   );
 }

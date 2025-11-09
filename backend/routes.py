@@ -1025,7 +1025,10 @@ async def get_my_project_tasks(
         pw = await database.project_working_collection.find_one(
             {
                 "project_id": ObjectId(project_id),
-                "annotator_assignments.annotator_id": current_user.id,
+                "$or": [
+                    {"annotator_assignments.annotator_id": current_user.id},
+                    {"qa_annotator_ids": current_user.id},
+                ],
             }
         )
         if not pw:
@@ -1034,11 +1037,15 @@ async def get_my_project_tasks(
                 detail="Not authorized to view tasks for this project",
             )
 
+    # Get all tasks assigned to this annotator (as annotator or as QA reviewer)
+    # Don't filter by completion status - let the frontend decide what to show
     tasks = await database.tasks_collection.find(
         {
             "project_id": ObjectId(project_id),
-            "assigned_annotator_id": current_user.id,
-            "completed_status.annotator_part": False,
+            "$or": [
+                {"assigned_annotator_id": current_user.id},
+                {"assigned_qa_id": current_user.id},
+            ],
         }
     ).to_list(None)
     return [as_response(TaskResponse, task) for task in tasks]

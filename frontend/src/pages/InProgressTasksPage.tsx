@@ -25,10 +25,32 @@ export default function InProgressTasksPage() {
 
     apiFetch<Task[]>(tasksPath)
       .then((allTasks) => {
-        // Filter for in-progress tasks (not completed by annotator)
-        const inProgress = allTasks.filter(
-          (t) => !t.completed_status?.annotator_part
-        );
+        // Filter for in-progress tasks
+        const inProgress = allTasks.filter((t) => {
+          // For tasks where user is the annotator: show if annotation not completed
+          if (
+            t.assigned_annotator_id === user?.id &&
+            !t.completed_status?.annotator_part
+          ) {
+            return true;
+          }
+          // For tasks where user is the QA: show if annotation is done but QA not done
+          if (
+            t.assigned_qa_id === user?.id &&
+            t.completed_status?.annotator_part &&
+            !t.completed_status?.qa_part
+          ) {
+            return true;
+          }
+          // For managers, show all not completed by annotator
+          if (
+            user?.role !== "annotator" &&
+            !t.completed_status?.annotator_part
+          ) {
+            return true;
+          }
+          return false;
+        });
         setTasks(inProgress);
       })
       .catch((e) => setError(String(e)));
