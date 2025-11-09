@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { apiFetch } from "@/api/client";
 import { Task } from "@/types";
 
@@ -88,6 +88,7 @@ function TaskDataViewer({ data }: { data: any }) {
 
 export default function TaskQAPage() {
   const { taskId } = useParams();
+  const navigate = useNavigate();
   const [task, setTask] = useState<Task | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -114,7 +115,7 @@ export default function TaskQAPage() {
   }, [taskId]);
 
   const handleReturnTask = async () => {
-    if (!taskId) return;
+    if (!taskId || !task) return;
 
     try {
       await apiFetch(`/tasks/${taskId}/return`, {
@@ -125,9 +126,10 @@ export default function TaskQAPage() {
       setError(null);
       setShowReturnModal(false);
       setReturnReason("");
-      // Refresh task data
-      const updatedTask = await apiFetch<Task>(`/tasks/${taskId}`);
-      setTask(updatedTask);
+      // Redirect to project dashboard after 1 second
+      setTimeout(() => {
+        navigate(`/projects/${task.project_id}`);
+      }, 1000);
     } catch (e: any) {
       setError(e?.message || "Failed to return task");
       setSuccess(null);
@@ -180,6 +182,12 @@ export default function TaskQAPage() {
           : "Task completed with revision notes!"
       );
       setError(null);
+      // Redirect to project dashboard after 1 second
+      setTimeout(() => {
+        if (task) {
+          navigate(`/projects/${task.project_id}`);
+        }
+      }, 1000);
     } catch (e: any) {
       setError(e?.message || "Failed to submit QA review");
       setSuccess(null);
