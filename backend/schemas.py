@@ -472,3 +472,51 @@ class TokenData(BaseModel):
 class LoginRequest(BaseModel):
     email: EmailStr
     password: str
+
+
+# Notification Schema
+class NotificationBase(BaseModel):
+    recipient_id: str  # User ID who receives notification
+    sender_id: Optional[str] = None  # User who triggered notification
+    type: Literal["invite", "task_assigned", "task_completed"]
+    title: str
+    message: str
+    task_id: Optional[str] = None  # Related task ID
+    project_id: Optional[str] = None
+    is_read: bool = False
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+class NotificationCreate(NotificationBase):
+    pass
+
+
+class NotificationInDB(BaseModel):
+    id: PyObjectId = Field(default_factory=PyObjectId, alias="_id")
+    recipient_id: PyObjectId
+    sender_id: Optional[PyObjectId] = None
+    type: Literal["invite", "task_assigned", "task_completed"]
+    title: str
+    message: str
+    task_id: Optional[PyObjectId] = None
+    project_id: Optional[PyObjectId] = None
+    is_read: bool = False
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+    class Config:
+        populate_by_name = True
+        arbitrary_types_allowed = True
+        json_encoders = {ObjectId: str}
+
+
+class NotificationResponse(BaseModel):
+    id: str = Field(alias="_id")
+    recipient_id: str
+    sender_id: Optional[str] = None
+    type: Literal["invite", "task_assigned", "task_completed"]
+    title: str
+    message: str
+    task_id: Optional[str] = None
+    project_id: Optional[str] = None
+    is_read: bool
+    created_at: datetime

@@ -41,3 +41,20 @@ export async function apiFetch<T = any>(
   }
   return (await res.text()) as unknown as T;
 }
+
+// Notification API functions
+export async function getNotifications(limit: number = 50) {
+  return apiFetch<any[]>(`/notifications?limit=${limit}`);
+}
+
+export async function getUnreadCount() {
+  return apiFetch<{ unread_count: number }>('/notifications/unread-count');
+}
+
+export async function markNotificationRead(notificationId: string) {
+  return apiFetch(`/notifications/${notificationId}/read`, { method: 'PATCH' });
+}
+
+export async function markAllNotificationsRead() {
+  return apiFetch('/notifications/mark-all-read', { method: 'PATCH' });
+}

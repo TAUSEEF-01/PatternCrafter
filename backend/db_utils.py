@@ -200,6 +200,88 @@ async def show_database_stats():
     client.close()
 
 
+async def send_task_assigned_notification(
+    annotator_id: ObjectId,
+    task_id: ObjectId,
+    task_name: str,
+    assigner_id: ObjectId,
+    project_id: ObjectId,
+):
+    """Send notification when task is assigned to an annotator"""
+    client = AsyncIOMotorClient(MONGODB_URL)
+    database = client[DATABASE_NAME]
+    notifications_collection = database.get_collection("notifications")
+
+    notification = {
+        "recipient_id": annotator_id,
+        "sender_id": assigner_id,
+        "type": "task_assigned",
+        "title": "New Task Assigned",
+        "message": f"You have been assigned to task: {task_name}",
+        "task_id": task_id,
+        "project_id": project_id,
+        "is_read": False,
+        "created_at": datetime.utcnow(),
+    }
+
+    await notifications_collection.insert_one(notification)
+    client.close()
+
+
+async def send_invite_notification(
+    invitee_id: ObjectId,
+    inviter_id: ObjectId,
+    project_id: ObjectId,
+    project_name: str,
+):
+    """Send notification when user is invited to a project"""
+    client = AsyncIOMotorClient(MONGODB_URL)
+    database = client[DATABASE_NAME]
+    notifications_collection = database.get_collection("notifications")
+
+    notification = {
+        "recipient_id": invitee_id,
+        "sender_id": inviter_id,
+        "type": "invite",
+        "title": "Project Invitation",
+        "message": f"You have been invited to project: {project_name}",
+        "project_id": project_id,
+        "is_read": False,
+        "created_at": datetime.utcnow(),
+    }
+
+    await notifications_collection.insert_one(notification)
+    client.close()
+
+
+async def send_task_completed_notification(
+    manager_id: ObjectId,
+    task_id: ObjectId,
+    task_name: str,
+    completed_by_id: ObjectId,
+    project_id: ObjectId,
+):
+    """Send notification when task is completed"""
+    client = AsyncIOMotorClient(MONGODB_URL)
+    database = client[DATABASE_NAME]
+    notifications_collection = database.get_collection("notifications")
+
+    notification = {
+        "recipient_id": manager_id,
+        "sender_id": completed_by_id,
+        "type": "task_completed",
+        "title": "Task Completed",
+        "message": f"Task completed: {task_name}",
+        "task_id": task_id,
+        "project_id": project_id,
+        "is_read": False,
+        "created_at": datetime.utcnow(),
+    }
+
+    await notifications_collection.insert_one(notification)
+    client.close()
+
+
 if __name__ == "__main__":
     import sys
 

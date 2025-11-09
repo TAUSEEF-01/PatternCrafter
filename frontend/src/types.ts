@@ -37,3 +37,16 @@ export type Invite = {
   invited_at?: string;
   accepted_at?: string | null;
 };
+
+export type Notification = {
+  id: Id;
+  recipient_id: Id;
+  sender_id?: Id | null;
+  type: 'invite' | 'task_assigned' | 'task_completed';
+  title: string;
+  message: string;
+  task_id?: Id | null;
+  project_id?: Id | null;
+  is_read: boolean;
+  created_at: string;
+};

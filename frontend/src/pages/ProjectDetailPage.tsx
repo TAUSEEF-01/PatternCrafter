@@ -1,5 +1,5 @@
-import { Fragment, useEffect, useMemo, useState } from "react";
-import { Link as RouterLink, useParams } from "react-router-dom";
+import { Fragment, useEffect, useMemo, useState, useRef } from "react";
+import { Link as RouterLink, useParams, useSearchParams } from "react-router-dom";
 import { apiFetch } from "@/api/client";
 import { Project, Task } from "@/types";
 import { useAuth } from "@/auth/AuthContext";
@@ -16,6 +16,9 @@ export default function ProjectDetailPage() {
   const [project, setProject] = useState<Project | null>(null);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [searchParams] = useSearchParams();
+  const highlightTaskId = searchParams.get('highlightTask');
+  const taskCardRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
 
   // Build task data per category
   const category = useMemo(() => project?.category, [project]);
@@ -80,6 +83,22 @@ export default function ProjectDetailPage() {
       .then(setTasks)
       .catch((e) => setError(String(e)));
   }, [projectId, user?.role]);
+
+  // Scroll to and highlight the task when highlightTask param is present
+  useEffect(() => {
+    if (highlightTaskId && tasks.length > 0) {
+      const targetTask = tasks.find((task) => task.id === highlightTaskId);
+      if (targetTask && taskCardRefs.current[targetTask.id]) {
+        const cardElement = taskCardRefs.current[targetTask.id];
+        if (cardElement) {
+          // Scroll to card with smooth behavior after a short delay
+          setTimeout(() => {
+            cardElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }, 100);
+        }
+      }
+    }
+  }, [highlightTaskId, tasks]);
 
   const createTask = async () => {
     if (!projectId) return;
@@ -577,7 +596,13 @@ export default function ProjectDetailPage() {
                   {tasks
                     .filter((t) => t.is_returned)
                     .map((t) => (
-                      <TaskCard key={t.id} t={t} isManager={false} />
+                      <TaskCard
+                        key={t.id}
+                        t={t}
+                        isManager={false}
+                        isHighlighted={highlightTaskId === t.id}
+                        cardRef={(el) => (taskCardRefs.current[t.id] = el)}
+                      />
                     ))}
                 </div>
               </div>
@@ -601,7 +626,13 @@ export default function ProjectDetailPage() {
                         !t.is_returned && !t.completed_status?.annotator_part
                     )
                     .map((t) => (
-                      <TaskCard key={t.id} t={t} isManager={false} />
+                      <TaskCard
+                        key={t.id}
+                        t={t}
+                        isManager={false}
+                        isHighlighted={highlightTaskId === t.id}
+                        cardRef={(el) => (taskCardRefs.current[t.id] = el)}
+                      />
                     ))}
                 </div>
               )}
@@ -620,7 +651,13 @@ export default function ProjectDetailPage() {
                         t.completed_status?.annotator_part && !t.is_returned
                     )
                     .map((t) => (
-                      <TaskCard key={t.id} t={t} isManager={false} />
+                      <TaskCard
+                        key={t.id}
+                        t={t}
+                        isManager={false}
+                        isHighlighted={highlightTaskId === t.id}
+                        cardRef={(el) => (taskCardRefs.current[t.id] = el)}
+                      />
                     ))}
                 </div>
               </div>
@@ -642,7 +679,13 @@ export default function ProjectDetailPage() {
                   {tasks
                     .filter((t) => !t.completed_status?.annotator_part)
                     .map((t) => (
-                      <TaskCard key={t.id} t={t} isManager={true} />
+                      <TaskCard
+                        key={t.id}
+                        t={t}
+                        isManager={true}
+                        isHighlighted={highlightTaskId === t.id}
+                        cardRef={(el) => (taskCardRefs.current[t.id] = el)}
+                      />
                     ))}
                 </div>
               )}
@@ -661,7 +704,13 @@ export default function ProjectDetailPage() {
                   {tasks
                     .filter((t) => t.completed_status?.annotator_part)
                     .map((t) => (
-                      <TaskCard key={t.id} t={t} isManager={true} />
+                      <TaskCard
+                        key={t.id}
+                        t={t}
+                        isManager={true}
+                        isHighlighted={highlightTaskId === t.id}
+                        cardRef={(el) => (taskCardRefs.current[t.id] = el)}
+                      />
                     ))}
                 </div>
               )}
@@ -756,7 +805,17 @@ function TaskDataViewer({ data }: { data: any }) {
   );
 }
 
-function TaskCard({ t, isManager }: { t: Task; isManager: boolean }) {
+function TaskCard({
+  t,
+  isManager,
+  isHighlighted = false,
+  cardRef,
+}: {
+  t: Task;
+  isManager: boolean;
+  isHighlighted?: boolean;
+  cardRef?: (el: HTMLDivElement | null) => void;
+}) {
   const [returning, setReturning] = useState(false);
   const [returnError, setReturnError] = useState<string | null>(null);
 
@@ -783,11 +842,25 @@ function TaskCard({ t, isManager }: { t: Task; isManager: boolean }) {
   };
 
   return (
-    <div className="card hover:shadow-lg transition-shadow">
+    <div
+      ref={cardRef}
+      className="card hover:shadow-lg transition-all duration-300"
+      style={{
+        backgroundColor: isHighlighted ? '#AD49E1' : undefined,
+        transform: isHighlighted ? 'scale(1.02)' : 'scale(1)',
+        boxShadow: isHighlighted
+          ? '0 10px 30px rgba(122, 28, 172, 0.4)'
+          : undefined,
+        animation: isHighlighted ? 'pulse 2s ease-in-out 3' : undefined,
+      }}
+    >
       <div className="card-body">
         <div className="flex items-center justify-between mb-3">
           <div>
-            <div className="font-semibold text-base">
+            <div
+              className="font-semibold text-base"
+              style={{ color: isHighlighted ? '#FFFFFF' : undefined }}
+            >
               Task {t.id.slice(0, 8)}
             </div>
             <span className="badge mt-1">{t.category}</span>
@@ -837,7 +910,12 @@ function TaskCard({ t, isManager }: { t: Task; isManager: boolean }) {
         )}
         <div className="space-y-2">
           <details className="mt-2">
-            <summary className="cursor-pointer text-sm font-medium text-gray-700 hover:text-gray-900">
+            <summary
+              className="cursor-pointer text-sm font-medium hover:text-gray-900"
+              style={{
+                color: isHighlighted ? '#F3E5FF' : '#374151',
+              }}
+            >
               View task data
             </summary>
             <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mt-2 max-h-96 overflow-auto scrollbar-thin">
@@ -848,7 +926,12 @@ function TaskCard({ t, isManager }: { t: Task; isManager: boolean }) {
           {/* Show annotator's work if task is completed */}
           {t.annotation && t.completed_status?.annotator_part && (
             <details className="mt-2">
-              <summary className="cursor-pointer text-sm font-medium text-green-700 hover:text-green-900">
+              <summary
+                className="cursor-pointer text-sm font-medium hover:text-green-900"
+                style={{
+                  color: isHighlighted ? '#F3E5FF' : '#15803d',
+                }}
+              >
                 📝 View annotator's work
               </summary>
               <div className="bg-green-50 border border-green-200 rounded-lg p-4 mt-2 max-h-96 overflow-auto scrollbar-thin">
