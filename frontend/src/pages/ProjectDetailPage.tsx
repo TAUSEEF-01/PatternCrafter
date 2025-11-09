@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { Link as RouterLink, useParams } from "react-router-dom";
+import { Fragment, useEffect, useMemo, useState, useRef } from "react";
+import { Link as RouterLink, useParams, useSearchParams } from "react-router-dom";
 import { apiFetch } from "@/api/client";
 import { Project, Task } from "@/types";
 import { useAuth } from "@/auth/AuthContext";
@@ -13,6 +13,9 @@ export default function ProjectDetailPage() {
   const [project, setProject] = useState<Project | null>(null);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [searchParams] = useSearchParams();
+  const highlightTaskId = searchParams.get('highlightTask');
+  const taskCardRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
 
   // QA Management
   const [projectAnnotators, setProjectAnnotators] = useState<
@@ -70,6 +73,80 @@ export default function ProjectDetailPage() {
     }
   }, [projectId, user?.role]);
 
+  // Scroll to and highlight the task when highlightTask param is present
+  useEffect(() => {
+    if (highlightTaskId && tasks.length > 0) {
+      const targetTask = tasks.find((task) => task.id === highlightTaskId);
+      if (targetTask && taskCardRefs.current[targetTask.id]) {
+        const cardElement = taskCardRefs.current[targetTask.id];
+        if (cardElement) {
+          // Scroll to card with smooth behavior after a short delay
+          setTimeout(() => {
+            cardElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }, 100);
+        }
+      }
+    }
+  }, [highlightTaskId, tasks]);
+
+  const createTask = async () => {
+    if (!projectId) return;
+    try {
+      let task_data: any = {};
+      switch (category) {
+        case "generative_ai_llm_response_grading": {
+          const paragraphs = llm_document
+            .split(/\n\n+/)
+            .map((x) => x.trim())
+            .filter(Boolean);
+          task_data = {
+            document: llm_split ? paragraphs : llm_document,
+            summary: llm_summary,
+            ...(llm_prompt ? { prompt: llm_prompt } : {}),
+            ...(llm_model ? { model_name: llm_model } : {}),
+          };
+          break;
+        }
+        case "generative_ai_chatbot_assessment": {
+          task_data = {
+            messages: chat_messages.filter((m) => m.content.trim().length),
+            ...(chat_model ? { model_name: chat_model } : {}),
+            ...(chat_title ? { assessment_title: chat_title } : {}),
+          };
+          break;
+        }
+        case "conversational_ai_response_selection": {
+          task_data = {
+            dialogue: rs_dialogue.filter((m) => m.content.trim().length),
+            response_options: rs_options.map((o) => o.trim()).filter(Boolean),
+            ...(rs_context ? { context: rs_context } : {}),
+          };
+          break;
+        }
+        case "text_classification": {
+          task_data = { text: tc_text, labels: parseList(tc_labels) };
+          break;
+        }
+        case "image_classification": {
+          task_data = { image_url: ic_image, labels: parseList(ic_labels) };
+          break;
+        }
+        case "object_detection": {
+          task_data = { image_url: od_image, classes: parseList(od_classes) };
+          break;
+        }
+        case "named_entity_recognition": {
+          task_data = {
+            text: ner_text,
+            entity_types: parseList(ner_entity_types),
+          };
+          break;
+        }
+        default: {
+          // Fallback for categories without a dedicated form
+          task_data = {};
+        }
+      }
   // Task statistics
   const taskStats = {
     total: tasks.length,
@@ -523,6 +600,29 @@ export default function ProjectDetailPage() {
         </div>
       )}
 
+      <div className="space-y-4">
+        {user?.role === "annotator" ? (
+          <>
+            {/* Returned tasks section for annotators */}
+            {tasks.filter((t) => t.is_returned).length > 0 && (
+              <div>
+                <h2 className="text-amber-600">⚠️ Tasks Needing Revision</h2>
+                <p className="text-sm text-gray-600 mb-3">
+                  These tasks were returned and need to be reworked
+                </p>
+                <div className="grid gap-3">
+                  {tasks
+                    .filter((t) => t.is_returned)
+                    .map((t) => (
+                      <TaskCard
+                        key={t.id}
+                        t={t}
+                        isManager={false}
+                        isHighlighted={highlightTaskId === t.id}
+                        cardRef={(el) => (taskCardRefs.current[t.id] = el)}
+                      />
+                    ))}
+                </div>
       {/* Team Overview */}
       <div className="grid md:grid-cols-2 gap-4">
         {/* Annotators */}
@@ -558,6 +658,110 @@ export default function ProjectDetailPage() {
           </div>
         </div>
 
+            <div>
+              <h2>Your assigned tasks</h2>
+              {tasks.filter(
+                (t) => !t.is_returned && !t.completed_status?.annotator_part
+              ).length === 0 ? (
+                <div className="card">
+                  <div className="card-body text-center py-12">
+                    <p className="muted">No tasks assigned yet</p>
+                  </div>
+                </div>
+              ) : (
+                <div className="grid gap-3 mt-3">
+                  {tasks
+                    .filter(
+                      (t) =>
+                        !t.is_returned && !t.completed_status?.annotator_part
+                    )
+                    .map((t) => (
+                      <TaskCard
+                        key={t.id}
+                        t={t}
+                        isManager={false}
+                        isHighlighted={highlightTaskId === t.id}
+                        cardRef={(el) => (taskCardRefs.current[t.id] = el)}
+                      />
+                    ))}
+                </div>
+              )}
+            </div>
+
+            {/* Completed tasks for annotators */}
+            {tasks.filter(
+              (t) => t.completed_status?.annotator_part && !t.is_returned
+            ).length > 0 && (
+              <div>
+                <h2>Completed tasks</h2>
+                <div className="grid gap-3 mt-3">
+                  {tasks
+                    .filter(
+                      (t) =>
+                        t.completed_status?.annotator_part && !t.is_returned
+                    )
+                    .map((t) => (
+                      <TaskCard
+                        key={t.id}
+                        t={t}
+                        isManager={false}
+                        isHighlighted={highlightTaskId === t.id}
+                        cardRef={(el) => (taskCardRefs.current[t.id] = el)}
+                      />
+                    ))}
+                </div>
+              </div>
+            )}
+          </>
+        ) : (
+          <>
+            <div>
+              <h2>In progress</h2>
+              {tasks.filter((t) => !t.completed_status?.annotator_part)
+                .length === 0 ? (
+                <div className="card mt-3">
+                  <div className="card-body text-center py-8 muted">
+                    No tasks in progress
+                  </div>
+                </div>
+              ) : (
+                <div className="grid gap-3 mt-3">
+                  {tasks
+                    .filter((t) => !t.completed_status?.annotator_part)
+                    .map((t) => (
+                      <TaskCard
+                        key={t.id}
+                        t={t}
+                        isManager={true}
+                        isHighlighted={highlightTaskId === t.id}
+                        cardRef={(el) => (taskCardRefs.current[t.id] = el)}
+                      />
+                    ))}
+                </div>
+              )}
+            </div>
+            <div>
+              <h2>Completed by annotator</h2>
+              {tasks.filter((t) => t.completed_status?.annotator_part)
+                .length === 0 ? (
+                <div className="card mt-3">
+                  <div className="card-body text-center py-8 muted">
+                    No completed tasks yet
+                  </div>
+                </div>
+              ) : (
+                <div className="grid gap-3 mt-3">
+                  {tasks
+                    .filter((t) => t.completed_status?.annotator_part)
+                    .map((t) => (
+                      <TaskCard
+                        key={t.id}
+                        t={t}
+                        isManager={true}
+                        isHighlighted={highlightTaskId === t.id}
+                        cardRef={(el) => (taskCardRefs.current[t.id] = el)}
+                      />
+                    ))}
         {/* QA Reviewers */}
         {user?.role !== "annotator" && (
           <div className="card">
@@ -607,6 +811,109 @@ export default function ProjectDetailPage() {
                 📋 All Tasks ({tasks.length})
               </h3>
             </div>
+          ))}
+        </div>
+      );
+    }
+    return (
+      <span className="text-gray-700 whitespace-pre-wrap break-words">
+        {String(value)}
+      </span>
+    );
+  };
+
+  return (
+    <div className="space-y-3">
+      {Object.entries(data).map(([key, value]) => (
+        <div
+          key={key}
+          className="border-b border-gray-100 pb-3 last:border-b-0 last:pb-0"
+        >
+          <div className="text-sm font-semibold text-gray-800 mb-1 capitalize">
+            {key.replace(/_/g, " ")}
+          </div>
+          <div className="text-sm">{renderValue(value)}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function TaskCard({
+  t,
+  isManager,
+  isHighlighted = false,
+  cardRef,
+}: {
+  t: Task;
+  isManager: boolean;
+  isHighlighted?: boolean;
+  cardRef?: (el: HTMLDivElement | null) => void;
+}) {
+  const [returning, setReturning] = useState(false);
+  const [returnError, setReturnError] = useState<string | null>(null);
+
+  const handleReturn = async () => {
+    if (
+      !confirm(
+        "Are you sure you want to return this task to the annotator? The annotation will be cleared and they will need to resubmit."
+      )
+    ) {
+      return;
+    }
+
+    setReturning(true);
+    setReturnError(null);
+
+    try {
+      await apiFetch(`/tasks/${t.id}/return`, { method: "PUT" });
+      // Refresh the page to show updated task status
+      window.location.reload();
+    } catch (e: any) {
+      setReturnError(e?.message || "Failed to return task");
+      setReturning(false);
+    }
+  };
+
+  return (
+    <div
+      ref={cardRef}
+      className="card hover:shadow-lg transition-all duration-300"
+      style={{
+        backgroundColor: isHighlighted ? '#AD49E1' : undefined,
+        transform: isHighlighted ? 'scale(1.02)' : 'scale(1)',
+        boxShadow: isHighlighted
+          ? '0 10px 30px rgba(122, 28, 172, 0.4)'
+          : undefined,
+        animation: isHighlighted ? 'pulse 2s ease-in-out 3' : undefined,
+      }}
+    >
+      <div className="card-body">
+        <div className="flex items-center justify-between mb-3">
+          <div>
+            <div
+              className="font-semibold text-base"
+              style={{ color: isHighlighted ? '#FFFFFF' : undefined }}
+            >
+              Task {t.id.slice(0, 8)}
+            </div>
+            <span className="badge mt-1">{t.category}</span>
+            {t.completed_status?.annotator_part && (
+              <span className="badge badge-green ml-2">Completed</span>
+            )}
+            {t.is_returned && (
+              <span className="badge badge-warning ml-2">Returned</span>
+            )}
+          </div>
+          <div className="flex items-center gap-3">
+            {isManager && (
+              <>
+                <LinkFix
+                  className="btn btn-outline btn-sm"
+                  to={`/tasks/${t.id}/assign`}
+                >
+                  Assign
+                </LinkFix>
 
             {tasks.length === 0 ? (
               <div className="text-center py-8">
@@ -749,6 +1056,42 @@ export default function ProjectDetailPage() {
             )}
           </div>
         </div>
+        {returnError && (
+          <div className="text-sm text-red-600 mb-2">{returnError}</div>
+        )}
+        <div className="space-y-2">
+          <details className="mt-2">
+            <summary
+              className="cursor-pointer text-sm font-medium hover:text-gray-900"
+              style={{
+                color: isHighlighted ? '#F3E5FF' : '#374151',
+              }}
+            >
+              View task data
+            </summary>
+            <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mt-2 max-h-96 overflow-auto scrollbar-thin">
+              <TaskDataViewer data={t.task_data} />
+            </div>
+          </details>
+
+          {/* Show annotator's work if task is completed */}
+          {t.annotation && t.completed_status?.annotator_part && (
+            <details className="mt-2">
+              <summary
+                className="cursor-pointer text-sm font-medium hover:text-green-900"
+                style={{
+                  color: isHighlighted ? '#F3E5FF' : '#15803d',
+                }}
+              >
+                📝 View annotator's work
+              </summary>
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4 mt-2 max-h-96 overflow-auto scrollbar-thin">
+                <TaskDataViewer data={t.annotation} />
+              </div>
+            </details>
+          )}
+        </div>
+      </div>
       )}
     </div>
   );

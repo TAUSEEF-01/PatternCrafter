@@ -1,6 +1,7 @@
 import { Link as RRLink, NavLink as RRNavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/auth/AuthContext';
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import NotificationBell from './NotificationBell';
 
 // Theme Context
 interface ThemeContextType {
@@ -242,6 +243,9 @@ export default function NavBar() {
               >
                 Invites
               </NavLink>
+
+              {/* Notification Bell */}
+              <NotificationBell />
 
               {/* Profile Dropdown */}
               <div style={{ position: 'relative' }}>

@@ -1196,6 +1196,23 @@ async def assign_task(
     await database.tasks_collection.update_one(
         {"_id": ObjectId(task_id)}, {"$set": update}
     )
+    
+    # Send notification to annotator when task is assigned
+    if payload.annotator_id:
+        task_name = task.get("tag_task") or f"Task in {project.get('details', 'Untitled Project')}"
+        notification = {
+            "recipient_id": ObjectId(payload.annotator_id),
+            "sender_id": current_user.id,
+            "type": "task_assigned",
+            "title": "New Task Assigned",
+            "message": f"You have been assigned to task: {task_name}",
+            "task_id": ObjectId(task_id),
+            "project_id": task["project_id"],
+            "is_read": False,
+            "created_at": datetime.utcnow(),
+        }
+        await database.notifications_collection.insert_one(notification)
+    
     # If annotator was assigned, update project_working to include this task under that annotator
     if payload.annotator_id:
         await database.project_working_collection.update_one(
@@ -1341,6 +1358,23 @@ async def submit_annotation(
     await database.tasks_collection.update_one(
         {"_id": ObjectId(task_id)}, {"$set": updates}
     )
+
+    # Send notification to project manager when task is completed
+    project = await database.projects_collection.find_one({"_id": task["project_id"]})
+    if project and project.get("manager_id"):
+        task_name = task.get("tag_task") or f"Task in {project.get('details', 'Untitled Project')}"
+        notification = {
+            "recipient_id": project["manager_id"],
+            "sender_id": current_user.id,
+            "type": "task_completed",
+            "title": "Task Completed",
+            "message": f"Task completed: {task_name}",
+            "task_id": ObjectId(task_id),
+            "project_id": task["project_id"],
+            "is_read": False,
+            "created_at": datetime.utcnow(),
+        }
+        await database.notifications_collection.insert_one(notification)
 
     # After submission: remove this task from project_working assigned task list for the annotator
     if task.get("assigned_annotator_id"):
@@ -1624,6 +1658,19 @@ async def create_invite(
         {"_id": result.inserted_id}
     )
 
+    # Send notification to the invited user
+    notification = {
+        "recipient_id": ObjectId(invite.user_id),
+        "sender_id": current_user.id,
+        "type": "invite",
+        "title": "Project Invitation",
+        "message": f"You have been invited to project: {project.get('details', 'Untitled Project')}",
+        "project_id": ObjectId(project_id),
+        "is_read": False,
+        "created_at": datetime.utcnow(),
+    }
+    await database.notifications_collection.insert_one(notification)
+
     return as_response(InviteResponse, created_invite)
 
 
@@ -1887,3 +1934,71 @@ async def get_my_task_history(
         "completed_tasks": sum(1 for h in history if h["status"] == "Completed"),
         "history": history,
     }
+
+
+# Notification endpoints
+@router.get(
+    "/notifications",
+    response_model=List[NotificationResponse],
+    response_model_by_alias=False,
+)
+async def get_notifications(
+    limit: int = 50, current_user: UserInDB = Depends(get_current_user)
+):
+    """Get all notifications for current user"""
+    notifications = (
+        await database.notifications_collection.find({"recipient_id": current_user.id})
+        .sort("created_at", -1)
+        .limit(limit)
+        .to_list(limit)
+    )
+    return [as_response(NotificationResponse, notif) for notif in notifications]
+
+
+@router.get("/notifications/unread-count")
+async def get_unread_count(current_user: UserInDB = Depends(get_current_user)):
+    """Get count of unread notifications"""
+    count = await database.notifications_collection.count_documents(
+        {"recipient_id": current_user.id, "is_read": False}
+    )
+    return {"unread_count": count}
+
+
+@router.patch("/notifications/{notification_id}/read")
+async def mark_notification_read(
+    notification_id: str, current_user: UserInDB = Depends(get_current_user)
+):
+    """Mark notification as read"""
+    if not ObjectId.is_valid(notification_id):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid notification ID"
+        )
+
+    notification = await database.notifications_collection.find_one(
+        {"_id": ObjectId(notification_id)}
+    )
+    if not notification:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Notification not found"
+        )
+
+    if notification["recipient_id"] != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to modify this notification",
+        )
+
+    await database.notifications_collection.update_one(
+        {"_id": ObjectId(notification_id)}, {"$set": {"is_read": True}}
+    )
+    return {"message": "Notification marked as read"}
+
+
+@router.patch("/notifications/mark-all-read")
+async def mark_all_notifications_read(current_user: UserInDB = Depends(get_current_user)):
+    """Mark all user's notifications as read"""
+    result = await database.notifications_collection.update_many(
+        {"recipient_id": current_user.id, "is_read": False},
+        {"$set": {"is_read": True}},
+    )
+    return {"message": f"Marked {result.modified_count} notifications as read"}
