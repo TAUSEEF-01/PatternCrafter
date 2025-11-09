@@ -97,7 +97,13 @@ export default function ProjectDetailPage() {
   const taskStats = {
     total: tasks.length,
     inProgress: tasks.filter((t) => {
-      // If user is annotator and annotation not done
+      // For managers: tasks that are not completed by both annotator and QA
+      if (user?.role !== "annotator") {
+        return !(
+          t.completed_status?.annotator_part && t.completed_status?.qa_part
+        );
+      }
+      // For annotators: If user is annotator and annotation not done
       if (
         t.assigned_annotator_id === user?.id &&
         !t.completed_status?.annotator_part
@@ -115,7 +121,13 @@ export default function ProjectDetailPage() {
       return false;
     }).length,
     completed: tasks.filter((t) => {
-      // If user is annotator and annotation is done
+      // For managers: Only count as completed when BOTH annotator and QA are done
+      if (user?.role !== "annotator") {
+        return (
+          t.completed_status?.annotator_part && t.completed_status?.qa_part
+        );
+      }
+      // For annotators: If user is annotator and annotation is done
       if (
         t.assigned_annotator_id === user?.id &&
         t.completed_status?.annotator_part
@@ -155,14 +167,23 @@ export default function ProjectDetailPage() {
     if (task.is_returned) {
       return { label: "Returned", color: "amber" };
     }
-    if (task.completed_status?.qa_part) {
+    // Only show completed when BOTH annotator and QA have completed
+    if (
+      task.completed_status?.annotator_part &&
+      task.completed_status?.qa_part
+    ) {
       return { label: "Completed", color: "green" };
     }
-    if (task.completed_status?.annotator_part) {
-      return { label: "Awaiting QA", color: "blue" };
+    // Show pending by QA when annotator is done but QA is not
+    if (
+      task.completed_status?.annotator_part &&
+      !task.completed_status?.qa_part
+    ) {
+      return { label: "Pending by QA", color: "blue" };
     }
-    if (task.assigned_annotator_id) {
-      return { label: "In Progress", color: "yellow" };
+    // Show pending by annotator when task is assigned but not completed
+    if (task.assigned_annotator_id && !task.completed_status?.annotator_part) {
+      return { label: "Pending by Annotator", color: "yellow" };
     }
     return { label: "Unassigned", color: "gray" };
   };
@@ -371,144 +392,269 @@ export default function ProjectDetailPage() {
       )}
 
       {/* Task Statistics */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="card">
-          <div className="card-body text-center">
-            <div className="text-3xl font-bold text-blue-600">
-              {taskStats.total}
-            </div>
-            <div className="text-sm text-gray-600 mt-1">Total Tasks</div>
-          </div>
-        </div>
-        <div className="card">
-          <div className="card-body text-center">
-            <div className="text-3xl font-bold text-yellow-600">
-              {taskStats.inProgress}
-            </div>
-            <div className="text-sm text-gray-600 mt-1">In Progress</div>
-          </div>
-        </div>
-        <div className="card">
-          <div className="card-body text-center">
-            <div className="text-3xl font-bold text-green-600">
-              {taskStats.completed}
-            </div>
-            <div className="text-sm text-gray-600 mt-1">Completed</div>
-          </div>
-        </div>
-        {taskStats.returned > 0 && (
+      {user?.role !== "annotator" ? (
+        // Manager View - Show all project statistics
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div className="card">
             <div className="card-body text-center">
-              <div className="text-3xl font-bold text-amber-600">
-                {taskStats.returned}
+              <div className="text-3xl font-bold text-blue-600">
+                {taskStats.total}
               </div>
-              <div className="text-sm text-gray-600 mt-1">Returned</div>
+              <div className="text-sm text-gray-600 mt-1">Total Tasks</div>
             </div>
           </div>
-        )}
-      </div>
+          <div className="card">
+            <div className="card-body text-center">
+              <div className="text-3xl font-bold text-yellow-600">
+                {taskStats.inProgress}
+              </div>
+              <div className="text-sm text-gray-600 mt-1">In Progress</div>
+            </div>
+          </div>
+          <div className="card">
+            <div className="card-body text-center">
+              <div className="text-3xl font-bold text-green-600">
+                {taskStats.completed}
+              </div>
+              <div className="text-sm text-gray-600 mt-1">Completed</div>
+            </div>
+          </div>
+          {taskStats.returned > 0 && (
+            <div className="card">
+              <div className="card-body text-center">
+                <div className="text-3xl font-bold text-amber-600">
+                  {taskStats.returned}
+                </div>
+                <div className="text-sm text-gray-600 mt-1">Returned</div>
+              </div>
+            </div>
+          )}
+        </div>
+      ) : (
+        // Annotator View - Show personal statistics only
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+          <div className="card">
+            <div className="card-body text-center">
+              <div className="text-3xl font-bold text-blue-600">
+                {
+                  tasks.filter(
+                    (t) =>
+                      t.assigned_annotator_id === user?.id &&
+                      !t.completed_status?.annotator_part &&
+                      !t.is_returned
+                  ).length
+                }
+              </div>
+              <div className="text-sm text-gray-600 mt-1">
+                My Tasks Remaining
+              </div>
+            </div>
+          </div>
+          <div className="card">
+            <div className="card-body text-center">
+              <div className="text-3xl font-bold text-green-600">
+                {
+                  tasks.filter(
+                    (t) =>
+                      t.assigned_annotator_id === user?.id &&
+                      t.completed_status?.annotator_part &&
+                      !t.is_returned
+                  ).length
+                }
+              </div>
+              <div className="text-sm text-gray-600 mt-1">
+                My Tasks Completed
+              </div>
+            </div>
+          </div>
+          {tasks.filter(
+            (t) => t.assigned_annotator_id === user?.id && t.is_returned
+          ).length > 0 && (
+            <div className="card">
+              <div className="card-body text-center">
+                <div className="text-3xl font-bold text-amber-600">
+                  {
+                    tasks.filter(
+                      (t) =>
+                        t.assigned_annotator_id === user?.id && t.is_returned
+                    ).length
+                  }
+                </div>
+                <div className="text-sm text-gray-600 mt-1">Returned</div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Navigation Cards */}
       {user?.role === "annotator" ? (
-        // Annotator View
-        <div className="grid md:grid-cols-2 gap-4">
-          {taskStats.returned > 0 && (
-            <LinkFix
-              to={`/projects/${projectId}/tasks/returned`}
-              className="card hover:shadow-xl transition-shadow border-l-4 border-amber-500"
-            >
-              <div className="card-body">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="text-lg font-semibold text-amber-700">
-                      ⚠️ Tasks Needing Revision
-                    </h3>
-                    <p className="text-sm text-gray-600 mt-1">
-                      {taskStats.returned} task(s) returned for rework
-                    </p>
+        // Annotator View - Separate sections for Annotation and QA work
+        <div className="space-y-6">
+          {/* Section: Annotation Tasks */}
+          <div>
+            <h2 className="text-xl font-semibold mb-3 text-gray-800">
+              📝 My Annotation Work
+            </h2>
+            <div className="grid md:grid-cols-2 gap-4">
+              {tasks.filter(
+                (t) => t.assigned_annotator_id === user?.id && t.is_returned
+              ).length > 0 && (
+                <LinkFix
+                  to={`/projects/${projectId}/tasks/returned`}
+                  className="card hover:shadow-xl transition-shadow border-l-4 border-amber-500"
+                >
+                  <div className="card-body">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h3 className="text-lg font-semibold text-amber-700">
+                          ⚠️ Returned for Revision
+                        </h3>
+                        <p className="text-sm text-gray-600 mt-1">
+                          {
+                            tasks.filter(
+                              (t) =>
+                                t.assigned_annotator_id === user?.id &&
+                                t.is_returned
+                            ).length
+                          }{" "}
+                          task(s) need rework
+                        </p>
+                      </div>
+                      <div className="text-3xl">→</div>
+                    </div>
                   </div>
-                  <div className="text-3xl">→</div>
-                </div>
-              </div>
-            </LinkFix>
-          )}
+                </LinkFix>
+              )}
 
-          <LinkFix
-            to={`/projects/${projectId}/tasks/in-progress`}
-            className="card hover:shadow-xl transition-shadow border-l-4 border-blue-500"
-          >
-            <div className="card-body">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-lg font-semibold">Your Assigned Tasks</h3>
-                  <p className="text-sm text-gray-600 mt-1">
-                    {
-                      tasks.filter((t) => {
-                        // Annotation tasks not returned and not completed
-                        if (
-                          t.assigned_annotator_id === user?.id &&
-                          !t.is_returned &&
-                          !t.completed_status?.annotator_part
-                        ) {
-                          return true;
-                        }
-                        // QA tasks where annotation done but QA not done
-                        if (
-                          t.assigned_qa_id === user?.id &&
-                          t.completed_status?.annotator_part &&
-                          !t.completed_status?.qa_part
-                        ) {
-                          return true;
-                        }
-                        return false;
-                      }).length
-                    }{" "}
-                    task(s) ready to work on
-                  </p>
+              <LinkFix
+                to={`/projects/${projectId}/tasks/annotation-tasks`}
+                className="card hover:shadow-xl transition-shadow border-l-4 border-blue-500"
+              >
+                <div className="card-body">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-lg font-semibold">
+                        Tasks to Complete
+                      </h3>
+                      <p className="text-sm text-gray-600 mt-1">
+                        {
+                          tasks.filter(
+                            (t) =>
+                              t.assigned_annotator_id === user?.id &&
+                              !t.is_returned &&
+                              !t.completed_status?.annotator_part
+                          ).length
+                        }{" "}
+                        task(s) assigned
+                      </p>
+                    </div>
+                    <div className="text-3xl">→</div>
+                  </div>
                 </div>
-                <div className="text-3xl">→</div>
-              </div>
+              </LinkFix>
             </div>
-          </LinkFix>
 
-          <LinkFix
-            to={`/projects/${projectId}/tasks/completed`}
-            className="card hover:shadow-xl transition-shadow border-l-4 border-green-500"
-          >
-            <div className="card-body">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-lg font-semibold">
-                    Your Completed Tasks
+            {/* Show completed task IDs for this annotator */}
+            {tasks.filter(
+              (t) =>
+                t.assigned_annotator_id === user?.id &&
+                t.completed_status?.annotator_part &&
+                !t.is_returned
+            ).length > 0 && (
+              <div className="card mt-4">
+                <div className="card-body">
+                  <h3 className="text-lg font-semibold mb-3 text-green-700">
+                    ✓ Completed Tasks
                   </h3>
-                  <p className="text-sm text-gray-600 mt-1">
-                    {
-                      tasks.filter((t) => {
-                        // Annotation tasks completed and not returned
-                        if (
+                  <div className="flex flex-wrap gap-2">
+                    {tasks
+                      .filter(
+                        (t) =>
                           t.assigned_annotator_id === user?.id &&
                           t.completed_status?.annotator_part &&
                           !t.is_returned
-                        ) {
-                          return true;
-                        }
-                        // QA tasks where QA is completed
-                        if (
-                          t.assigned_qa_id === user?.id &&
-                          t.completed_status?.qa_part
-                        ) {
-                          return true;
-                        }
-                        return false;
-                      }).length
-                    }{" "}
-                    task(s) submitted for review
-                  </p>
+                      )
+                      .map((t) => (
+                        <code
+                          key={t.id}
+                          className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded"
+                        >
+                          {t.id.slice(0, 8)}
+                        </code>
+                      ))}
+                  </div>
                 </div>
-                <div className="text-3xl">→</div>
               </div>
+            )}
+          </div>
+
+          {/* Section: QA Review Tasks */}
+          {tasks.filter((t) => t.assigned_qa_id === user?.id).length > 0 && (
+            <div>
+              <h2 className="text-xl font-semibold mb-3 text-purple-800">
+                🔍 My QA Review Work
+              </h2>
+              <div className="grid md:grid-cols-2 gap-4">
+                <LinkFix
+                  to={`/projects/${projectId}/tasks/qa-pending`}
+                  className="card hover:shadow-xl transition-shadow border-l-4 border-purple-500"
+                >
+                  <div className="card-body">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h3 className="text-lg font-semibold">
+                          Tasks to Review
+                        </h3>
+                        <p className="text-sm text-gray-600 mt-1">
+                          {
+                            tasks.filter(
+                              (t) =>
+                                t.assigned_qa_id === user?.id &&
+                                t.completed_status?.annotator_part &&
+                                !t.completed_status?.qa_part
+                            ).length
+                          }{" "}
+                          task(s) assigned for review
+                        </p>
+                      </div>
+                      <div className="text-3xl">→</div>
+                    </div>
+                  </div>
+                </LinkFix>
+              </div>
+
+              {/* Show completed QA review task IDs */}
+              {tasks.filter(
+                (t) =>
+                  t.assigned_qa_id === user?.id && t.completed_status?.qa_part
+              ).length > 0 && (
+                <div className="card mt-4">
+                  <div className="card-body">
+                    <h3 className="text-lg font-semibold mb-3 text-purple-700">
+                      ✓ Completed Reviews
+                    </h3>
+                    <div className="flex flex-wrap gap-2">
+                      {tasks
+                        .filter(
+                          (t) =>
+                            t.assigned_qa_id === user?.id &&
+                            t.completed_status?.qa_part
+                        )
+                        .map((t) => (
+                          <code
+                            key={t.id}
+                            className="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded"
+                          >
+                            {t.id.slice(0, 8)}
+                          </code>
+                        ))}
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
-          </LinkFix>
+          )}
         </div>
       ) : (
         // Manager View
@@ -552,16 +698,24 @@ export default function ProjectDetailPage() {
 
           <LinkFix
             to={`/projects/${projectId}/tasks/annotator-completed`}
-            className="card hover:shadow-xl transition-shadow border-l-4 border-green-500"
+            className="card hover:shadow-xl transition-shadow border-l-4 border-blue-500"
           >
             <div className="card-body">
               <div className="flex items-center justify-between">
                 <div>
                   <h3 className="text-lg font-semibold">
-                    ✅ Completed by Annotator
+                    📝 Pending QA Review
                   </h3>
                   <p className="text-sm text-gray-600 mt-1">
-                    {taskStats.completed} task(s) awaiting review
+                    {
+                      tasks.filter(
+                        (t) =>
+                          t.completed_status?.annotator_part &&
+                          !t.completed_status?.qa_part &&
+                          !t.is_returned
+                      ).length
+                    }{" "}
+                    task(s) awaiting QA
                   </p>
                 </div>
                 <div className="text-3xl">→</div>
@@ -571,14 +725,14 @@ export default function ProjectDetailPage() {
 
           <LinkFix
             to={`/projects/${projectId}/completed`}
-            className="card hover:shadow-xl transition-shadow border-l-4 border-blue-500"
+            className="card hover:shadow-xl transition-shadow border-l-4 border-green-500"
           >
             <div className="card-body">
               <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="text-lg font-semibold">🎯 Fully Completed</h3>
+                  <h3 className="text-lg font-semibold">✅ Fully Completed</h3>
                   <p className="text-sm text-gray-600 mt-1">
-                    View all finished tasks
+                    {taskStats.completed} task(s) completed
                   </p>
                 </div>
                 <div className="text-3xl">→</div>
@@ -605,180 +759,43 @@ export default function ProjectDetailPage() {
         </div>
       )}
 
-      <div className="space-y-4">
-        {user?.role === "annotator" ? (
-          <>
-            {/* Returned tasks section for annotators */}
-            {tasks.filter((t) => t.is_returned).length > 0 && (
-              <div>
-                <h2 className="text-amber-600">⚠️ Tasks Needing Revision</h2>
-                <p className="text-sm text-gray-600 mb-3">
-                  These tasks were returned and need to be reworked
-                </p>
-                <div className="grid gap-3">
-                  {tasks
-                    .filter((t) => t.is_returned)
-                    .map((t) => (
-                      <TaskCard
-                        key={t.id}
-                        t={t}
-                        isManager={false}
-                        isHighlighted={highlightTaskId === t.id}
-                        cardRef={(el) => (taskCardRefs.current[t.id] = el)}
-                      />
-                    ))}
-                </div>
-              </div>
-            )}
-
-            <div>
-              <h2>Your assigned tasks</h2>
-              {tasks.filter(
-                (t) => !t.is_returned && !t.completed_status?.annotator_part
-              ).length === 0 ? (
-                <div className="card">
-                  <div className="card-body text-center py-12">
-                    <p className="muted">No tasks assigned yet</p>
-                  </div>
-                </div>
+      {/* Team Overview - Manager Only */}
+      {user?.role !== "annotator" && (
+        <div className="grid md:grid-cols-2 gap-4">
+          {/* Annotators */}
+          <div className="card">
+            <div className="card-body">
+              <h3 className="text-lg font-semibold mb-3">
+                👤 Annotators ({projectAnnotators.length})
+              </h3>
+              {projectAnnotators.length === 0 ? (
+                <p className="text-sm text-gray-500">No annotators yet</p>
               ) : (
-                <div className="grid gap-3 mt-3">
-                  {tasks
-                    .filter(
-                      (t) =>
-                        !t.is_returned && !t.completed_status?.annotator_part
-                    )
-                    .map((t) => (
-                      <TaskCard
-                        key={t.id}
-                        t={t}
-                        isManager={false}
-                        isHighlighted={highlightTaskId === t.id}
-                        cardRef={(el) => (taskCardRefs.current[t.id] = el)}
-                      />
-                    ))}
-                </div>
-              )}
-            </div>
-
-            {/* Completed tasks for annotators */}
-            {tasks.filter(
-              (t) => t.completed_status?.annotator_part && !t.is_returned
-            ).length > 0 && (
-              <div>
-                <h2>Completed tasks</h2>
-                <div className="grid gap-3 mt-3">
-                  {tasks
-                    .filter(
-                      (t) =>
-                        t.completed_status?.annotator_part && !t.is_returned
-                    )
-                    .map((t) => (
-                      <TaskCard
-                        key={t.id}
-                        t={t}
-                        isManager={false}
-                        isHighlighted={highlightTaskId === t.id}
-                        cardRef={(el) => (taskCardRefs.current[t.id] = el)}
-                      />
-                    ))}
-                </div>
-              </div>
-            )}
-          </>
-        ) : (
-          <>
-            <div>
-              <h2>In progress</h2>
-              {tasks.filter((t) => !t.completed_status?.annotator_part)
-                .length === 0 ? (
-                <div className="card mt-3">
-                  <div className="card-body text-center py-8 muted">
-                    No tasks in progress
-                  </div>
-                </div>
-              ) : (
-                <div className="grid gap-3 mt-3">
-                  {tasks
-                    .filter((t) => !t.completed_status?.annotator_part)
-                    .map((t) => (
-                      <TaskCard
-                        key={t.id}
-                        t={t}
-                        isManager={true}
-                        isHighlighted={highlightTaskId === t.id}
-                        cardRef={(el) => (taskCardRefs.current[t.id] = el)}
-                      />
-                    ))}
-                </div>
-              )}
-            </div>
-            <div>
-              <h2>Completed by annotator</h2>
-              {tasks.filter((t) => t.completed_status?.annotator_part)
-                .length === 0 ? (
-                <div className="card mt-3">
-                  <div className="card-body text-center py-8 muted">
-                    No completed tasks yet
-                  </div>
-                </div>
-              ) : (
-                <div className="grid gap-3 mt-3">
-                  {tasks
-                    .filter((t) => t.completed_status?.annotator_part)
-                    .map((t) => (
-                      <TaskCard
-                        key={t.id}
-                        t={t}
-                        isManager={true}
-                        isHighlighted={highlightTaskId === t.id}
-                        cardRef={(el) => (taskCardRefs.current[t.id] = el)}
-                      />
-                    ))}
-                </div>
-              )}
-            </div>
-          </>
-        )}
-      </div>
-
-      {/* Team Overview */}
-      <div className="grid md:grid-cols-2 gap-4">
-        {/* Annotators */}
-        <div className="card">
-          <div className="card-body">
-            <h3 className="text-lg font-semibold mb-3">
-              👤 Annotators ({projectAnnotators.length})
-            </h3>
-            {projectAnnotators.length === 0 ? (
-              <p className="text-sm text-gray-500">No annotators yet</p>
-            ) : (
-              <div className="space-y-2 max-h-60 overflow-auto">
-                {projectAnnotators.map((annotator) => (
-                  <div
-                    key={annotator.id}
-                    className="flex items-center gap-2 p-2 bg-gray-50 rounded"
-                  >
-                    <div className="flex-1">
-                      <div className="font-medium text-sm">
-                        {annotator.name}
+                <div className="space-y-2 max-h-60 overflow-auto">
+                  {projectAnnotators.map((annotator) => (
+                    <div
+                      key={annotator.id}
+                      className="flex items-center gap-2 p-2 bg-gray-50 rounded"
+                    >
+                      <div className="flex-1">
+                        <div className="font-medium text-sm">
+                          {annotator.name}
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          {annotator.email}
+                        </div>
                       </div>
-                      <div className="text-xs text-gray-500">
-                        {annotator.email}
-                      </div>
+                      {qaAnnotators.some((qa) => qa.id === annotator.id) && (
+                        <div className="badge badge-primary badge-sm">QA</div>
+                      )}
                     </div>
-                    {qaAnnotators.some((qa) => qa.id === annotator.id) && (
-                      <div className="badge badge-primary badge-sm">QA</div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
-        </div>
 
-        {/* QA Reviewers */}
-        {user?.role !== "annotator" && (
+          {/* QA Reviewers */}
           <div className="card">
             <div className="card-body">
               <div className="flex items-center justify-between mb-3">
@@ -814,8 +831,8 @@ export default function ProjectDetailPage() {
               )}
             </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* All Tasks Section - Manager Only */}
       {user?.role !== "annotator" && (

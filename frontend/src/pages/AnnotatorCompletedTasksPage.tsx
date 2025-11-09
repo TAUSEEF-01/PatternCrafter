@@ -25,27 +25,22 @@ export default function AnnotatorCompletedTasksPage() {
 
     apiFetch<Task[]>(tasksPath)
       .then((allTasks) => {
-        // Filter for completed tasks
+        // Filter for annotation tasks completed (not QA tasks)
         const completed = allTasks.filter((t) => {
-          // For tasks where user is the annotator: show if annotation completed
-          if (
-            t.assigned_annotator_id === user?.id &&
-            t.completed_status?.annotator_part
-          ) {
-            return true;
+          // For annotators: show only their completed annotation tasks
+          if (user?.role === "annotator") {
+            return (
+              t.assigned_annotator_id === user?.id &&
+              t.completed_status?.annotator_part &&
+              !t.is_returned
+            );
           }
-          // For tasks where user is the QA: show if QA is completed
-          if (t.assigned_qa_id === user?.id && t.completed_status?.qa_part) {
-            return true;
-          }
-          // For managers, show all completed by annotator
-          if (
-            user?.role !== "annotator" &&
-            t.completed_status?.annotator_part
-          ) {
-            return true;
-          }
-          return false;
+          // For managers: show all completed annotation tasks that are awaiting QA (not yet QA completed)
+          return (
+            t.completed_status?.annotator_part &&
+            !t.completed_status?.qa_part &&
+            !t.is_returned
+          );
         });
         setTasks(completed);
       })
@@ -83,9 +78,9 @@ export default function AnnotatorCompletedTasksPage() {
     <div className="max-w-6xl mx-auto space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1>Completed by Annotator</h1>
+          <h1>Pending QA Review</h1>
           <p className="text-sm text-gray-600 mt-1">
-            Tasks that have been completed and are awaiting QA review
+            Tasks completed by annotators awaiting QA review
           </p>
         </div>
         <LinkFix className="btn btn-ghost" to={`/projects/${projectId}`}>
