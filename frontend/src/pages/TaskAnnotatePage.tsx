@@ -112,6 +112,20 @@ export default function TaskAnnotatePage() {
   // Object Detection
   const [objects, setObjects] = useState("");
 
+  // Object Detection form fields
+  interface DetectedObject {
+    class: string;
+    bbox: number[];
+    confidence: number;
+  }
+  const [detectedObjects, setDetectedObjects] = useState<DetectedObject[]>([]);
+  const [currentObjClass, setCurrentObjClass] = useState("");
+  const [currentBboxX, setCurrentBboxX] = useState("");
+  const [currentBboxY, setCurrentBboxY] = useState("");
+  const [currentBboxW, setCurrentBboxW] = useState("");
+  const [currentBboxH, setCurrentBboxH] = useState("");
+  const [currentObjConfidence, setCurrentObjConfidence] = useState("0.95");
+
   // Named Entity Recognition
   const [entities, setEntities] = useState("");
 
@@ -179,6 +193,9 @@ export default function TaskAnnotatePage() {
               break;
             case "object_detection":
               if (ann.objects) setObjects(JSON.stringify(ann.objects, null, 2));
+              if (ann.objects && Array.isArray(ann.objects)) {
+                setDetectedObjects(ann.objects);
+              }
               break;
             case "named_entity_recognition":
               if (ann.entities && Array.isArray(ann.entities)) {
@@ -267,13 +284,7 @@ export default function TaskAnnotatePage() {
         annotationData.predicted_class = predictedClass;
         break;
       case "object_detection":
-        try {
-          annotationData.objects = objects ? JSON.parse(objects) : [];
-        } catch {
-          setError("Objects must be valid JSON array");
-          setIsTimerActive(true); // Resume timer on error
-          return;
-        }
+        annotationData.objects = detectedObjects;
         break;
       case "named_entity_recognition":
         // Validate that at least one entity has been added
@@ -482,24 +493,170 @@ export default function TaskAnnotatePage() {
 
             {/* Object Detection */}
             {task?.category === "object_detection" && (
-              <div>
-                <label className="label">
-                  Detected Objects{" "}
-                  <span className="text-xs text-gray-500">
-                    (JSON array format)
-                  </span>
-                </label>
-                <textarea
-                  className="textarea font-mono text-sm h-32"
-                  value={objects}
-                  onChange={(e) => setObjects(e.target.value)}
-                  placeholder='[{"class": "car", "bbox": [x, y, w, h], "confidence": 0.95}]'
-                  required
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  Example: [&#123;"class": "person", "bbox": [10, 20, 100, 200],
-                  "confidence": 0.92&#125;]
-                </p>
+              <div className="space-y-4">
+                <div>
+                  <label className="label">Detected Objects</label>
+
+                  {/* List of added objects */}
+                  {detectedObjects.length > 0 && (
+                    <div className="mb-4 space-y-2">
+                      <p className="text-sm font-medium text-gray-700">
+                        Added Objects ({detectedObjects.length}):
+                      </p>
+                      {detectedObjects.map((obj, idx) => (
+                        <div
+                          key={idx}
+                          className="flex items-center justify-between p-3 bg-gray-50 border border-gray-200 rounded-md"
+                        >
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="font-medium text-gray-800">
+                                {obj.class}
+                              </span>
+                              <span className="badge badge-primary text-xs">
+                                Confidence: {(obj.confidence * 100).toFixed(0)}%
+                              </span>
+                            </div>
+                            <div className="text-xs text-gray-600">
+                              BBox: [{obj.bbox.join(", ")}]
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setDetectedObjects((prev) =>
+                                prev.filter((_, i) => i !== idx)
+                              );
+                            }}
+                            className="btn btn-ghost btn-sm text-red-600"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Add new object form */}
+                  <div className="p-4 bg-blue-50 border border-blue-200 rounded-md space-y-3">
+                    <p className="text-sm font-semibold text-blue-800 mb-2">
+                      Add New Object:
+                    </p>
+
+                    <div>
+                      <label className="label text-xs">Object Class</label>
+                      <input
+                        type="text"
+                        className="input input-sm"
+                        value={currentObjClass}
+                        onChange={(e) => setCurrentObjClass(e.target.value)}
+                        placeholder="e.g., car, person, dog"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-4 gap-2">
+                      <div>
+                        <label className="label text-xs">X</label>
+                        <input
+                          type="number"
+                          className="input input-sm"
+                          value={currentBboxX}
+                          onChange={(e) => setCurrentBboxX(e.target.value)}
+                          placeholder="X"
+                        />
+                      </div>
+                      <div>
+                        <label className="label text-xs">Y</label>
+                        <input
+                          type="number"
+                          className="input input-sm"
+                          value={currentBboxY}
+                          onChange={(e) => setCurrentBboxY(e.target.value)}
+                          placeholder="Y"
+                        />
+                      </div>
+                      <div>
+                        <label className="label text-xs">Width</label>
+                        <input
+                          type="number"
+                          className="input input-sm"
+                          value={currentBboxW}
+                          onChange={(e) => setCurrentBboxW(e.target.value)}
+                          placeholder="W"
+                        />
+                      </div>
+                      <div>
+                        <label className="label text-xs">Height</label>
+                        <input
+                          type="number"
+                          className="input input-sm"
+                          value={currentBboxH}
+                          onChange={(e) => setCurrentBboxH(e.target.value)}
+                          placeholder="H"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="label text-xs">
+                        Confidence (0.0 - 1.0)
+                      </label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        max="1"
+                        className="input input-sm"
+                        value={currentObjConfidence}
+                        onChange={(e) =>
+                          setCurrentObjConfidence(e.target.value)
+                        }
+                        placeholder="0.95"
+                      />
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (!currentObjClass.trim()) {
+                          alert("Please enter an object class");
+                          return;
+                        }
+                        if (
+                          !currentBboxX ||
+                          !currentBboxY ||
+                          !currentBboxW ||
+                          !currentBboxH
+                        ) {
+                          alert("Please enter all bounding box values");
+                          return;
+                        }
+
+                        const newObject: DetectedObject = {
+                          class: currentObjClass.trim(),
+                          bbox: [
+                            parseFloat(currentBboxX),
+                            parseFloat(currentBboxY),
+                            parseFloat(currentBboxW),
+                            parseFloat(currentBboxH),
+                          ],
+                          confidence: parseFloat(currentObjConfidence) || 0.95,
+                        };
+
+                        setDetectedObjects((prev) => [...prev, newObject]);
+                        setCurrentObjClass("");
+                        setCurrentBboxX("");
+                        setCurrentBboxY("");
+                        setCurrentBboxW("");
+                        setCurrentBboxH("");
+                        setCurrentObjConfidence("0.95");
+                      }}
+                      className="btn btn-primary btn-sm w-full"
+                    >
+                      ➕ Add Object
+                    </button>
+                  </div>
+                </div>
               </div>
             )}
 

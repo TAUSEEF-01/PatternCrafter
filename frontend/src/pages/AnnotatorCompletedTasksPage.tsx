@@ -25,10 +25,28 @@ export default function AnnotatorCompletedTasksPage() {
 
     apiFetch<Task[]>(tasksPath)
       .then((allTasks) => {
-        // Filter for tasks completed by annotator
-        const completed = allTasks.filter(
-          (t) => t.completed_status?.annotator_part
-        );
+        // Filter for completed tasks
+        const completed = allTasks.filter((t) => {
+          // For tasks where user is the annotator: show if annotation completed
+          if (
+            t.assigned_annotator_id === user?.id &&
+            t.completed_status?.annotator_part
+          ) {
+            return true;
+          }
+          // For tasks where user is the QA: show if QA is completed
+          if (t.assigned_qa_id === user?.id && t.completed_status?.qa_part) {
+            return true;
+          }
+          // For managers, show all completed by annotator
+          if (
+            user?.role !== "annotator" &&
+            t.completed_status?.annotator_part
+          ) {
+            return true;
+          }
+          return false;
+        });
         setTasks(completed);
       })
       .catch((e) => setError(String(e)));

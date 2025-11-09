@@ -70,11 +70,41 @@ export default function ProjectDetailPage() {
     }
   }, [projectId, user?.role]);
 
-  // Task statistics
+  // Task statistics - properly handle both annotation and QA tasks
   const taskStats = {
     total: tasks.length,
-    inProgress: tasks.filter((t) => !t.completed_status?.annotator_part).length,
-    completed: tasks.filter((t) => t.completed_status?.annotator_part).length,
+    inProgress: tasks.filter((t) => {
+      // If user is annotator and annotation not done
+      if (
+        t.assigned_annotator_id === user?.id &&
+        !t.completed_status?.annotator_part
+      ) {
+        return true;
+      }
+      // If user is QA, annotation done but QA not done
+      if (
+        t.assigned_qa_id === user?.id &&
+        t.completed_status?.annotator_part &&
+        !t.completed_status?.qa_part
+      ) {
+        return true;
+      }
+      return false;
+    }).length,
+    completed: tasks.filter((t) => {
+      // If user is annotator and annotation is done
+      if (
+        t.assigned_annotator_id === user?.id &&
+        t.completed_status?.annotator_part
+      ) {
+        return true;
+      }
+      // If user is QA and QA is done
+      if (t.assigned_qa_id === user?.id && t.completed_status?.qa_part) {
+        return true;
+      }
+      return false;
+    }).length,
     returned: tasks.filter((t) => t.is_returned).length,
   };
 
@@ -390,10 +420,25 @@ export default function ProjectDetailPage() {
                   <h3 className="text-lg font-semibold">Your Assigned Tasks</h3>
                   <p className="text-sm text-gray-600 mt-1">
                     {
-                      tasks.filter(
-                        (t) =>
-                          !t.is_returned && !t.completed_status?.annotator_part
-                      ).length
+                      tasks.filter((t) => {
+                        // Annotation tasks not returned and not completed
+                        if (
+                          t.assigned_annotator_id === user?.id &&
+                          !t.is_returned &&
+                          !t.completed_status?.annotator_part
+                        ) {
+                          return true;
+                        }
+                        // QA tasks where annotation done but QA not done
+                        if (
+                          t.assigned_qa_id === user?.id &&
+                          t.completed_status?.annotator_part &&
+                          !t.completed_status?.qa_part
+                        ) {
+                          return true;
+                        }
+                        return false;
+                      }).length
                     }{" "}
                     task(s) ready to work on
                   </p>
@@ -415,10 +460,24 @@ export default function ProjectDetailPage() {
                   </h3>
                   <p className="text-sm text-gray-600 mt-1">
                     {
-                      tasks.filter(
-                        (t) =>
-                          t.completed_status?.annotator_part && !t.is_returned
-                      ).length
+                      tasks.filter((t) => {
+                        // Annotation tasks completed and not returned
+                        if (
+                          t.assigned_annotator_id === user?.id &&
+                          t.completed_status?.annotator_part &&
+                          !t.is_returned
+                        ) {
+                          return true;
+                        }
+                        // QA tasks where QA is completed
+                        if (
+                          t.assigned_qa_id === user?.id &&
+                          t.completed_status?.qa_part
+                        ) {
+                          return true;
+                        }
+                        return false;
+                      }).length
                     }{" "}
                     task(s) submitted for review
                   </p>
