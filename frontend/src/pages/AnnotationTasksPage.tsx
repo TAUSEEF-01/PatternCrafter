@@ -33,9 +33,9 @@ export default function AnnotationTasksPage() {
     <div className="max-w-6xl mx-auto space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1>My Annotation Tasks</h1>
+          <h1>My Assigned Tasks</h1>
           <p className="text-sm text-gray-600 mt-1">
-            Tasks assigned to you for annotation
+            Complete these tasks and submit them
           </p>
         </div>
         <LinkFix className="btn btn-ghost" to={`/projects/${projectId}`}>
@@ -54,11 +54,10 @@ export default function AnnotationTasksPage() {
           <div className="card-body text-center py-12">
             <div className="text-4xl mb-3">📭</div>
             <h3 className="text-lg font-medium text-gray-700">
-              No tasks to annotate
+              No tasks assigned
             </h3>
             <p className="text-sm text-gray-500 mt-1">
-              All your annotation tasks are complete or no tasks have been
-              assigned yet.
+              You don't have any tasks assigned at the moment.
             </p>
           </div>
         </div>

@@ -224,20 +224,12 @@ function TaskCard({
           </div>
           <div className="flex items-center gap-3">
             {isManager && (
-              <>
-                <LinkFix
-                  className="btn btn-outline btn-sm"
-                  to={`/tasks/${t.id}/assign`}
-                >
-                  Assign
-                </LinkFix>
-                <LinkFix
-                  className="btn btn-outline btn-sm"
-                  to={`/tasks/${t.id}/assign-qa`}
-                >
-                  Assign QA
-                </LinkFix>
-              </>
+              <LinkFix
+                className="btn btn-outline btn-sm"
+                to={`/tasks/${t.id}/assign`}
+              >
+                Assign
+              </LinkFix>
             )}
             <LinkFix
               className="btn btn-primary btn-sm"

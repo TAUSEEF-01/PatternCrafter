@@ -35,8 +35,12 @@ export default function AnnotatorCompletedTasksPage() {
               !t.is_returned
             );
           }
-          // For managers: show all completed annotation tasks
-          return t.completed_status?.annotator_part;
+          // For managers: show all completed annotation tasks that are awaiting QA (not yet QA completed)
+          return (
+            t.completed_status?.annotator_part &&
+            !t.completed_status?.qa_part &&
+            !t.is_returned
+          );
         });
         setTasks(completed);
       })
@@ -74,9 +78,9 @@ export default function AnnotatorCompletedTasksPage() {
     <div className="max-w-6xl mx-auto space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1>Completed by Annotator</h1>
+          <h1>Pending QA Review</h1>
           <p className="text-sm text-gray-600 mt-1">
-            Tasks that have been completed and are awaiting QA review
+            Tasks completed by annotators awaiting QA review
           </p>
         </div>
         <LinkFix className="btn btn-ghost" to={`/projects/${projectId}`}>

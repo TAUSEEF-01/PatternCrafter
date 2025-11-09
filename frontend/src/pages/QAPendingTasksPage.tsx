@@ -33,9 +33,9 @@ export default function QAPendingTasksPage() {
     <div className="max-w-6xl mx-auto space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1>Pending QA Reviews</h1>
+          <h1>My QA Review Tasks</h1>
           <p className="text-sm text-gray-600 mt-1">
-            Tasks assigned to you for quality assurance review
+            Review these tasks and approve or return them
           </p>
         </div>
         <LinkFix className="btn btn-ghost" to={`/projects/${projectId}`}>
@@ -54,11 +54,10 @@ export default function QAPendingTasksPage() {
           <div className="card-body text-center py-12">
             <div className="text-4xl mb-3">✅</div>
             <h3 className="text-lg font-medium text-gray-700">
-              No tasks pending review
+              No tasks assigned for review
             </h3>
             <p className="text-sm text-gray-500 mt-1">
-              All your QA reviews are complete or no tasks have been assigned
-              for review yet.
+              You don't have any tasks assigned for QA review at the moment.
             </p>
           </div>
         </div>
