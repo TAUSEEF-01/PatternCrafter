@@ -119,6 +119,7 @@ class Project(BaseModel):
     details: str
     category: TaskCategory  # Added category field
     task_ids: List[PyObjectId] = []
+    is_completed: bool = False  # Track if project is marked as completed
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
     class Config:
@@ -134,6 +135,7 @@ class ProjectResponse(BaseModel):
     details: str
     category: TaskCategory
     task_ids: List[str] = []
+    is_completed: bool = False
     created_at: datetime
 
 
@@ -389,6 +391,9 @@ class ProjectWorking(BaseModel):
     id: PyObjectId = Field(default_factory=PyObjectId, alias="_id")
     project_id: PyObjectId
     annotator_assignments: List[AnnotatorTaskAssignment] = []
+    qa_annotator_ids: List[PyObjectId] = (
+        []
+    )  # Annotators designated as QA for this project
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
     class Config:

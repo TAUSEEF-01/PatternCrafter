@@ -5,6 +5,7 @@ export type Project = {
   // Backend expects `details` as a simple string (e.g., project name/description)
   details: string;
   category: string;
+  is_completed: boolean;
 };
 
 export type Task = {
