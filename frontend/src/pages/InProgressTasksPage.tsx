@@ -14,6 +14,22 @@ export default function InProgressTasksPage() {
   const [projectAnnotators, setProjectAnnotators] = useState<
     { id: string; name: string; email: string }[]
   >([]);
+  const [notification, setNotification] = useState<{
+    message: string;
+    type: "success" | "error";
+  } | null>(null);
+  const [unassignTaskModal, setUnassignTaskModal] = useState<{
+    taskId: string;
+    taskName: string;
+  } | null>(null);
+
+  // Auto-dismiss notification after 5 seconds
+  useEffect(() => {
+    if (notification) {
+      const timer = setTimeout(() => setNotification(null), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [notification]);
 
   useEffect(() => {
     if (!projectId) return;
@@ -51,8 +67,183 @@ export default function InProgressTasksPage() {
     }
   }, [projectId, user?.role]);
 
+  const handleUnassignTask = async (taskId: string, taskName: string) => {
+    try {
+      await apiFetch(`/tasks/${taskId}/unassign`, { method: "PUT" });
+      // Refresh tasks
+      const tasksPath =
+        user?.role === "annotator"
+          ? `/projects/${projectId}/my-tasks`
+          : `/projects/${projectId}/tasks`;
+      const allTasks = await apiFetch<Task[]>(tasksPath);
+      const inProgress = allTasks.filter((t) => {
+        if (user?.role === "annotator") {
+          return (
+            t.assigned_annotator_id === user?.id &&
+            !t.completed_status?.annotator_part
+          );
+        }
+        return !t.completed_status?.annotator_part;
+      });
+      setTasks(inProgress);
+      setNotification({
+        message: "Task unassigned successfully!",
+        type: "success",
+      });
+      setUnassignTaskModal(null);
+    } catch (e: any) {
+      setNotification({
+        message: e?.message || "Failed to unassign task",
+        type: "error",
+      });
+      setUnassignTaskModal(null);
+    }
+  };
+
   return (
     <div className="max-w-6xl mx-auto space-y-6">
+      {/* Unassign Task Confirmation Modal */}
+      {unassignTaskModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in">
+          <div className="relative max-w-md w-full rounded-2xl shadow-2xl border-2 bg-white dark:bg-gray-900 border-orange-300 dark:border-orange-700 p-6 animate-scale-in">
+            {/* Warning Icon */}
+            <div className="flex justify-center mb-4">
+              <div className="rounded-full p-3 bg-orange-100 dark:bg-orange-900/30">
+                <svg
+                  width="48"
+                  height="48"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="#ea580c"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                  <line x1="12" y1="9" x2="12" y2="13" />
+                  <line x1="12" y1="17" x2="12.01" y2="17" />
+                </svg>
+              </div>
+            </div>
+
+            {/* Title */}
+            <h3 className="text-2xl font-bold text-center mb-2 text-orange-600 dark:text-orange-400">
+              Unassign Task?
+            </h3>
+
+            {/* Message */}
+            <p className="text-center mb-2 text-gray-700 dark:text-gray-300">
+              You're about to unassign task{" "}
+              <span className="font-semibold">
+                "{unassignTaskModal.taskName}"
+              </span>
+            </p>
+            <p className="text-sm text-center mb-6 text-gray-600 dark:text-gray-400">
+              This will remove the assigned annotator and QA reviewer, and clear
+              all progress on this task.
+            </p>
+
+            {/* Action Buttons */}
+            <div className="flex gap-3">
+              <button
+                onClick={() => setUnassignTaskModal(null)}
+                className="flex-1 py-3 px-4 rounded-xl font-semibold transition-all bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 border-2 border-gray-300 dark:border-gray-700"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() =>
+                  handleUnassignTask(
+                    unassignTaskModal.taskId,
+                    unassignTaskModal.taskName
+                  )
+                }
+                className="flex-1 py-3 px-4 rounded-xl font-semibold text-white transition-all shadow-md hover:shadow-lg bg-gradient-to-r from-orange-600 to-orange-700 hover:from-orange-700 hover:to-orange-800"
+              >
+                Unassign Task
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Toast Notification */}
+      {notification && (
+        <div
+          className={`fixed top-20 right-6 z-50 max-w-md animate-slide-in-right shadow-2xl rounded-xl border-2 p-4 flex items-start gap-3 ${
+            notification.type === "success"
+              ? "bg-green-50 border-green-300"
+              : "bg-red-50 border-red-300"
+          }`}
+        >
+          <div className="flex-shrink-0">
+            {notification.type === "success" ? (
+              <svg
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="#16a34a"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                <polyline points="22 4 12 14.01 9 11.01" />
+              </svg>
+            ) : (
+              <svg
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="#dc2626"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <circle cx="12" cy="12" r="10" />
+                <line x1="15" y1="9" x2="9" y2="15" />
+                <line x1="9" y1="9" x2="15" y2="15" />
+              </svg>
+            )}
+          </div>
+          <div className="flex-1 min-w-0">
+            <p
+              className={`text-sm font-semibold ${
+                notification.type === "success"
+                  ? "text-green-800"
+                  : "text-red-800"
+              }`}
+            >
+              {notification.message}
+            </p>
+          </div>
+          <button
+            onClick={() => setNotification(null)}
+            className={`flex-shrink-0 rounded-lg p-1 transition-colors ${
+              notification.type === "success"
+                ? "hover:bg-green-200 text-green-600"
+                : "hover:bg-red-200 text-red-600"
+            }`}
+          >
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
+        </div>
+      )}
+
       <div className="flex items-center justify-between">
         <div>
           <h1>Tasks In Progress</h1>
@@ -88,6 +279,8 @@ export default function InProgressTasksPage() {
               t={t}
               isManager={user?.role !== "annotator"}
               annotators={projectAnnotators}
+              onUnassign={handleUnassignTask}
+              onOpenUnassignModal={setUnassignTaskModal}
             />
           ))}
         </div>
@@ -183,10 +376,14 @@ function TaskCard({
   t,
   isManager,
   annotators = [],
+  onUnassign,
+  onOpenUnassignModal,
 }: {
   t: Task;
   isManager: boolean;
   annotators?: { id: string; name: string; email: string }[];
+  onUnassign?: (taskId: string, taskName: string) => void;
+  onOpenUnassignModal?: (data: { taskId: string; taskName: string }) => void;
 }) {
   const annotatorInfo = annotators.find(
     (a) => a.id === t.assigned_annotator_id
@@ -224,12 +421,29 @@ function TaskCard({
           </div>
           <div className="flex items-center gap-3">
             {isManager && (
-              <LinkFix
-                className="btn btn-outline btn-sm"
-                to={`/tasks/${t.id}/assign`}
-              >
-                Assign
-              </LinkFix>
+              <>
+                <LinkFix
+                  className="btn btn-outline btn-sm"
+                  to={`/tasks/${t.id}/assign`}
+                >
+                  Assign
+                </LinkFix>
+                {(t.assigned_annotator_id || t.assigned_qa_id) &&
+                  onOpenUnassignModal && (
+                    <button
+                      onClick={() =>
+                        onOpenUnassignModal({
+                          taskId: t.id,
+                          taskName: `Task ${t.id.slice(0, 8)}`,
+                        })
+                      }
+                      className="btn btn-outline btn-sm text-orange-600 hover:bg-orange-50 border-orange-600"
+                      title="Unassign this task"
+                    >
+                      ↩️ Unassign
+                    </button>
+                  )}
+              </>
             )}
             <LinkFix
               className="btn btn-primary btn-sm"

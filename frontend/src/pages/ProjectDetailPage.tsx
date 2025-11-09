@@ -35,6 +35,10 @@ export default function ProjectDetailPage() {
     taskId: string;
     taskName: string;
   } | null>(null);
+  const [unassignTaskModal, setUnassignTaskModal] = useState<{
+    taskId: string;
+    taskName: string;
+  } | null>(null);
   const [notification, setNotification] = useState<{
     message: string;
     type: "success" | "error" | "info";
@@ -154,12 +158,38 @@ export default function ProjectDetailPage() {
       });
       setDeleteTaskModal(null);
     } catch (e: any) {
+      const errorMessage = e?.message || "Failed to delete task";
       setNotification({
-        message: e?.message || "Failed to delete task",
+        message: errorMessage,
         type: "error",
       });
+      setDeleteTaskModal(null);
     } finally {
       setDeletingTaskId(null);
+    }
+  };
+
+  const handleUnassignTask = async (taskId: string, taskName: string) => {
+    try {
+      await apiFetch(`/tasks/${taskId}/unassign`, { method: "PUT" });
+      // Refresh tasks to show updated state
+      const tasksPath =
+        user?.role === "annotator"
+          ? `/projects/${projectId}/my-tasks`
+          : `/projects/${projectId}/tasks`;
+      const updatedTasks = await apiFetch<Task[]>(tasksPath);
+      setTasks(updatedTasks);
+      setNotification({
+        message: "Task unassigned successfully!",
+        type: "success",
+      });
+      setUnassignTaskModal(null);
+    } catch (e: any) {
+      setNotification({
+        message: e?.message || "Failed to unassign task",
+        type: "error",
+      });
+      setUnassignTaskModal(null);
     }
   };
 
@@ -190,6 +220,71 @@ export default function ProjectDetailPage() {
 
   return (
     <div className="space-y-6">
+      {/* Unassign Task Confirmation Modal */}
+      {unassignTaskModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in">
+          <div className="relative max-w-md w-full rounded-2xl shadow-2xl border-2 bg-white dark:bg-gray-900 border-orange-300 dark:border-orange-700 p-6 animate-scale-in">
+            {/* Warning Icon */}
+            <div className="flex justify-center mb-4">
+              <div className="rounded-full p-3 bg-orange-100 dark:bg-orange-900/30">
+                <svg
+                  width="48"
+                  height="48"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="#ea580c"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                  <line x1="12" y1="9" x2="12" y2="13" />
+                  <line x1="12" y1="17" x2="12.01" y2="17" />
+                </svg>
+              </div>
+            </div>
+
+            {/* Title */}
+            <h3 className="text-2xl font-bold text-center mb-2 text-orange-600 dark:text-orange-400">
+              Unassign Task?
+            </h3>
+
+            {/* Message */}
+            <p className="text-center mb-2 text-gray-700 dark:text-gray-300">
+              You're about to unassign task{" "}
+              <span className="font-semibold">
+                "{unassignTaskModal.taskName}"
+              </span>
+            </p>
+            <p className="text-sm text-center mb-6 text-gray-600 dark:text-gray-400">
+              This will remove the assigned annotator and QA reviewer, and clear
+              all progress on this task.
+            </p>
+
+            {/* Action Buttons */}
+            <div className="flex gap-3">
+              <button
+                onClick={() => setUnassignTaskModal(null)}
+                className="flex-1 py-3 px-4 rounded-xl font-semibold transition-all bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 border-2 border-gray-300 dark:border-gray-700"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() =>
+                  handleUnassignTask(
+                    unassignTaskModal.taskId,
+                    unassignTaskModal.taskName
+                  )
+                }
+                className="flex-1 py-3 px-4 rounded-xl font-semibold text-white transition-all shadow-md hover:shadow-lg bg-gradient-to-r from-orange-600 to-orange-700 hover:from-orange-700 hover:to-orange-800"
+              >
+                Unassign Task
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Delete Task Confirmation Modal */}
       {deleteTaskModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in">
@@ -660,6 +755,23 @@ export default function ProjectDetailPage() {
         // Manager View
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
           <LinkFix
+            to={`/projects/${projectId}/invites`}
+            className="card hover:shadow-xl transition-shadow border-l-4 border-indigo-500"
+          >
+            <div className="card-body">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-lg font-semibold">👥 Manage Invites</h3>
+                  <p className="text-sm text-gray-600 mt-1">
+                    Invite annotators to this project
+                  </p>
+                </div>
+                <div className="text-3xl">→</div>
+              </div>
+            </div>
+          </LinkFix>
+
+          <LinkFix
             to={`/projects/${projectId}/tasks/create`}
             state={{ category: project?.category }}
             className="card hover:shadow-xl transition-shadow border-l-4 border-purple-500"
@@ -963,6 +1075,21 @@ export default function ProjectDetailPage() {
                               >
                                 👁️ View
                               </LinkFix>
+                              {(task.assigned_annotator_id ||
+                                task.assigned_qa_id) && (
+                                <button
+                                  onClick={() =>
+                                    setUnassignTaskModal({
+                                      taskId: task.id,
+                                      taskName: `Task ${task.id.slice(0, 8)}`,
+                                    })
+                                  }
+                                  className="btn btn-ghost btn-sm text-orange-600 hover:bg-orange-50"
+                                  title="Unassign this task"
+                                >
+                                  ↩️
+                                </button>
+                              )}
                               <button
                                 onClick={() =>
                                   setDeleteTaskModal({
@@ -972,6 +1099,7 @@ export default function ProjectDetailPage() {
                                 }
                                 disabled={deletingTaskId === task.id}
                                 className="btn btn-ghost btn-sm text-red-600 hover:bg-red-50"
+                                title="Delete this task"
                               >
                                 🗑️
                               </button>
