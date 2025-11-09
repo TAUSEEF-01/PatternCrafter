@@ -15,6 +15,18 @@ export default function ManageRolesPage() {
   >([]);
   const [selectedQaIds, setSelectedQaIds] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
+  const [notification, setNotification] = useState<{
+    message: string;
+    type: "success" | "error";
+  } | null>(null);
+
+  // Auto-dismiss notification after 5 seconds
+  useEffect(() => {
+    if (notification) {
+      const timer = setTimeout(() => setNotification(null), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [notification]);
 
   useEffect(() => {
     if (!projectId) return;
@@ -54,7 +66,10 @@ export default function ManageRolesPage() {
       >(`/projects/${projectId}/qa-annotators`);
       setQaAnnotators(qaList);
       setSaving(false);
-      alert("QA reviewers updated successfully!");
+      setNotification({
+        message: "QA reviewers updated successfully!",
+        type: "success",
+      });
     } catch (e: any) {
       setError(e?.message || "Failed to update QA annotators");
       setSaving(false);
@@ -63,6 +78,83 @@ export default function ManageRolesPage() {
 
   return (
     <div className="max-w-5xl mx-auto space-y-6">
+      {/* Toast Notification */}
+      {notification && (
+        <div
+          className={`fixed top-20 right-6 z-50 max-w-md animate-slide-in-right shadow-2xl rounded-xl border-2 p-4 flex items-start gap-3 ${
+            notification.type === "success"
+              ? "bg-green-50 border-green-300"
+              : "bg-red-50 border-red-300"
+          }`}
+        >
+          <div className="flex-shrink-0">
+            {notification.type === "success" ? (
+              <svg
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="#16a34a"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                <polyline points="22 4 12 14.01 9 11.01" />
+              </svg>
+            ) : (
+              <svg
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="#dc2626"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <circle cx="12" cy="12" r="10" />
+                <line x1="15" y1="9" x2="9" y2="15" />
+                <line x1="9" y1="9" x2="15" y2="15" />
+              </svg>
+            )}
+          </div>
+          <div className="flex-1 min-w-0">
+            <p
+              className={`text-sm font-semibold ${
+                notification.type === "success"
+                  ? "text-green-800"
+                  : "text-red-800"
+              }`}
+            >
+              {notification.message}
+            </p>
+          </div>
+          <button
+            onClick={() => setNotification(null)}
+            className={`flex-shrink-0 rounded-lg p-1 transition-colors ${
+              notification.type === "success"
+                ? "hover:bg-green-200 text-green-600"
+                : "hover:bg-red-200 text-red-600"
+            }`}
+          >
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
+        </div>
+      )}
+
       <div className="flex items-center justify-between">
         <h1>Manage Roles</h1>
         <LinkFix className="btn btn-ghost" to={`/projects/${projectId}`}>

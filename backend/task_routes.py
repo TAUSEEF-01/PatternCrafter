@@ -818,9 +818,10 @@ async def submit_qa(
 @router.put("/tasks/{task_id}/return")
 async def return_task_to_annotator(
     task_id: str,
+    body: Dict[str, Any] = None,
     current_user: UserInDB = Depends(get_current_user),
 ):
-    """Return a completed task back to the annotator for revision (manager or admin only)"""
+    """Return a completed task back to the annotator for revision (manager, admin, or assigned QA reviewer)"""
     if not ObjectId.is_valid(task_id):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid task ID"
@@ -832,16 +833,29 @@ async def return_task_to_annotator(
             status_code=status.HTTP_404_NOT_FOUND, detail="Task not found"
         )
 
-    # Only admins or the project's manager can return tasks
+    # Allow admins, the project's manager, or the assigned QA reviewer to return tasks
     project = await database.projects_collection.find_one({"_id": task["project_id"]})
-    if current_user.role not in ["admin", "manager"] or (
+    is_manager = (
         current_user.role == "manager"
         and project
-        and project["manager_id"] != current_user.id
+        and project["manager_id"] == current_user.id
+    )
+    is_assigned_qa = task.get("assigned_qa_id") == current_user.id
+
+    if current_user.role not in ["admin", "manager", "annotator"] or (
+        current_user.role == "manager" and not is_manager
     ):
+        if not is_assigned_qa:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Not authorized to return this task",
+            )
+
+    # If user is annotator, they must be the assigned QA reviewer
+    if current_user.role == "annotator" and not is_assigned_qa:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not authorized to return this task",
+            detail="Only the assigned QA reviewer can return this task",
         )
 
     # Task must be completed by annotator to be returnable
@@ -867,9 +881,14 @@ async def return_task_to_annotator(
     previous_accumulated_time = task.get("accumulated_time", 0) or 0
     new_accumulated_time = previous_accumulated_time + current_completion_time
 
+    # Get return reason from request body
+    return_reason = body.get("return_reason", "") if body else ""
+
     updates = {
         "completed_status.annotator_part": False,
         "is_returned": True,
+        "return_reason": return_reason,
+        "returned_by": current_user.id,
         "accumulated_time": new_accumulated_time,
         "annotator_completed_at": None,
     }
@@ -908,7 +927,7 @@ async def return_task_to_annotator(
 
 @router.delete("/tasks/{task_id}")
 async def delete_task(task_id: str, current_user: UserInDB = Depends(get_current_user)):
-    """Delete a task (manager only)"""
+    """Delete a task (manager only, cannot delete assigned tasks)"""
     if current_user.role != "manager":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -934,6 +953,13 @@ async def delete_task(task_id: str, current_user: UserInDB = Depends(get_current
             detail="Not authorized to delete this task",
         )
 
+    # Check if task is assigned to an annotator or QA
+    if task.get("assigned_annotator_id") or task.get("assigned_qa_id"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot delete assigned task. Please unassign the task first.",
+        )
+
     # Remove task from project_working assignments
     await database.project_working_collection.update_many(
         {"project_id": task["project_id"]},
@@ -949,6 +975,69 @@ async def delete_task(task_id: str, current_user: UserInDB = Depends(get_current
     await database.tasks_collection.delete_one({"_id": ObjectId(task_id)})
 
     return {"message": "Task deleted successfully"}
+
+
+@router.put("/tasks/{task_id}/unassign")
+async def unassign_task(
+    task_id: str, current_user: UserInDB = Depends(get_current_user)
+):
+    """Unassign annotator and/or QA from a task (manager only)"""
+    if current_user.role != "manager":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only managers can unassign tasks",
+        )
+
+    if not ObjectId.is_valid(task_id):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid task ID"
+        )
+
+    task = await database.tasks_collection.find_one({"_id": ObjectId(task_id)})
+    if not task:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Task not found"
+        )
+
+    # Verify the manager owns the project
+    project = await database.projects_collection.find_one({"_id": task["project_id"]})
+    if not project or project["manager_id"] != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to unassign this task",
+        )
+
+    update = {
+        "assigned_annotator_id": None,
+        "assigned_qa_id": None,
+        "annotation": None,
+        "qa_annotation": None,
+        "qa_feedback": None,
+        "completed_status": {"annotator_part": False, "qa_part": False},
+        "is_returned": False,
+        "annotator_started_at": None,
+        "annotator_completed_at": None,
+        "qa_started_at": None,
+        "qa_completed_at": None,
+    }
+
+    # Update the task
+    await database.tasks_collection.update_one(
+        {"_id": ObjectId(task_id)}, {"$set": update}
+    )
+
+    # Remove task from project_working assignments
+    await database.project_working_collection.update_many(
+        {"project_id": task["project_id"]},
+        {"$pull": {"annotator_assignments.$[].task_ids": ObjectId(task_id)}},
+    )
+
+    # Delete related annotator_tasks records
+    await database.annotator_tasks_collection.delete_many(
+        {"task_id": ObjectId(task_id)}
+    )
+
+    return {"message": "Task unassigned successfully"}
 
 
 @router.get("/annotators/my-task-history")

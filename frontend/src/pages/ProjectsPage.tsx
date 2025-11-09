@@ -56,6 +56,14 @@ export default function ProjectsPage() {
     projectId: string;
     projectName: string;
   } | null>(null);
+  const [completeConfirmModal, setCompleteConfirmModal] = useState<{
+    projectId: string;
+    projectName: string;
+  } | null>(null);
+  const [reopenConfirmModal, setReopenConfirmModal] = useState<{
+    projectId: string;
+    projectName: string;
+  } | null>(null);
   const [taskCounts, setTaskCounts] = useState<Map<string, number>>(new Map());
 
   // Auto-dismiss notification after 5 seconds
@@ -114,7 +122,6 @@ export default function ProjectsPage() {
   };
 
   const handleMarkComplete = async (projectId: string) => {
-    if (!confirm("Mark this project as complete?")) return;
     setCompletingId(projectId);
     try {
       const updated = await apiFetch<Project>(
@@ -128,6 +135,7 @@ export default function ProjectsPage() {
         message: "Project marked as complete successfully!",
         type: "success",
       });
+      setCompleteConfirmModal(null);
     } catch (e: any) {
       setNotification({
         message: e?.message || "Failed to mark project as complete",
@@ -139,7 +147,6 @@ export default function ProjectsPage() {
   };
 
   const handleReopenProject = async (projectId: string) => {
-    if (!confirm("Reopen this project?")) return;
     try {
       const updated = await apiFetch<Project>(`/projects/${projectId}/reopen`, {
         method: "PUT",
@@ -151,6 +158,7 @@ export default function ProjectsPage() {
         message: "Project reopened successfully!",
         type: "success",
       });
+      setReopenConfirmModal(null);
     } catch (e: any) {
       setNotification({
         message: e?.message || "Failed to reopen project",
@@ -186,6 +194,202 @@ export default function ProjectsPage() {
 
   return (
     <div className="space-y-6 p-6">
+      {/* Complete Confirmation Modal */}
+      {completeConfirmModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in">
+          <div
+            className={`relative max-w-md w-full rounded-2xl shadow-2xl border-2 p-6 animate-scale-in ${
+              darkMode
+                ? "bg-gray-900 border-green-700"
+                : "bg-white border-green-300"
+            }`}
+          >
+            {/* Success Icon */}
+            <div className="flex justify-center mb-4">
+              <div
+                className={`rounded-full p-3 ${
+                  darkMode ? "bg-green-900/30" : "bg-green-100"
+                }`}
+              >
+                <svg
+                  width="48"
+                  height="48"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke={darkMode ? "#4ade80" : "#16a34a"}
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                  <polyline points="22 4 12 14.01 9 11.01" />
+                </svg>
+              </div>
+            </div>
+
+            {/* Title */}
+            <h3
+              className={`text-2xl font-bold text-center mb-2 ${
+                darkMode ? "text-green-400" : "text-green-600"
+              }`}
+            >
+              Mark Project Complete?
+            </h3>
+
+            {/* Message */}
+            <p
+              className={`text-center mb-2 ${
+                darkMode ? "text-gray-300" : "text-gray-700"
+              }`}
+            >
+              You're about to mark{" "}
+              <span className="font-semibold">
+                "{completeConfirmModal.projectName}"
+              </span>{" "}
+              as complete.
+            </p>
+            <p
+              className={`text-sm text-center mb-6 ${
+                darkMode ? "text-gray-400" : "text-gray-600"
+              }`}
+            >
+              This will move the project to the completed tab.
+            </p>
+
+            {/* Action Buttons */}
+            <div className="flex gap-3">
+              <button
+                onClick={() => setCompleteConfirmModal(null)}
+                disabled={completingId === completeConfirmModal.projectId}
+                className={`flex-1 py-3 px-4 rounded-xl font-semibold transition-all ${
+                  darkMode
+                    ? "bg-gray-800 text-gray-300 hover:bg-gray-700 border-2 border-gray-700"
+                    : "bg-gray-100 text-gray-700 hover:bg-gray-200 border-2 border-gray-300"
+                }`}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() =>
+                  handleMarkComplete(completeConfirmModal.projectId)
+                }
+                disabled={completingId === completeConfirmModal.projectId}
+                className={`flex-1 py-3 px-4 rounded-xl font-semibold text-white transition-all shadow-md hover:shadow-lg ${
+                  completingId === completeConfirmModal.projectId
+                    ? "bg-green-400 cursor-not-allowed"
+                    : "bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800"
+                }`}
+              >
+                {completingId === completeConfirmModal.projectId ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <svg
+                      className="animate-spin"
+                      width="20"
+                      height="20"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                    >
+                      <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+                    </svg>
+                    Processing...
+                  </span>
+                ) : (
+                  "Mark Complete"
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Reopen Confirmation Modal */}
+      {reopenConfirmModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in">
+          <div
+            className={`relative max-w-md w-full rounded-2xl shadow-2xl border-2 p-6 animate-scale-in ${
+              darkMode
+                ? "bg-gray-900 border-blue-700"
+                : "bg-white border-blue-300"
+            }`}
+          >
+            {/* Info Icon */}
+            <div className="flex justify-center mb-4">
+              <div
+                className={`rounded-full p-3 ${
+                  darkMode ? "bg-blue-900/30" : "bg-blue-100"
+                }`}
+              >
+                <svg
+                  width="48"
+                  height="48"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke={darkMode ? "#60a5fa" : "#2563eb"}
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                  <circle cx="12" cy="12" r="3" />
+                </svg>
+              </div>
+            </div>
+
+            {/* Title */}
+            <h3
+              className={`text-2xl font-bold text-center mb-2 ${
+                darkMode ? "text-blue-400" : "text-blue-600"
+              }`}
+            >
+              Reopen Project?
+            </h3>
+
+            {/* Message */}
+            <p
+              className={`text-center mb-2 ${
+                darkMode ? "text-gray-300" : "text-gray-700"
+              }`}
+            >
+              You're about to reopen{" "}
+              <span className="font-semibold">
+                "{reopenConfirmModal.projectName}"
+              </span>
+            </p>
+            <p
+              className={`text-sm text-center mb-6 ${
+                darkMode ? "text-gray-400" : "text-gray-600"
+              }`}
+            >
+              This will move the project back to the running tab.
+            </p>
+
+            {/* Action Buttons */}
+            <div className="flex gap-3">
+              <button
+                onClick={() => setReopenConfirmModal(null)}
+                className={`flex-1 py-3 px-4 rounded-xl font-semibold transition-all ${
+                  darkMode
+                    ? "bg-gray-800 text-gray-300 hover:bg-gray-700 border-2 border-gray-700"
+                    : "bg-gray-100 text-gray-700 hover:bg-gray-200 border-2 border-gray-300"
+                }`}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() =>
+                  handleReopenProject(reopenConfirmModal.projectId)
+                }
+                className="flex-1 py-3 px-4 rounded-xl font-semibold text-white transition-all shadow-md hover:shadow-lg bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800"
+              >
+                Reopen Project
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Delete Confirmation Modal */}
       {deleteConfirmModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in">
@@ -701,33 +905,6 @@ export default function ProjectsPage() {
                       style={{ borderColor: darkMode ? "#334155" : "#e5e7eb" }}
                     >
                       <div
-                        className={`flex items-center gap-1 text-sm font-medium transition-colors cursor-pointer ${
-                          darkMode
-                            ? "text-gray-300 hover:text-[#D78FEE]"
-                            : "text-gray-600 hover:text-[#2E073F]"
-                        }`}
-                        onClick={(e: React.MouseEvent) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          window.location.href = `/projects/${p.id}/invites`;
-                        }}
-                      >
-                        <svg
-                          width="16"
-                          height="16"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                        >
-                          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-                          <circle cx="9" cy="7" r="4" />
-                          <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
-                          <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-                        </svg>
-                        Invites
-                      </div>
-                      <div
                         className={`flex items-center gap-1 text-sm font-medium ${
                           darkMode ? "text-gray-400" : "text-gray-500"
                         }`}
@@ -758,7 +935,10 @@ export default function ProjectsPage() {
                             onClick={(e: React.MouseEvent) => {
                               e.preventDefault();
                               e.stopPropagation();
-                              handleReopenProject(p.id);
+                              setReopenConfirmModal({
+                                projectId: p.id,
+                                projectName: p.details || p.id,
+                              });
                             }}
                             className={`flex-1 py-2 px-3 rounded-lg text-xs font-semibold transition-colors ${
                               darkMode
@@ -773,7 +953,10 @@ export default function ProjectsPage() {
                             onClick={(e: React.MouseEvent) => {
                               e.preventDefault();
                               e.stopPropagation();
-                              handleMarkComplete(p.id);
+                              setCompleteConfirmModal({
+                                projectId: p.id,
+                                projectName: p.details || p.id,
+                              });
                             }}
                             disabled={completingId === p.id}
                             className={`flex-1 py-2 px-3 rounded-lg text-xs font-semibold transition-colors ${

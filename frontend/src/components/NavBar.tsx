@@ -1,7 +1,17 @@
-import { Link as RRLink, NavLink as RRNavLink, useNavigate } from 'react-router-dom';
-import { useAuth } from '@/auth/AuthContext';
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import NotificationBell from './NotificationBell';
+import {
+  Link as RRLink,
+  NavLink as RRNavLink,
+  useNavigate,
+} from "react-router-dom";
+import { useAuth } from "@/auth/AuthContext";
+import {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  ReactNode,
+} from "react";
+import NotificationBell from "./NotificationBell";
 
 // Theme Context
 interface ThemeContextType {
@@ -13,16 +23,16 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [darkMode, setDarkMode] = useState(() => {
-    const saved = localStorage.getItem('darkMode');
+    const saved = localStorage.getItem("darkMode");
     return saved ? JSON.parse(saved) : false;
   });
 
   useEffect(() => {
-    localStorage.setItem('darkMode', JSON.stringify(darkMode));
+    localStorage.setItem("darkMode", JSON.stringify(darkMode));
     if (darkMode) {
-      document.documentElement.classList.add('dark');
+      document.documentElement.classList.add("dark");
     } else {
-      document.documentElement.classList.remove('dark');
+      document.documentElement.classList.remove("dark");
     }
   }, [darkMode]);
 
@@ -38,7 +48,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 export function useTheme() {
   const context = useContext(ThemeContext);
   if (!context) {
-    throw new Error('useTheme must be used within ThemeProvider');
+    throw new Error("useTheme must be used within ThemeProvider");
   }
   return context;
 }
@@ -48,9 +58,11 @@ export function AnimatedBackground() {
   const { darkMode } = useTheme();
 
   useEffect(() => {
-    const canvas = document.getElementById('app-bg-canvas') as HTMLCanvasElement;
+    const canvas = document.getElementById(
+      "app-bg-canvas"
+    ) as HTMLCanvasElement;
     if (!canvas) return;
-    const ctx = canvas.getContext('2d');
+    const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
     const resize = () => {
@@ -58,7 +70,7 @@ export function AnimatedBackground() {
       canvas.height = window.innerHeight;
     };
     resize();
-    window.addEventListener('resize', resize);
+    window.addEventListener("resize", resize);
 
     const particles: Array<{
       x: number;
@@ -100,12 +112,16 @@ export function AnimatedBackground() {
           ? `rgba(200, 200, 255, ${particle.opacity})`
           : `rgba(100, 100, 200, ${particle.opacity})`;
         ctx.shadowBlur = 10;
-        ctx.shadowColor = darkMode ? 'rgba(150, 150, 255, 0.5)' : 'rgba(100, 100, 200, 0.3)';
+        ctx.shadowColor = darkMode
+          ? "rgba(150, 150, 255, 0.5)"
+          : "rgba(100, 100, 200, 0.3)";
         ctx.fill();
         ctx.shadowBlur = 0;
       });
 
-      ctx.strokeStyle = darkMode ? 'rgba(200, 200, 255, 0.15)' : 'rgba(100, 100, 200, 0.1)';
+      ctx.strokeStyle = darkMode
+        ? "rgba(200, 200, 255, 0.15)"
+        : "rgba(100, 100, 200, 0.1)";
       ctx.lineWidth = 1;
       for (let i = 0; i < particles.length; i++) {
         for (let j = i + 1; j < particles.length; j++) {
@@ -129,7 +145,7 @@ export function AnimatedBackground() {
     animate();
 
     return () => {
-      window.removeEventListener('resize', resize);
+      window.removeEventListener("resize", resize);
       cancelAnimationFrame(animationId);
     };
   }, [darkMode]);
@@ -138,13 +154,13 @@ export function AnimatedBackground() {
     <canvas
       id="app-bg-canvas"
       style={{
-        position: 'fixed',
+        position: "fixed",
         top: 0,
         left: 0,
-        width: '100%',
-        height: '100%',
+        width: "100%",
+        height: "100%",
         zIndex: 0,
-        pointerEvents: 'none',
+        pointerEvents: "none",
       }}
     />
   );
@@ -162,19 +178,24 @@ export default function NavBar() {
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
-      const dropdown = document.getElementById('profile-dropdown');
-      const button = document.getElementById('profile-button');
-      if (dropdown && button && !dropdown.contains(e.target as Node) && !button.contains(e.target as Node)) {
+      const dropdown = document.getElementById("profile-dropdown");
+      const button = document.getElementById("profile-button");
+      if (
+        dropdown &&
+        button &&
+        !dropdown.contains(e.target as Node) &&
+        !button.contains(e.target as Node)
+      ) {
         setDropdownOpen(false);
       }
     };
 
     if (dropdownOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener("mousedown", handleClickOutside);
     }
 
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener("mousedown", handleClickOutside);
     };
   }, [dropdownOpen]);
 
@@ -185,31 +206,31 @@ export default function NavBar() {
 
   const handleProfileClick = () => {
     setDropdownOpen(false);
-    navigate('/profile');
+    navigate("/profile");
   };
 
   return (
     <nav
       style={{
-        backgroundColor: '#7A1CAC',
-        color: '#EBD3F8',
-        position: 'sticky',
+        backgroundColor: "#7A1CAC",
+        color: "#EBD3F8",
+        position: "sticky",
         top: 0,
         zIndex: 20,
-        borderBottom: '1px solid rgba(235, 211, 248, 0.2)',
+        borderBottom: "1px solid rgba(235, 211, 248, 0.2)",
       }}
     >
       <div className="container-app py-3 flex items-center justify-between">
         <Link
           to="/"
           className="flex items-center gap-2 font-semibold text-lg"
-          style={{ color: '#EBD3F8', textDecoration: 'none' }}
+          style={{ color: "#EBD3F8", textDecoration: "none" }}
         >
           <img
             src="/favicon.png"
             alt="PatternCrafter Logo"
             className="h-8 w-8"
-            style={{ objectFit: 'contain' }}
+            style={{ objectFit: "contain" }}
           />
           <span>PatternCrafter</span>
         </Link>
@@ -219,61 +240,62 @@ export default function NavBar() {
             <>
               <NavLink
                 className={({ isActive }: any) =>
-                  `text-sm ${isActive ? 'font-semibold' : 'hover:text-white'
-                  }`
+                  `text-sm ${isActive ? "font-semibold" : "hover:text-white"}`
                 }
                 style={({ isActive }: any) => ({
-                  color: isActive ? '#ffffff' : '#EBD3F8',
-                  textDecoration: 'none',
+                  color: isActive ? "#ffffff" : "#EBD3F8",
+                  textDecoration: "none",
                 })}
                 to="/projects"
               >
                 Projects
               </NavLink>
-              <NavLink
-                className={({ isActive }: any) =>
-                  `text-sm ${isActive ? 'font-semibold' : 'hover:text-white'
-                  }`
-                }
-                style={({ isActive }: any) => ({
-                  color: isActive ? '#ffffff' : '#EBD3F8',
-                  textDecoration: 'none',
-                })}
-                to="/invites"
-              >
-                Invites
-              </NavLink>
+              {user.role === "annotator" && (
+                <NavLink
+                  className={({ isActive }: any) =>
+                    `text-sm ${isActive ? "font-semibold" : "hover:text-white"}`
+                  }
+                  style={({ isActive }: any) => ({
+                    color: isActive ? "#ffffff" : "#EBD3F8",
+                    textDecoration: "none",
+                  })}
+                  to="/invites"
+                >
+                  Invites
+                </NavLink>
+              )}
 
               {/* Notification Bell */}
               <NotificationBell />
 
               {/* Profile Dropdown */}
-              <div style={{ position: 'relative' }}>
+              <div style={{ position: "relative" }}>
                 <button
                   id="profile-button"
                   onClick={() => setDropdownOpen(!dropdownOpen)}
                   className="flex items-center gap-2"
                   style={{
-                    color: '#EBD3F8',
-                    background: 'none',
-                    border: 'none',
-                    cursor: 'pointer',
-                    padding: '0.25rem',
-                    borderRadius: '0.5rem',
-                    transition: 'background-color 0.3s ease',
+                    color: "#EBD3F8",
+                    background: "none",
+                    border: "none",
+                    cursor: "pointer",
+                    padding: "0.25rem",
+                    borderRadius: "0.5rem",
+                    transition: "background-color 0.3s ease",
                   }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = 'rgba(235, 211, 248, 0.1)';
+                    e.currentTarget.style.backgroundColor =
+                      "rgba(235, 211, 248, 0.1)";
                   }}
                   onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = 'transparent';
+                    e.currentTarget.style.backgroundColor = "transparent";
                   }}
                 >
                   <div
                     className="h-8 w-8 rounded-full flex items-center justify-center text-sm font-semibold"
-                    style={{ backgroundColor: '#EBD3F8', color: '#2E073F' }}
+                    style={{ backgroundColor: "#EBD3F8", color: "#2E073F" }}
                   >
-                    {user.name?.[0]?.toUpperCase() || '?'}
+                    {user.name?.[0]?.toUpperCase() || "?"}
                   </div>
                 </button>
 
@@ -282,39 +304,47 @@ export default function NavBar() {
                   <div
                     id="profile-dropdown"
                     style={{
-                      position: 'absolute',
-                      top: '100%',
+                      position: "absolute",
+                      top: "100%",
                       right: 0,
-                      marginTop: '0.5rem',
-                      backgroundColor: darkMode ? '#1e293b' : '#ffffff',
-                      border: `1px solid ${darkMode ? '#334155' : '#e2e8f0'}`,
-                      borderRadius: '0.5rem',
-                      boxShadow: '0 10px 25px rgba(0, 0, 0, 0.2)',
-                      minWidth: '220px',
+                      marginTop: "0.5rem",
+                      backgroundColor: darkMode ? "#1e293b" : "#ffffff",
+                      border: `1px solid ${darkMode ? "#334155" : "#e2e8f0"}`,
+                      borderRadius: "0.5rem",
+                      boxShadow: "0 10px 25px rgba(0, 0, 0, 0.2)",
+                      minWidth: "220px",
                       zIndex: 50,
-                      overflow: 'hidden',
+                      overflow: "hidden",
                     }}
                   >
-                    <div style={{
-                      padding: '1rem',
-                      borderBottom: `1px solid ${darkMode ? '#334155' : '#e2e8f0'}`,
-                    }}>
-                      <div style={{
-                        fontWeight: '600',
-                        color: darkMode ? '#e2e8f0' : '#1e293b',
-                        marginBottom: '0.5rem',
-                      }}>
+                    <div
+                      style={{
+                        padding: "1rem",
+                        borderBottom: `1px solid ${
+                          darkMode ? "#334155" : "#e2e8f0"
+                        }`,
+                      }}
+                    >
+                      <div
+                        style={{
+                          fontWeight: "600",
+                          color: darkMode ? "#e2e8f0" : "#1e293b",
+                          marginBottom: "0.5rem",
+                        }}
+                      >
                         {user.name}
                       </div>
-                      <div style={{
-                        fontSize: '0.75rem',
-                        color: darkMode ? '#94a3b8' : '#64748b',
-                        display: 'inline-block',
-                        backgroundColor: darkMode ? '#334155' : '#f1f5f9',
-                        padding: '0.25rem 0.5rem',
-                        borderRadius: '0.25rem',
-                        textTransform: 'capitalize',
-                      }}>
+                      <div
+                        style={{
+                          fontSize: "0.75rem",
+                          color: darkMode ? "#94a3b8" : "#64748b",
+                          display: "inline-block",
+                          backgroundColor: darkMode ? "#334155" : "#f1f5f9",
+                          padding: "0.25rem 0.5rem",
+                          borderRadius: "0.25rem",
+                          textTransform: "capitalize",
+                        }}
+                      >
                         {user.role}
                       </div>
                     </div>
@@ -322,27 +352,36 @@ export default function NavBar() {
                     <button
                       onClick={handleProfileClick}
                       style={{
-                        width: '100%',
-                        padding: '0.75rem 1rem',
-                        textAlign: 'left',
-                        backgroundColor: 'transparent',
-                        border: 'none',
-                        cursor: 'pointer',
-                        color: darkMode ? '#e2e8f0' : '#1e293b',
-                        fontSize: '0.875rem',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.75rem',
-                        transition: 'background-color 0.2s ease',
+                        width: "100%",
+                        padding: "0.75rem 1rem",
+                        textAlign: "left",
+                        backgroundColor: "transparent",
+                        border: "none",
+                        cursor: "pointer",
+                        color: darkMode ? "#e2e8f0" : "#1e293b",
+                        fontSize: "0.875rem",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "0.75rem",
+                        transition: "background-color 0.2s ease",
                       }}
                       onMouseEnter={(e) => {
-                        e.currentTarget.style.backgroundColor = darkMode ? '#334155' : '#f1f5f9';
+                        e.currentTarget.style.backgroundColor = darkMode
+                          ? "#334155"
+                          : "#f1f5f9";
                       }}
                       onMouseLeave={(e) => {
-                        e.currentTarget.style.backgroundColor = 'transparent';
+                        e.currentTarget.style.backgroundColor = "transparent";
                       }}
                     >
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <svg
+                        width="18"
+                        height="18"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                      >
                         <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
                         <circle cx="12" cy="7" r="4" />
                       </svg>
@@ -352,28 +391,39 @@ export default function NavBar() {
                     <button
                       onClick={handleLogout}
                       style={{
-                        width: '100%',
-                        padding: '0.75rem 1rem',
-                        textAlign: 'left',
-                        backgroundColor: 'transparent',
-                        border: 'none',
-                        cursor: 'pointer',
-                        color: '#ef4444',
-                        fontSize: '0.875rem',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.75rem',
-                        transition: 'background-color 0.2s ease',
-                        borderTop: `1px solid ${darkMode ? '#334155' : '#e2e8f0'}`,
+                        width: "100%",
+                        padding: "0.75rem 1rem",
+                        textAlign: "left",
+                        backgroundColor: "transparent",
+                        border: "none",
+                        cursor: "pointer",
+                        color: "#ef4444",
+                        fontSize: "0.875rem",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "0.75rem",
+                        transition: "background-color 0.2s ease",
+                        borderTop: `1px solid ${
+                          darkMode ? "#334155" : "#e2e8f0"
+                        }`,
                       }}
                       onMouseEnter={(e) => {
-                        e.currentTarget.style.backgroundColor = darkMode ? '#334155' : '#fef2f2';
+                        e.currentTarget.style.backgroundColor = darkMode
+                          ? "#334155"
+                          : "#fef2f2";
                       }}
                       onMouseLeave={(e) => {
-                        e.currentTarget.style.backgroundColor = 'transparent';
+                        e.currentTarget.style.backgroundColor = "transparent";
                       }}
                     >
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <svg
+                        width="18"
+                        height="18"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                      >
                         <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
                         <polyline points="16 17 21 12 16 7" />
                         <line x1="21" y1="12" x2="9" y2="12" />
@@ -388,36 +438,37 @@ export default function NavBar() {
               <button
                 onClick={toggleTheme}
                 style={{
-                  padding: '0.5rem',
-                  borderRadius: '0.5rem',
-                  backgroundColor: 'rgba(235, 211, 248, 0.2)',
-                  color: '#EBD3F8',
-                  border: 'none',
-                  cursor: 'pointer',
-                  fontSize: '1.25rem',
-                  transition: 'all 0.3s ease',
+                  padding: "0.5rem",
+                  borderRadius: "0.5rem",
+                  backgroundColor: "rgba(235, 211, 248, 0.2)",
+                  color: "#EBD3F8",
+                  border: "none",
+                  cursor: "pointer",
+                  fontSize: "1.25rem",
+                  transition: "all 0.3s ease",
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = 'rgba(235, 211, 248, 0.3)';
+                  e.currentTarget.style.backgroundColor =
+                    "rgba(235, 211, 248, 0.3)";
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = 'rgba(235, 211, 248, 0.2)';
+                  e.currentTarget.style.backgroundColor =
+                    "rgba(235, 211, 248, 0.2)";
                 }}
                 aria-label="Toggle theme"
               >
-                {darkMode ? '☀️' : '🌙'}
+                {darkMode ? "☀️" : "🌙"}
               </button>
             </>
           ) : (
             <>
               <NavLink
                 className={({ isActive }: any) =>
-                  `text-sm ${isActive ? 'font-semibold' : 'hover:text-white'
-                  }`
+                  `text-sm ${isActive ? "font-semibold" : "hover:text-white"}`
                 }
                 style={({ isActive }: any) => ({
-                  color: isActive ? '#ffffff' : '#EBD3F8',
-                  textDecoration: 'none',
+                  color: isActive ? "#ffffff" : "#EBD3F8",
+                  textDecoration: "none",
                 })}
                 to="/login"
               >
@@ -425,12 +476,11 @@ export default function NavBar() {
               </NavLink>
               <NavLink
                 className={({ isActive }: any) =>
-                  `text-sm ${isActive ? 'font-semibold' : 'hover:text-white'
-                  }`
+                  `text-sm ${isActive ? "font-semibold" : "hover:text-white"}`
                 }
                 style={({ isActive }: any) => ({
-                  color: isActive ? '#ffffff' : '#EBD3F8',
-                  textDecoration: 'none',
+                  color: isActive ? "#ffffff" : "#EBD3F8",
+                  textDecoration: "none",
                 })}
                 to="/register"
               >
@@ -441,24 +491,26 @@ export default function NavBar() {
               <button
                 onClick={toggleTheme}
                 style={{
-                  padding: '0.5rem',
-                  borderRadius: '0.5rem',
-                  backgroundColor: 'rgba(235, 211, 248, 0.2)',
-                  color: '#EBD3F8',
-                  border: 'none',
-                  cursor: 'pointer',
-                  fontSize: '1.25rem',
-                  transition: 'all 0.3s ease',
+                  padding: "0.5rem",
+                  borderRadius: "0.5rem",
+                  backgroundColor: "rgba(235, 211, 248, 0.2)",
+                  color: "#EBD3F8",
+                  border: "none",
+                  cursor: "pointer",
+                  fontSize: "1.25rem",
+                  transition: "all 0.3s ease",
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = 'rgba(235, 211, 248, 0.3)';
+                  e.currentTarget.style.backgroundColor =
+                    "rgba(235, 211, 248, 0.3)";
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = 'rgba(235, 211, 248, 0.2)';
+                  e.currentTarget.style.backgroundColor =
+                    "rgba(235, 211, 248, 0.2)";
                 }}
                 aria-label="Toggle theme"
               >
-                {darkMode ? '☀️' : '🌙'}
+                {darkMode ? "☀️" : "🌙"}
               </button>
             </>
           )}

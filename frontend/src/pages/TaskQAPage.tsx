@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { apiFetch } from "@/api/client";
 import { Task } from "@/types";
 
@@ -88,9 +88,12 @@ function TaskDataViewer({ data }: { data: any }) {
 
 export default function TaskQAPage() {
   const { taskId } = useParams();
+  const navigate = useNavigate();
   const [task, setTask] = useState<Task | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [showReturnModal, setShowReturnModal] = useState(false);
+  const [returnReason, setReturnReason] = useState("");
 
   // QA Review Fields
   const [decision, setDecision] = useState<"approve" | "reject" | "revise">(
@@ -111,28 +114,35 @@ export default function TaskQAPage() {
       .catch((e) => setError(String(e)));
   }, [taskId]);
 
+  const handleReturnTask = async () => {
+    if (!taskId || !task) return;
+
+    try {
+      await apiFetch(`/tasks/${taskId}/return`, {
+        method: "PUT",
+        body: { return_reason: returnReason },
+      });
+      setSuccess("Task returned to annotator for revision!");
+      setError(null);
+      setShowReturnModal(false);
+      setReturnReason("");
+      // Redirect to project dashboard after 1 second
+      setTimeout(() => {
+        navigate(`/projects/${task.project_id}`);
+      }, 1000);
+    } catch (e: any) {
+      setError(e?.message || "Failed to return task");
+      setSuccess(null);
+    }
+  };
+
   const submit = async (e: FormEvent) => {
     e.preventDefault();
     if (!taskId) return;
 
     if (decision === "reject") {
-      // If rejecting, return the task to annotator
-      if (
-        !confirm(
-          "Are you sure you want to return this task to the annotator for revision? They will need to resubmit."
-        )
-      ) {
-        return;
-      }
-
-      try {
-        await apiFetch(`/tasks/${taskId}/return`, { method: "PUT" });
-        setSuccess("Task returned to annotator for revision!");
-        setError(null);
-      } catch (e: any) {
-        setError(e?.message || "Failed to return task");
-        setSuccess(null);
-      }
+      // If rejecting, show the return modal
+      setShowReturnModal(true);
       return;
     }
 
@@ -172,6 +182,12 @@ export default function TaskQAPage() {
           : "Task completed with revision notes!"
       );
       setError(null);
+      // Redirect to project dashboard after 1 second
+      setTimeout(() => {
+        if (task) {
+          navigate(`/projects/${task.project_id}`);
+        }
+      }, 1000);
     } catch (e: any) {
       setError(e?.message || "Failed to submit QA review");
       setSuccess(null);
@@ -180,6 +196,81 @@ export default function TaskQAPage() {
 
   return (
     <div className="space-y-6">
+      {/* Return Task Modal */}
+      {showReturnModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in">
+          <div className="relative max-w-md w-full rounded-2xl shadow-2xl border-2 bg-white dark:bg-gray-900 border-amber-300 dark:border-amber-700 p-6 animate-scale-in">
+            {/* Warning Icon */}
+            <div className="flex justify-center mb-4">
+              <div className="rounded-full p-3 bg-amber-100 dark:bg-amber-900/30">
+                <svg
+                  width="48"
+                  height="48"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="#f59e0b"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                  <line x1="12" y1="9" x2="12" y2="13" />
+                  <line x1="12" y1="17" x2="12.01" y2="17" />
+                </svg>
+              </div>
+            </div>
+
+            {/* Title */}
+            <h3 className="text-2xl font-bold text-center mb-2 text-amber-600 dark:text-amber-400">
+              Return Task to Annotator?
+            </h3>
+
+            {/* Message */}
+            <p className="text-center mb-4 text-gray-700 dark:text-gray-300">
+              The task will be sent back to the annotator for revision.
+            </p>
+
+            {/* Return Reason Input */}
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Reason for Return *
+              </label>
+              <textarea
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 resize-none"
+                rows={4}
+                value={returnReason}
+                onChange={(e) => setReturnReason(e.target.value)}
+                placeholder="Please explain why this task is being returned..."
+                required
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                This message will be visible to the annotator
+              </p>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setShowReturnModal(false);
+                  setReturnReason("");
+                }}
+                className="flex-1 py-3 px-4 rounded-xl font-semibold transition-all bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 border-2 border-gray-300 dark:border-gray-700"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleReturnTask}
+                disabled={!returnReason.trim()}
+                className="flex-1 py-3 px-4 rounded-xl font-semibold text-white transition-all shadow-md hover:shadow-lg bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-700 hover:to-amber-800 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Return Task
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div>
         <h1>QA Review</h1>
         <p className="muted mt-1">

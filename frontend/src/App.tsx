@@ -29,6 +29,8 @@ import AnnotatorCompletedTasksPage from "@/pages/AnnotatorCompletedTasksPage";
 import TaskViewPage from "@/pages/TaskViewPage";
 import AnnotationTasksPage from "@/pages/AnnotationTasksPage";
 import QAPendingTasksPage from "@/pages/QAPendingTasksPage";
+import QACompletedTasksPage from "@/pages/QACompletedTasksPage";
+import ReturnedTasksPage from "@/pages/ReturnedTasksPage";
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -119,6 +121,14 @@ function AppContent() {
             element={
               <RequireAuth>
                 <InProgressTasksPage />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/projects/:projectId/tasks/returned"
+            element={
+              <RequireAuth>
+                <ReturnedTasksPage />
               </RequireAuth>
             }
           />

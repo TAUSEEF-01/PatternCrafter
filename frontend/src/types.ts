@@ -23,6 +23,8 @@ export type Task = {
     qa_part?: boolean;
   };
   is_returned?: boolean;
+  return_reason?: string;
+  returned_by?: Id | null;
   accumulated_time?: number | null;
   created_at?: string;
   annotator_started_at?: string | null;
@@ -43,7 +45,7 @@ export type Notification = {
   id: Id;
   recipient_id: Id;
   sender_id?: Id | null;
-  type: 'invite' | 'task_assigned' | 'task_completed';
+  type: "invite" | "task_assigned" | "task_completed";
   title: string;
   message: string;
   task_id?: Id | null;
