@@ -20,6 +20,7 @@ invites_collection = None
 manager_projects_collection = None
 project_working_collection = None
 annotator_tasks_collection = None
+notifications_collection = None
 
 
 async def connect_to_mongo():
@@ -27,7 +28,7 @@ async def connect_to_mongo():
     global client, database
     global users_collection, projects_collection, tasks_collection
     global invites_collection, manager_projects_collection
-    global project_working_collection, annotator_tasks_collection
+    global project_working_collection, annotator_tasks_collection, notifications_collection
 
     print(f"Connecting to MongoDB at {MONGODB_URL}...")
     client = AsyncIOMotorClient(MONGODB_URL)
@@ -41,6 +42,7 @@ async def connect_to_mongo():
     manager_projects_collection = database.get_collection("manager_projects")
     project_working_collection = database.get_collection("project_working")
     annotator_tasks_collection = database.get_collection("annotator_tasks")
+    notifications_collection = database.get_collection("notifications")
 
     print("MongoDB connected successfully!")
     print(f"Collections initialized: users_collection={users_collection is not None}")
@@ -78,6 +80,9 @@ async def create_indexes():
     await annotator_tasks_collection.create_index(
         [("task_id", 1), ("annotator_id", 1)], unique=True
     )
+    await notifications_collection.create_index("recipient_id")
+    await notifications_collection.create_index([("recipient_id", 1), ("is_read", 1)])
+    await notifications_collection.create_index("created_at")
 
 
 def get_database() -> AsyncIOMotorDatabase:

@@ -127,6 +127,17 @@ body,
   border-radius: 8px;
 }
 
+/* Pulse animation for highlighted notification cards */
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+    box-shadow: 0 10px 30px rgba(122, 28, 172, 0.4);
+  }
+  50% {
+    opacity: 0.9;
+    box-shadow: 0 15px 40px rgba(122, 28, 172, 0.6);
+  }
+}
 /* Toast notification animation */
 @keyframes slide-in-right {
   from {
