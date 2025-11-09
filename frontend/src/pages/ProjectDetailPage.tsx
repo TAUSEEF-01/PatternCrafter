@@ -685,10 +685,11 @@ export default function ProjectDetailPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <h3 className="text-lg font-semibold">
-                    ⏳ Tasks In Progress
+                    ⏳Assign tasks to Annotators
                   </h3>
                   <p className="text-sm text-gray-600 mt-1">
-                    {taskStats.inProgress} task(s) being worked on
+                    {tasks.filter((t) => !t.assigned_annotator_id).length}{" "}
+                    task(s) to assign
                   </p>
                 </div>
                 <div className="text-3xl">→</div>

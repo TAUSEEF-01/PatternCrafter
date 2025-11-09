@@ -1,10 +1,11 @@
 import { FormEvent, useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { apiFetch } from "@/api/client";
 import { Task } from "@/types";
 
 export default function AssignTaskPage() {
   const { taskId } = useParams();
+  const navigate = useNavigate();
   const [task, setTask] = useState<Task | null>(null);
   const [annotatorId, setAnnotatorId] = useState("");
   const [annotators, setAnnotators] = useState<
@@ -56,12 +57,16 @@ export default function AssignTaskPage() {
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
-    if (!taskId) return;
+    if (!taskId || !task) return;
     try {
       const body: any = {};
       if (annotatorId) body.annotator_id = annotatorId;
       await apiFetch(`/tasks/${taskId}/assign`, { method: "PUT", body });
       setSuccess("Annotator assigned successfully");
+      // Redirect to project dashboard after 1 second
+      setTimeout(() => {
+        navigate(`/projects/${task.project_id}`);
+      }, 1000);
     } catch (e: any) {
       setError(e?.message || "Failed to assign annotator");
     }

@@ -56,6 +56,7 @@ export default function ProjectsPage() {
     projectId: string;
     projectName: string;
   } | null>(null);
+  const [taskCounts, setTaskCounts] = useState<Map<string, number>>(new Map());
 
   // Auto-dismiss notification after 5 seconds
   useEffect(() => {
@@ -67,7 +68,21 @@ export default function ProjectsPage() {
 
   useEffect(() => {
     apiFetch<Project[]>("/projects")
-      .then(setProjects)
+      .then((projectsData) => {
+        setProjects(projectsData);
+        // Fetch task counts for each project
+        projectsData.forEach((project) => {
+          apiFetch<any[]>(`/projects/${project.id}/tasks`)
+            .then((tasks) => {
+              setTaskCounts((prev) =>
+                new Map(prev).set(project.id, tasks.length)
+              );
+            })
+            .catch(() => {
+              setTaskCounts((prev) => new Map(prev).set(project.id, 0));
+            });
+        });
+      })
       .catch((e) => setError(String(e)));
     // For annotators, fetch invites to know which projects they can open
     if (user?.role === "annotator") {
@@ -604,13 +619,27 @@ export default function ProjectsPage() {
       ) : (
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {displayedProjects.map((p) => (
-            <div
+            <Link
               key={p.id}
-              className={`p-6 rounded-2xl border shadow-md transition-all cursor-pointer ${
+              to={
+                user?.role === "manager" || acceptedProjectIds.has(p.id)
+                  ? `/projects/${p.id}`
+                  : "#"
+              }
+              className={`p-6 rounded-2xl border shadow-md transition-all ${
+                user?.role === "manager" || acceptedProjectIds.has(p.id)
+                  ? "cursor-pointer hover:shadow-lg"
+                  : "cursor-default"
+              } ${
                 darkMode
-                  ? "bg-gray-800 border-purple-700 hover:shadow-lg"
-                  : "bg-white border-purple-300 hover:shadow-lg"
+                  ? "bg-gray-800 border-purple-700"
+                  : "bg-white border-purple-300"
               }`}
+              onClick={(e: React.MouseEvent) => {
+                if (user?.role !== "manager" && !acceptedProjectIds.has(p.id)) {
+                  e.preventDefault();
+                }
+              }}
             >
               <div className="flex flex-col h-full">
                 <div className="flex items-start gap-3 mb-3">
@@ -671,33 +700,17 @@ export default function ProjectsPage() {
                       className="flex gap-3 pb-2 border-b"
                       style={{ borderColor: darkMode ? "#334155" : "#e5e7eb" }}
                     >
-                      <Link
-                        className={`flex items-center gap-1 text-sm font-semibold transition-colors ${
-                          darkMode
-                            ? "text-[#D78FEE] hover:text-[#EAB4FF]"
-                            : "text-[#7A1CAC] hover:text-[#9D4EDD]"
-                        }`}
-                        to={`/projects/${p.id}`}
-                      >
-                        <svg
-                          width="16"
-                          height="16"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                        >
-                          <path d="M5 12h14M12 5l7 7-7 7" />
-                        </svg>
-                        Open
-                      </Link>
-                      <Link
-                        className={`flex items-center gap-1 text-sm font-medium transition-colors ${
+                      <div
+                        className={`flex items-center gap-1 text-sm font-medium transition-colors cursor-pointer ${
                           darkMode
                             ? "text-gray-300 hover:text-[#D78FEE]"
                             : "text-gray-600 hover:text-[#2E073F]"
                         }`}
-                        to={`/projects/${p.id}/invites`}
+                        onClick={(e: React.MouseEvent) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          window.location.href = `/projects/${p.id}/invites`;
+                        }}
                       >
                         <svg
                           width="16"
@@ -713,7 +726,28 @@ export default function ProjectsPage() {
                           <path d="M16 3.13a4 4 0 0 1 0 7.75" />
                         </svg>
                         Invites
-                      </Link>
+                      </div>
+                      <div
+                        className={`flex items-center gap-1 text-sm font-medium ${
+                          darkMode ? "text-gray-400" : "text-gray-500"
+                        }`}
+                      >
+                        <svg
+                          width="16"
+                          height="16"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                        >
+                          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                          <polyline points="14 2 14 8 20 8" />
+                          <line x1="16" y1="13" x2="8" y2="13" />
+                          <line x1="16" y1="17" x2="8" y2="17" />
+                          <polyline points="10 9 9 9 8 9" />
+                        </svg>
+                        {taskCounts.get(p.id) ?? "..."} tasks
+                      </div>
                     </div>
 
                     {/* Action Buttons */}
@@ -721,7 +755,11 @@ export default function ProjectsPage() {
                       <div className="flex gap-2">
                         {p.is_completed ? (
                           <button
-                            onClick={() => handleReopenProject(p.id)}
+                            onClick={(e: React.MouseEvent) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              handleReopenProject(p.id);
+                            }}
                             className={`flex-1 py-2 px-3 rounded-lg text-xs font-semibold transition-colors ${
                               darkMode
                                 ? "bg-blue-900/30 text-blue-400 hover:bg-blue-900/50"
@@ -732,7 +770,11 @@ export default function ProjectsPage() {
                           </button>
                         ) : (
                           <button
-                            onClick={() => handleMarkComplete(p.id)}
+                            onClick={(e: React.MouseEvent) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              handleMarkComplete(p.id);
+                            }}
                             disabled={completingId === p.id}
                             className={`flex-1 py-2 px-3 rounded-lg text-xs font-semibold transition-colors ${
                               completingId === p.id
@@ -748,12 +790,14 @@ export default function ProjectsPage() {
                           </button>
                         )}
                         <button
-                          onClick={() =>
+                          onClick={(e: React.MouseEvent) => {
+                            e.preventDefault();
+                            e.stopPropagation();
                             setDeleteConfirmModal({
                               projectId: p.id,
                               projectName: p.details || p.id,
-                            })
-                          }
+                            });
+                          }}
                           disabled={deletingId === p.id}
                           className={`py-2 px-3 rounded-lg text-xs font-semibold transition-colors ${
                             deletingId === p.id
@@ -775,29 +819,7 @@ export default function ProjectsPage() {
                     className="mt-auto pt-4 border-t flex items-center justify-start gap-2"
                     style={{ borderColor: darkMode ? "#334155" : "#e5e7eb" }}
                   >
-                    {acceptedProjectIds.has(p.id) ? (
-                      <Link
-                        className={`flex items-center gap-1 text-sm font-semibold ${
-                          darkMode
-                            ? "text-[#D78FEE] hover:text-[#EAB4FF]"
-                            : "text-[#7A1CAC] hover:text-[#9D4EDD]"
-                        }`}
-                        to={`/projects/${p.id}`}
-                      >
-                        <svg
-                          width="16"
-                          height="16"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                        >
-                          <path d="M3 7v13h18V7H3z" />
-                          <polyline points="9 12 12 15 15 12" />
-                        </svg>
-                        Open
-                      </Link>
-                    ) : (
+                    {!acceptedProjectIds.has(p.id) && (
                       <div
                         className={`flex items-center gap-1 px-2 py-1 rounded-lg border text-xs ${
                           darkMode
@@ -823,7 +845,7 @@ export default function ProjectsPage() {
                   </div>
                 )}
               </div>
-            </div>
+            </Link>
           ))}
         </div>
       )}
