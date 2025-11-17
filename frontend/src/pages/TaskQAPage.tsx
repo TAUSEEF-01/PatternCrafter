@@ -1,7 +1,9 @@
 import { FormEvent, useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { apiFetch } from "@/api/client";
-import { Task } from "@/types";
+import { Task, TaskRemark } from "@/types";
+import RemarksThread from "@/components/RemarksThread";
+import { useAuth } from "@/auth/AuthContext";
 
 function TaskDataViewer({ data }: { data: any }) {
   if (!data || typeof data !== "object") {
@@ -89,11 +91,11 @@ function TaskDataViewer({ data }: { data: any }) {
 export default function TaskQAPage() {
   const { taskId } = useParams();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [task, setTask] = useState<Task | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [showReturnModal, setShowReturnModal] = useState(false);
-  const [returnReason, setReturnReason] = useState("");
 
   // QA Review Fields
   const [decision, setDecision] = useState<"approve" | "reject" | "revise">(
@@ -107,6 +109,25 @@ export default function TaskQAPage() {
   const [corrections, setCorrections] = useState("");
   const [notes, setNotes] = useState("");
 
+  const handleRemarkAdded = (remark: TaskRemark) => {
+    setTask((prev) =>
+      prev
+        ? {
+            ...prev,
+            remarks: [...(prev.remarks ?? []), remark],
+          }
+        : prev
+    );
+  };
+
+  const canReplyToThread = Boolean(
+    task &&
+      user &&
+      (user.role === "admin" ||
+        user.role === "manager" ||
+        task.assigned_qa_id === user.id)
+  );
+
   useEffect(() => {
     if (!taskId) return;
     apiFetch<Task>(`/tasks/${taskId}`)
@@ -115,20 +136,17 @@ export default function TaskQAPage() {
   }, [taskId]);
 
   const handleReturnTask = async () => {
-    if (!taskId || !task) return;
+    if (!taskId) return;
 
     try {
-      await apiFetch(`/tasks/${taskId}/return`, {
-        method: "PUT",
-        body: { return_reason: returnReason },
-      });
-      setSuccess("Task returned to annotator for revision!");
-      setError(null);
+      await apiFetch(`/tasks/${taskId}/return`, { method: "PUT" });
       setShowReturnModal(false);
-      setReturnReason("");
-      // Redirect to project dashboard after 1 second
+      setSuccess("Task returned to the annotator for revision.");
+      setError(null);
       setTimeout(() => {
-        navigate(`/projects/${task.project_id}`);
+        if (task) {
+          navigate(`/projects/${task.project_id}`);
+        }
       }, 1000);
     } catch (e: any) {
       setError(e?.message || "Failed to return task");
@@ -141,12 +159,10 @@ export default function TaskQAPage() {
     if (!taskId) return;
 
     if (decision === "reject") {
-      // If rejecting, show the return modal
       setShowReturnModal(true);
       return;
     }
 
-    // For approve or revise, submit QA annotation
     const qaAnnotation: any = {
       decision: decision,
       quality_score: parseInt(qualityScore) || 5,
@@ -155,17 +171,14 @@ export default function TaskQAPage() {
       clarity_rating: parseInt(clarityRating) || 5,
     };
 
-    // Add corrections if provided
     if (corrections.trim()) {
       try {
         qaAnnotation.corrections = JSON.parse(corrections);
       } catch {
-        // If not JSON, store as text
         qaAnnotation.corrections = corrections;
       }
     }
 
-    // Add notes if provided
     if (notes.trim()) {
       qaAnnotation.notes = notes;
     }
@@ -182,7 +195,6 @@ export default function TaskQAPage() {
           : "Task completed with revision notes!"
       );
       setError(null);
-      // Redirect to project dashboard after 1 second
       setTimeout(() => {
         if (task) {
           navigate(`/projects/${task.project_id}`);
@@ -196,11 +208,9 @@ export default function TaskQAPage() {
 
   return (
     <div className="space-y-6">
-      {/* Return Task Modal */}
       {showReturnModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in">
           <div className="relative max-w-md w-full rounded-2xl shadow-2xl border-2 bg-white dark:bg-gray-900 border-amber-300 dark:border-amber-700 p-6 animate-scale-in">
-            {/* Warning Icon */}
             <div className="flex justify-center mb-4">
               <div className="rounded-full p-3 bg-amber-100 dark:bg-amber-900/30">
                 <svg
@@ -219,54 +229,31 @@ export default function TaskQAPage() {
                 </svg>
               </div>
             </div>
-
-            {/* Title */}
-            <h3 className="text-2xl font-bold text-center mb-2 text-amber-600 dark:text-amber-400">
+            <h2 className="text-xl font-semibold text-center text-amber-700 mb-2">
               Return Task to Annotator?
-            </h3>
-
-            {/* Message */}
-            <p className="text-center mb-4 text-gray-700 dark:text-gray-300">
-              The task will be sent back to the annotator for revision.
+            </h2>
+            <p className="text-sm text-center text-amber-700 mb-6">
+              Are you sure you want to send this task back for revision? The
+              annotator will need to update their submission.
             </p>
-
-            {/* Return Reason Input */}
-            <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Reason for Return *
-              </label>
-              <textarea
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 resize-none"
-                rows={4}
-                value={returnReason}
-                onChange={(e) => setReturnReason(e.target.value)}
-                placeholder="Please explain why this task is being returned..."
-                required
-              />
-              <p className="text-xs text-gray-500 mt-1">
-                This message will be visible to the annotator
-              </p>
-            </div>
-
-            {/* Action Buttons */}
-            <div className="flex gap-3">
+            <div className="grid grid-cols-2 gap-3">
               <button
-                onClick={() => {
-                  setShowReturnModal(false);
-                  setReturnReason("");
-                }}
+                onClick={() => setShowReturnModal(false)}
                 className="flex-1 py-3 px-4 rounded-xl font-semibold transition-all bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 border-2 border-gray-300 dark:border-gray-700"
               >
                 Cancel
               </button>
               <button
                 onClick={handleReturnTask}
-                disabled={!returnReason.trim()}
-                className="flex-1 py-3 px-4 rounded-xl font-semibold text-white transition-all shadow-md hover:shadow-lg bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-700 hover:to-amber-800 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex-1 py-3 px-4 rounded-xl font-semibold text-white transition-all shadow-md hover:shadow-lg bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-700 hover:to-amber-800"
               >
-                Return Task
+                Yes, Return Task
               </button>
             </div>
+            <p className="text-xs text-center text-amber-600 mt-4">
+              Tip: leave a remark in the thread to highlight what needs
+              attention before returning.
+            </p>
           </div>
         </div>
       )}
@@ -277,16 +264,19 @@ export default function TaskQAPage() {
           Review the annotation and provide quality assurance feedback
         </p>
       </div>
+
       {error && (
         <div className="rounded-md bg-red-50 border border-red-200 p-3 text-sm text-red-700">
           {error}
         </div>
       )}
+
       {success && (
         <div className="rounded-md bg-green-50 border border-green-200 p-3 text-sm text-green-700">
           {success}
         </div>
       )}
+
       {task && (
         <div className="card">
           <div className="card-body space-y-4">
@@ -315,6 +305,19 @@ export default function TaskQAPage() {
             )}
           </div>
         </div>
+      )}
+
+      {task?.id && (
+        <RemarksThread
+          taskId={task.id}
+          remarks={task.remarks}
+          allowReply={canReplyToThread}
+          replyLabel={
+            canReplyToThread ? "Leave a note for the annotator" : "Conversation"
+          }
+          emptyStateLabel="No remarks yet. Add context for the annotator when needed."
+          onRemarkAdded={handleRemarkAdded}
+        />
       )}
 
       <div className="card">

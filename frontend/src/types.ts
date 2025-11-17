@@ -8,6 +8,15 @@ export type Project = {
   is_completed: boolean;
 };
 
+export type TaskRemark = {
+  message: string;
+  author_id: Id;
+  author_name?: string | null;
+  author_role: "admin" | "manager" | "annotator";
+  remark_type: "qa_return" | "annotator_reply" | "qa_note" | "manager_note";
+  created_at: string;
+};
+
 export type Task = {
   id: Id;
   project_id: Id;
@@ -26,6 +35,7 @@ export type Task = {
   return_reason?: string;
   returned_by?: Id | null;
   accumulated_time?: number | null;
+  remarks?: TaskRemark[];
   created_at?: string;
   annotator_started_at?: string | null;
   annotator_completed_at?: string | null;

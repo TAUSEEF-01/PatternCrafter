@@ -1,7 +1,8 @@
 import { FormEvent, useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { apiFetch } from "@/api/client";
-import { Task } from "@/types";
+import { Task, TaskRemark } from "@/types";
+import RemarksThread from "@/components/RemarksThread";
 
 function TaskDataViewer({ data }: { data: any }) {
   if (!data || typeof data !== "object") {
@@ -92,6 +93,20 @@ export default function TaskAnnotatePage() {
   const [task, setTask] = useState<Task | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const hasReturnRemark = task?.remarks?.some(
+    (r) => r.remark_type === "qa_return"
+  );
+
+  const handleRemarkAdded = (remark: TaskRemark) => {
+    setTask((prev) =>
+      prev
+        ? {
+            ...prev,
+            remarks: [...(prev.remarks ?? []), remark],
+          }
+        : prev
+    );
+  };
 
   // Timer state - tracks time in seconds
   const [elapsedTime, setElapsedTime] = useState(0);
@@ -427,6 +442,7 @@ export default function TaskAnnotatePage() {
 
       {/* QA Remarks Panel */}
       {task?.is_returned &&
+        !hasReturnRemark &&
         (task.return_reason || task.qa_feedback || task.qa_annotation) && (
           <div className="bg-amber-50 border-2 border-amber-300 rounded-xl p-5 shadow-md">
             <div className="flex items-start gap-3">
@@ -495,6 +511,17 @@ export default function TaskAnnotatePage() {
             </div>
           </div>
         )}
+
+      {task?.id && (task.is_returned || (task.remarks?.length ?? 0) > 0) && (
+        <RemarksThread
+          taskId={task.id}
+          remarks={task.remarks}
+          allowReply={Boolean(task.is_returned)}
+          replyLabel="Let QA know what you fixed"
+          emptyStateLabel="No remarks yet. Add a note once you review the feedback."
+          onRemarkAdded={handleRemarkAdded}
+        />
+      )}
 
       <div className="card">
         <div className="card-body">
