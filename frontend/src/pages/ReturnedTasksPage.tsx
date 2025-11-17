@@ -74,6 +74,15 @@ export default function ReturnedTasksPage() {
 }
 
 function TaskCard({ t }: { t: Task }) {
+  const shouldShowQAAnnotation = Boolean(
+    t.qa_annotation &&
+      typeof t.qa_annotation === "object" &&
+      (!t.returned_by || t.returned_by === t.assigned_qa_id)
+  );
+  const hasVisibleRemarks = Boolean(
+    t.return_reason || t.qa_feedback || shouldShowQAAnnotation
+  );
+
   return (
     <div className="card hover:shadow-lg transition-shadow border-l-4 border-amber-500">
       <div className="card-body">
@@ -89,7 +98,7 @@ function TaskCard({ t }: { t: Task }) {
               </span>
             </div>
 
-            {(t.return_reason || t.qa_feedback || t.qa_annotation) && (
+            {hasVisibleRemarks && (
               <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mt-3 shadow-sm">
                 <div className="flex items-start gap-2">
                   <div className="text-amber-600 mt-0.5">
@@ -113,9 +122,11 @@ function TaskCard({ t }: { t: Task }) {
                       <h4 className="text-sm font-semibold text-amber-800">
                         QA Remarks
                       </h4>
-                      <span className="text-xs text-amber-600">
-                        Review these notes before revising the task
-                      </span>
+                      {shouldShowQAAnnotation && (
+                        <span className="text-xs text-amber-600">
+                          Review these notes before revising the task
+                        </span>
+                      )}
                     </div>
                     {t.return_reason && (
                       <div>
@@ -137,7 +148,7 @@ function TaskCard({ t }: { t: Task }) {
                         </p>
                       </div>
                     )}
-                    {t.qa_annotation && typeof t.qa_annotation === "object" && (
+                    {shouldShowQAAnnotation && (
                       <div>
                         <div className="text-xs uppercase tracking-wide text-amber-700 font-semibold">
                           QA Notes
@@ -161,12 +172,6 @@ function TaskCard({ t }: { t: Task }) {
           </div>
 
           <div className="flex items-center gap-3">
-            <LinkFix
-              to={`/tasks/${t.id}/view`}
-              className="btn btn-ghost btn-sm"
-            >
-              👁️ View
-            </LinkFix>
             <LinkFix
               to={`/tasks/${t.id}/annotate`}
               className="btn btn-primary btn-sm"
