@@ -89,9 +89,8 @@ function TaskCard({ t }: { t: Task }) {
               </span>
             </div>
 
-            {/* Return Reason */}
-            {t.return_reason && (
-              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mt-3">
+            {(t.return_reason || t.qa_feedback || t.qa_annotation) && (
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mt-3 shadow-sm">
                 <div className="flex items-start gap-2">
                   <div className="text-amber-600 mt-0.5">
                     <svg
@@ -109,13 +108,45 @@ function TaskCard({ t }: { t: Task }) {
                       <line x1="12" y1="16" x2="12.01" y2="16" />
                     </svg>
                   </div>
-                  <div className="flex-1">
-                    <div className="text-sm font-semibold text-amber-800 mb-1">
-                      Reason for Return:
+                  <div className="flex-1 space-y-2">
+                    <div className="flex items-center gap-2">
+                      <h4 className="text-sm font-semibold text-amber-800">
+                        QA Remarks
+                      </h4>
+                      <span className="text-xs text-amber-600">
+                        Review these notes before revising the task
+                      </span>
                     </div>
-                    <div className="text-sm text-amber-700 whitespace-pre-wrap">
-                      {t.return_reason}
-                    </div>
+                    {t.return_reason && (
+                      <div>
+                        <div className="text-xs uppercase tracking-wide text-amber-700 font-semibold">
+                          Return Reason
+                        </div>
+                        <p className="text-sm text-amber-700 whitespace-pre-wrap bg-white/70 border border-amber-200 rounded-md p-2 mt-1">
+                          {t.return_reason}
+                        </p>
+                      </div>
+                    )}
+                    {t.qa_feedback && (
+                      <div>
+                        <div className="text-xs uppercase tracking-wide text-amber-700 font-semibold">
+                          Additional Comments
+                        </div>
+                        <p className="text-sm text-amber-700 whitespace-pre-wrap bg-white/70 border border-amber-200 rounded-md p-2 mt-1">
+                          {t.qa_feedback}
+                        </p>
+                      </div>
+                    )}
+                    {t.qa_annotation && typeof t.qa_annotation === "object" && (
+                      <div>
+                        <div className="text-xs uppercase tracking-wide text-amber-700 font-semibold">
+                          QA Notes
+                        </div>
+                        <pre className="text-xs text-amber-700 bg-white/70 border border-amber-200 rounded-md p-2 mt-1 whitespace-pre-wrap">
+                          {JSON.stringify(t.qa_annotation, null, 2)}
+                        </pre>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>

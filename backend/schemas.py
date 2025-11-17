@@ -323,6 +323,8 @@ class Task(BaseModel):
 
     # Return status and accumulated time
     is_returned: bool = False  # Whether task has been returned to annotator
+    return_reason: Optional[str] = None  # Feedback provided when task is returned
+    returned_by: Optional[PyObjectId] = None  # User who returned the task
     accumulated_time: Optional[float] = None  # Time spent before return (in seconds)
 
     # Timestamps
@@ -441,6 +443,8 @@ class TaskResponse(BaseModel):
     assigned_annotator_id: Optional[str] = None
     assigned_qa_id: Optional[str] = None
     is_returned: bool = False
+    return_reason: Optional[str] = None
+    returned_by: Optional[str] = None
     accumulated_time: Optional[float] = None
     created_at: datetime
     annotator_started_at: Optional[datetime] = None

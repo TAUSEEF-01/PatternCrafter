@@ -110,6 +110,8 @@ async def create_task(
         "tag_task": task.tag_task,
         "assigned_annotator_id": None,
         "assigned_qa_id": None,
+        "return_reason": None,
+        "returned_by": None,
         "created_at": datetime.utcnow(),
         "annotator_started_at": None,
         "annotator_completed_at": None,
