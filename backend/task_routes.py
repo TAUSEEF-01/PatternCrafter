@@ -18,6 +18,8 @@ from schemas import (
     SubmitAnnotationRequest,
     SubmitQARequest,
     TaskCategory,
+    TaskRemark,
+    TaskRemarkCreate,
 )
 from utils import (
     as_response,
@@ -110,6 +112,8 @@ async def create_task(
         "tag_task": task.tag_task,
         "assigned_annotator_id": None,
         "assigned_qa_id": None,
+        "return_reason": None,
+        "returned_by": None,
         "created_at": datetime.utcnow(),
         "annotator_started_at": None,
         "annotator_completed_at": None,
@@ -565,6 +569,9 @@ async def assign_task(
             "title": "New Task Assigned",
             "message": f"You have been assigned to task: {task_name}",
             "task_id": ObjectId(task_id),
+            "return_reason": None,
+            "returned_by": None,
+            "remarks": [],
             "project_id": task["project_id"],
             "is_read": False,
             "created_at": datetime.utcnow(),
@@ -785,15 +792,17 @@ async def submit_qa(
 
     # Permission check
     allowed = False
-    if current_user.role in ["admin"]:
+    if current_user.role == "admin":
         allowed = True
     elif current_user.role == "manager":
-        project = await database.projects_collection.find_one(
-            {"_id": task["project_id"]}
-        )
-        allowed = project and project["manager_id"] == current_user.id
+        # Managers may only submit QA if no QA annotator is assigned yet
+        if not task.get("assigned_qa_id"):
+            project = await database.projects_collection.find_one(
+                {"_id": task["project_id"]}
+            )
+            allowed = project and project["manager_id"] == current_user.id
     elif current_user.role == "annotator":
-        # Check if this annotator is assigned as QA for this task
+        # Only the explicitly assigned QA annotator can submit QA
         allowed = task.get("assigned_qa_id") == current_user.id
 
     if not allowed:
@@ -882,10 +891,28 @@ async def return_task_to_annotator(
     new_accumulated_time = previous_accumulated_time + current_completion_time
 
     # Get return reason from request body
-    return_reason = body.get("return_reason", "") if body else ""
+    return_reason = (body.get("return_reason", "") if body else "").strip()
+    remark_message = (
+        return_reason if return_reason else "Task returned for further revisions"
+    )
+
+    remark_entry = TaskRemark(
+        message=remark_message,
+        author_id=current_user.id,
+        author_name=current_user.name,
+        author_role=current_user.role,
+        remark_type="qa_return",
+        created_at=datetime.utcnow(),
+    )
 
     updates = {
+        # Reset annotator completion so they can work again
         "completed_status.annotator_part": False,
+        # Also reset QA completion so original QA must re-review after resubmission
+        "completed_status.qa_part": False,
+        "qa_annotation": None,
+        "qa_feedback": None,
+        "qa_completed_at": None,
         "is_returned": True,
         "return_reason": return_reason,
         "returned_by": current_user.id,
@@ -894,7 +921,8 @@ async def return_task_to_annotator(
     }
 
     await database.tasks_collection.update_one(
-        {"_id": ObjectId(task_id)}, {"$set": updates}
+        {"_id": ObjectId(task_id)},
+        {"$set": updates, "$push": {"remarks": remark_entry.model_dump(by_alias=True)}},
     )
 
     # Add task back to project_working for the annotator
@@ -923,6 +951,87 @@ async def return_task_to_annotator(
         )
 
     return {"message": "Task returned to annotator"}
+
+
+@router.post(
+    "/tasks/{task_id}/remarks",
+    response_model=TaskRemark,
+    response_model_by_alias=False,
+)
+async def add_task_remark(
+    task_id: str,
+    payload: TaskRemarkCreate,
+    current_user: UserInDB = Depends(get_current_user),
+):
+    """Append a remark to a task's comment thread."""
+    if not ObjectId.is_valid(task_id):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid task ID"
+        )
+
+    message = payload.message.strip() if payload and payload.message else ""
+    if not message:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Remark message cannot be empty",
+        )
+
+    task = await database.tasks_collection.find_one({"_id": ObjectId(task_id)})
+    if not task:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Task not found"
+        )
+
+    project = await database.projects_collection.find_one({"_id": task["project_id"]})
+
+    allowed = False
+    if current_user.role == "admin":
+        allowed = True
+    elif current_user.role == "manager":
+        allowed = project and project.get("manager_id") == current_user.id
+    elif current_user.role == "annotator":
+        allowed = current_user.id in [
+            task.get("assigned_annotator_id"),
+            task.get("assigned_qa_id"),
+        ]
+
+    if not allowed:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to add remarks to this task",
+        )
+
+    default_type_map = {
+        "admin": "manager_note",
+        "manager": "manager_note",
+        "annotator": (
+            "annotator_reply"
+            if current_user.id == task.get("assigned_annotator_id")
+            else "qa_note"
+        ),
+    }
+
+    remark_type = (
+        payload.remark_type
+        if payload.remark_type
+        else default_type_map.get(current_user.role, "qa_note")
+    )
+
+    remark = TaskRemark(
+        message=message,
+        author_id=current_user.id,
+        author_name=current_user.name,
+        author_role=current_user.role,
+        remark_type=remark_type,
+        created_at=datetime.utcnow(),
+    )
+
+    await database.tasks_collection.update_one(
+        {"_id": ObjectId(task_id)},
+        {"$push": {"remarks": remark.model_dump(by_alias=True)}},
+    )
+
+    return remark
 
 
 @router.delete("/tasks/{task_id}")

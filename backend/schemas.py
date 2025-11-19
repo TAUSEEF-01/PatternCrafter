@@ -278,6 +278,22 @@ class TaskCompletionStatus(BaseModel):
     qa_part: bool = False
 
 
+class TaskRemark(BaseModel):
+    message: str
+    author_id: PyObjectId
+    author_name: Optional[str] = None
+    author_role: Literal["admin", "manager", "annotator"]
+    remark_type: Literal["qa_return", "annotator_reply", "qa_note", "manager_note"] = (
+        "qa_note"
+    )
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+    class Config:
+        populate_by_name = True
+        arbitrary_types_allowed = True
+        json_encoders = {ObjectId: str}
+
+
 # Main Task Schema
 class Task(BaseModel):
     id: PyObjectId = Field(default_factory=PyObjectId, alias="_id")
@@ -323,7 +339,10 @@ class Task(BaseModel):
 
     # Return status and accumulated time
     is_returned: bool = False  # Whether task has been returned to annotator
+    return_reason: Optional[str] = None  # Feedback provided when task is returned
+    returned_by: Optional[PyObjectId] = None  # User who returned the task
     accumulated_time: Optional[float] = None  # Time spent before return (in seconds)
+    remarks: List[TaskRemark] = Field(default_factory=list)
 
     # Timestamps
     created_at: datetime = Field(default_factory=datetime.utcnow)
@@ -441,7 +460,10 @@ class TaskResponse(BaseModel):
     assigned_annotator_id: Optional[str] = None
     assigned_qa_id: Optional[str] = None
     is_returned: bool = False
+    return_reason: Optional[str] = None
+    returned_by: Optional[str] = None
     accumulated_time: Optional[float] = None
+    remarks: List[TaskRemark] = Field(default_factory=list)
     created_at: datetime
     annotator_started_at: Optional[datetime] = None
     annotator_completed_at: Optional[datetime] = None
@@ -462,6 +484,11 @@ class SubmitAnnotationRequest(BaseModel):
 class SubmitQARequest(BaseModel):
     qa_annotation: Dict[str, Any]
     qa_feedback: Optional[str] = None
+
+
+class TaskRemarkCreate(BaseModel):
+    message: str
+    remark_type: Optional[str] = None
 
 
 # Authentication schemas

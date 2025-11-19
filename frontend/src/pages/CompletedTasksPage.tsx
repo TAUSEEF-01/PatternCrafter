@@ -304,7 +304,7 @@ export default function CompletedTasksPage() {
                     className="btn btn-outline btn-sm"
                     to={`/tasks/${t.id}/qa`}
                   >
-                    View QA
+                    Manager Review
                   </Link>
                   <Link
                     className="btn btn-outline btn-sm"

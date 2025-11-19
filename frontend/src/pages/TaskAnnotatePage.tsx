@@ -1,7 +1,8 @@
 import { FormEvent, useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { apiFetch } from "@/api/client";
-import { Task } from "@/types";
+import { Task, TaskRemark } from "@/types";
+import RemarksThread from "@/components/RemarksThread";
 
 function TaskDataViewer({ data }: { data: any }) {
   if (!data || typeof data !== "object") {
@@ -92,6 +93,20 @@ export default function TaskAnnotatePage() {
   const [task, setTask] = useState<Task | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const hasReturnRemark = task?.remarks?.some(
+    (r) => r.remark_type === "qa_return"
+  );
+
+  const handleRemarkAdded = (remark: TaskRemark) => {
+    setTask((prev) =>
+      prev
+        ? {
+            ...prev,
+            remarks: [...(prev.remarks ?? []), remark],
+          }
+        : prev
+    );
+  };
 
   // Timer state - tracks time in seconds
   const [elapsedTime, setElapsedTime] = useState(0);
@@ -425,45 +440,87 @@ export default function TaskAnnotatePage() {
         </div>
       )}
 
-      {/* Return Reason Alert */}
-      {task?.is_returned && task?.return_reason && (
-        <div className="bg-amber-50 border-2 border-amber-300 rounded-xl p-5 shadow-md">
-          <div className="flex items-start gap-3">
-            <div className="flex-shrink-0 mt-0.5">
-              <svg
-                width="24"
-                height="24"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="#d97706"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
-                <line x1="12" y1="9" x2="12" y2="13" />
-                <line x1="12" y1="17" x2="12.01" y2="17" />
-              </svg>
-            </div>
-            <div className="flex-1">
-              <h3 className="text-lg font-semibold text-amber-800 mb-2">
-                📥 Task Returned for Revision
-              </h3>
-              <p className="text-sm font-medium text-amber-700 mb-1">
-                Reason from QA Reviewer:
-              </p>
-              <div className="bg-white border border-amber-200 rounded-lg p-3 mt-2">
-                <p className="text-sm text-gray-800 whitespace-pre-wrap">
-                  {task.return_reason}
-                </p>
+      {/* QA Remarks Panel */}
+      {task?.is_returned &&
+        !hasReturnRemark &&
+        (task.return_reason || task.qa_feedback || task.qa_annotation) && (
+          <div className="bg-amber-50 border-2 border-amber-300 rounded-xl p-5 shadow-md">
+            <div className="flex items-start gap-3">
+              <div className="flex-shrink-0 mt-0.5">
+                <svg
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="#d97706"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                  <line x1="12" y1="9" x2="12" y2="13" />
+                  <line x1="12" y1="17" x2="12.01" y2="17" />
+                </svg>
               </div>
-              <p className="text-xs text-amber-600 mt-3">
-                💡 Please address the feedback above and resubmit your
-                annotation.
-              </p>
+              <div className="flex-1 space-y-3">
+                <div>
+                  <h3 className="text-lg font-semibold text-amber-800">
+                    📥 Task Returned for Revision
+                  </h3>
+                  <p className="text-xs text-amber-600 mt-1">
+                    Review these notes from the QA reviewer before updating your
+                    submission.
+                  </p>
+                </div>
+                {task.return_reason && (
+                  <div>
+                    <p className="text-xs uppercase tracking-wide text-amber-700 font-semibold">
+                      Return Reason
+                    </p>
+                    <div className="bg-white border border-amber-200 rounded-lg p-3 mt-1">
+                      <p className="text-sm text-gray-800 whitespace-pre-wrap">
+                        {task.return_reason}
+                      </p>
+                    </div>
+                  </div>
+                )}
+                {task.qa_feedback && (
+                  <div>
+                    <p className="text-xs uppercase tracking-wide text-amber-700 font-semibold">
+                      Additional Comments
+                    </p>
+                    <div className="bg-white border border-amber-200 rounded-lg p-3 mt-1">
+                      <p className="text-sm text-gray-800 whitespace-pre-wrap">
+                        {task.qa_feedback}
+                      </p>
+                    </div>
+                  </div>
+                )}
+                {task.qa_annotation &&
+                  typeof task.qa_annotation === "object" && (
+                    <div>
+                      <p className="text-xs uppercase tracking-wide text-amber-700 font-semibold">
+                        QA Notes
+                      </p>
+                      <pre className="text-xs text-gray-800 bg-white border border-amber-200 rounded-lg p-3 mt-1 whitespace-pre-wrap overflow-x-auto">
+                        {JSON.stringify(task.qa_annotation, null, 2)}
+                      </pre>
+                    </div>
+                  )}
+              </div>
             </div>
           </div>
-        </div>
+        )}
+
+      {task?.id && (task.is_returned || (task.remarks?.length ?? 0) > 0) && (
+        <RemarksThread
+          taskId={task.id}
+          remarks={task.remarks}
+          allowReply={Boolean(task.is_returned)}
+          replyLabel="Let QA know what you fixed"
+          emptyStateLabel="No remarks yet. Add a note once you review the feedback."
+          onRemarkAdded={handleRemarkAdded}
+        />
       )}
 
       <div className="card">
