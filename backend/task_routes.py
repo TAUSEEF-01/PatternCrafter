@@ -792,15 +792,17 @@ async def submit_qa(
 
     # Permission check
     allowed = False
-    if current_user.role in ["admin"]:
+    if current_user.role == "admin":
         allowed = True
     elif current_user.role == "manager":
-        project = await database.projects_collection.find_one(
-            {"_id": task["project_id"]}
-        )
-        allowed = project and project["manager_id"] == current_user.id
+        # Managers may only submit QA if no QA annotator is assigned yet
+        if not task.get("assigned_qa_id"):
+            project = await database.projects_collection.find_one(
+                {"_id": task["project_id"]}
+            )
+            allowed = project and project["manager_id"] == current_user.id
     elif current_user.role == "annotator":
-        # Check if this annotator is assigned as QA for this task
+        # Only the explicitly assigned QA annotator can submit QA
         allowed = task.get("assigned_qa_id") == current_user.id
 
     if not allowed:
@@ -904,7 +906,13 @@ async def return_task_to_annotator(
     )
 
     updates = {
+        # Reset annotator completion so they can work again
         "completed_status.annotator_part": False,
+        # Also reset QA completion so original QA must re-review after resubmission
+        "completed_status.qa_part": False,
+        "qa_annotation": None,
+        "qa_feedback": None,
+        "qa_completed_at": None,
         "is_returned": True,
         "return_reason": return_reason,
         "returned_by": current_user.id,
