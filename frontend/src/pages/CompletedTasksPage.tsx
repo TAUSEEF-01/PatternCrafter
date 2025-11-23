@@ -160,20 +160,36 @@ export default function CompletedTasksPage() {
       if (annotatorId)
         qParts.push(`annotator_id=${encodeURIComponent(annotatorId)}`);
       const query = qParts.length ? `?${qParts.join("&")}` : "";
-      const data = await apiFetch<string>(
-        `/projects/${projectId}/completed-tasks/export${query}`
-      );
-      const blob = new Blob([data], {
-        type: format === "csv" ? "text/csv" : "application/json",
-      });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `completed_tasks_${projectId}.${format}`;
-      document.body.appendChild(a);
-      a.click();
-      URL.revokeObjectURL(url);
-      a.remove();
+
+      // For JSON, apiFetch will parse the JSON. For CSV we get raw text.
+      if (format === "json") {
+        const jsonData = await apiFetch<any>(
+          `/projects/${projectId}/completed-tasks/export${query}`
+        );
+        const jsonString = JSON.stringify(jsonData, null, 2);
+        const blob = new Blob([jsonString], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `completed_tasks_${projectId}.json`;
+        document.body.appendChild(a);
+        a.click();
+        URL.revokeObjectURL(url);
+        a.remove();
+      } else {
+        const csvData = await apiFetch<string>(
+          `/projects/${projectId}/completed-tasks/export${query}`
+        );
+        const blob = new Blob([csvData], { type: "text/csv" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `completed_tasks_${projectId}.csv`;
+        document.body.appendChild(a);
+        a.click();
+        URL.revokeObjectURL(url);
+        a.remove();
+      }
     } catch (e: any) {
       setError(e?.message || `Failed to download ${format.toUpperCase()}`);
     }
