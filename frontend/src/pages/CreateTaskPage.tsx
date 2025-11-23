@@ -48,8 +48,8 @@ export default function CreateTaskPage() {
   const [rs_context, setRsContext] = useState("");
 
   // Text Classification
-  const [tc_text, setTcText] = useState("");
-  const [tc_labels, setTcLabels] = useState("positive, negative");
+  // const [tc_text, setTcText] = useState("");
+  // const [tc_labels, setTcLabels] = useState("positive, negative");
 
   // Image Classification
   const [ic_image, setIcImage] = useState("");
@@ -137,10 +137,10 @@ export default function CreateTaskPage() {
           };
           break;
         }
-        case "text_classification": {
-          task_data = { text: tc_text, labels: parseList(tc_labels) };
-          break;
-        }
+        // case "text_classification": {
+        //   task_data = { text: tc_text, labels: parseList(tc_labels) };
+        //   break;
+        // }
         case "image_classification": {
           task_data = { image_url: ic_image, labels: parseList(ic_labels) };
           break;
@@ -1376,7 +1376,7 @@ export default function CreateTaskPage() {
             </div>
           )}
 
-          {category === "text_classification" && (
+          {/* {category === "text_classification" && (
             <div className="space-y-3">
               <div>
                 <label className="block mb-1 font-medium">Text</label>
@@ -1395,7 +1395,7 @@ export default function CreateTaskPage() {
                 />
               </div>
             </div>
-          )}
+          )} */}
 
           {category === "image_classification" && (
             <div className="space-y-3">
@@ -2509,7 +2509,7 @@ export default function CreateTaskPage() {
               "generative_ai_llm_response_grading",
               "generative_ai_chatbot_assessment",
               "conversational_ai_response_selection",
-              "text_classification",
+              // "text_classification",
               "image_classification",
               "object_detection",
               "named_entity_recognition",

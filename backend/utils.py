@@ -56,7 +56,7 @@ DATA_MODEL_BY_CATEGORY = {
     TaskCategory.CHATBOT_MODEL_ASSESSMENT: ChatbotModelAssessmentData,
     TaskCategory.RESPONSE_SELECTION: ResponseSelectionData,
     TaskCategory.IMAGE_CLASSIFICATION: ImageClassificationData,
-    TaskCategory.TEXT_CLASSIFICATION: TextClassificationData,
+    # TaskCategory.TEXT_CLASSIFICATION: TextClassificationData,
     TaskCategory.OBJECT_DETECTION: ObjectDetectionData,
     TaskCategory.NER: NERData,
 }
@@ -66,7 +66,7 @@ ANNOTATION_MODEL_BY_CATEGORY = {
     TaskCategory.CHATBOT_MODEL_ASSESSMENT: ChatbotModelAssessmentAnnotation,
     TaskCategory.RESPONSE_SELECTION: ResponseSelectionAnnotation,
     TaskCategory.IMAGE_CLASSIFICATION: ImageClassificationAnnotation,
-    TaskCategory.TEXT_CLASSIFICATION: TextClassificationAnnotation,
+    # TaskCategory.TEXT_CLASSIFICATION: TextClassificationAnnotation,
     TaskCategory.OBJECT_DETECTION: ObjectDetectionAnnotation,
     TaskCategory.NER: NERAnnotation,
 }

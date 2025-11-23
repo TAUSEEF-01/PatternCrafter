@@ -224,10 +224,10 @@ export default function TaskAnnotatePage() {
 
           // Category-specific fields
           switch (taskData.category) {
-            case "text_classification":
-              if (ann.label) setLabel(ann.label);
-              if (ann.category) setCategory(ann.category);
-              break;
+            // case "text_classification":
+            //   if (ann.label) setLabel(ann.label);
+            //   if (ann.category) setCategory(ann.category);
+            //   break;
             case "image_classification":
               if (ann.predicted_class) setPredictedClass(ann.predicted_class);
               break;
@@ -311,10 +311,10 @@ export default function TaskAnnotatePage() {
 
     // Build annotation based on task category
     switch (task.category) {
-      case "text_classification":
-        annotationData.label = label;
-        annotationData.category = category;
-        break;
+      // case "text_classification":
+      //   annotationData.label = label;
+      //   annotationData.category = category;
+      //   break;
       case "image_classification":
         annotationData.predicted_class = predictedClass;
         break;
@@ -566,7 +566,7 @@ export default function TaskAnnotatePage() {
             )}
           <form onSubmit={submit} className="space-y-4">
             {/* Text Classification */}
-            {task?.category === "text_classification" && (
+            {/* {task?.category === "text_classification" && (
               <>
                 <div>
                   <label className="label">Label</label>
@@ -590,7 +590,7 @@ export default function TaskAnnotatePage() {
                   />
                 </div>
               </>
-            )}
+            )} */}
 
             {/* Image Classification */}
             {task?.category === "image_classification" && (

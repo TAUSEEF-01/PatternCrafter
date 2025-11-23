@@ -21,7 +21,7 @@ const CATEGORIES: { value: string; label: string }[] = [
     value: "conversational_ai_response_selection",
     label: "Response Selection",
   },
-  { value: "text_classification", label: "Text Classification" },
+  // { value: "text_classification", label: "Text Classification" },
   { value: "image_classification", label: "Image Classification" },
   { value: "object_detection", label: "Object Detection" },
   {
