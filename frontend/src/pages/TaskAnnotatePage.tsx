@@ -1704,9 +1704,67 @@ export default function TaskAnnotatePage() {
             {/* QA Evaluation */}
             {task?.category === "qa_evaluation" && (
               <div className="space-y-6">
-                {/* Context Section - Always first */}
+                {/* Progress Summary */}
+                <div className="bg-teal-50 border-2 border-teal-300 rounded-lg p-4 flex flex-col gap-3">
+                  {(() => {
+                    const total = task.task_data?.qa_pairs?.length || 0;
+                    const completed = qaEvaluations.filter(
+                      (e) => e && e.accuracy && e.relevance && e.completeness
+                    ).length;
+                    const pct =
+                      total === 0 ? 0 : Math.round((completed / total) * 100);
+                    return (
+                      <>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <svg
+                              className="w-5 h-5 text-teal-600"
+                              fill="currentColor"
+                              viewBox="0 0 20 20"
+                            >
+                              <path
+                                fillRule="evenodd"
+                                d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 001 1h2a1 1 0 100-2h-1V6z"
+                                clipRule="evenodd"
+                              />
+                            </svg>
+                            <h3 className="text-sm font-bold text-teal-900 uppercase tracking-wide">
+                              Evaluation Progress
+                            </h3>
+                          </div>
+                          <span className="text-xs font-semibold text-teal-800 bg-teal-100 px-2 py-0.5 rounded-full">
+                            {completed}/{total} Completed
+                          </span>
+                        </div>
+                        <div className="w-full h-3 bg-white border-2 border-teal-200 rounded-md overflow-hidden">
+                          <div
+                            className="h-full bg-teal-500 transition-all"
+                            style={{ width: pct + "%" }}
+                          />
+                        </div>
+                        <p className="text-xs text-teal-700 flex items-center gap-1">
+                          <svg
+                            className="w-3.5 h-3.5"
+                            fill="currentColor"
+                            viewBox="0 0 20 20"
+                          >
+                            <path
+                              fillRule="evenodd"
+                              d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                              clipRule="evenodd"
+                            />
+                          </svg>
+                          Rate Accuracy, Relevance, and Completeness for each
+                          answer.
+                        </p>
+                      </>
+                    );
+                  })()}
+                </div>
+
+                {/* Context */}
                 {task.task_data?.context && (
-                  <div className="bg-teal-50 border-2 border-teal-300 rounded-lg p-5">
+                  <div className="bg-white border-2 border-teal-300 rounded-lg p-5">
                     <div className="flex items-center gap-2 mb-3">
                       <svg
                         className="w-5 h-5 text-teal-600"
@@ -1723,7 +1781,7 @@ export default function TaskAnnotatePage() {
                         Context / Background
                       </h3>
                     </div>
-                    <div className="bg-white border-2 border-teal-200 rounded-lg p-4">
+                    <div className="bg-teal-50 border-2 border-teal-200 rounded-lg p-4 max-h-56 overflow-auto">
                       <p className="text-sm text-teal-900 leading-relaxed whitespace-pre-wrap">
                         {task.task_data.context}
                       </p>
@@ -1731,7 +1789,7 @@ export default function TaskAnnotatePage() {
                   </div>
                 )}
 
-                {/* Evaluation Guidelines */}
+                {/* Guidelines */}
                 <div className="bg-teal-50 border-2 border-teal-200 rounded-lg p-4">
                   <div className="flex items-start gap-2">
                     <svg
@@ -1746,227 +1804,207 @@ export default function TaskAnnotatePage() {
                         Evaluation Guidelines
                       </p>
                       <ul className="text-xs text-teal-800 space-y-1">
-                        <li>
-                          • Rate each criterion from 1-10 or use Low/Medium/High
-                        </li>
-                        <li>• Consider factual accuracy and correctness</li>
-                        <li>
-                          • Assess how well the answer addresses the question
-                        </li>
-                        <li>• Check if all key aspects are covered</li>
+                        <li>• Accuracy: factual correctness & precision</li>
+                        <li>• Relevance: directly answers the question</li>
+                        <li>• Completeness: covers all key aspects</li>
+                        <li>• Use Low / Medium / High or numeric (1–10)</li>
                       </ul>
                     </div>
                   </div>
                 </div>
 
-                {/* Question-Answer Pairs */}
-                {task.task_data?.qa_pairs?.map((pair: any, index: number) => (
-                  <div
-                    key={index}
-                    className="bg-white border-2 border-gray-300 rounded-lg p-5 space-y-4"
-                  >
-                    {/* Q&A Pair Header */}
-                    <div className="flex items-center gap-2 pb-3 border-b-2 border-gray-200">
-                      <div className="bg-teal-600 text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center">
-                        {index + 1}
-                      </div>
-                      <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wide">
-                        Q&A Pair #{index + 1}
-                      </h3>
-                    </div>
-
-                    {/* Question */}
-                    <div className="bg-gray-50 border-2 border-gray-200 rounded-lg p-4">
-                      <div className="flex items-center gap-2 mb-2">
-                        <svg
-                          className="w-4 h-4 text-teal-600"
-                          fill="currentColor"
-                          viewBox="0 0 20 20"
+                {/* Q&A Pairs */}
+                {task.task_data?.qa_pairs?.map((pair: any, index: number) => {
+                  const current = qaEvaluations[index] || {
+                    accuracy: "",
+                    relevance: "",
+                    completeness: "",
+                  };
+                  const setValue = (
+                    field: "accuracy" | "relevance" | "completeness",
+                    value: string
+                  ) => {
+                    const newEvals = [...qaEvaluations];
+                    newEvals[index] = { ...current, [field]: value };
+                    setQaEvaluations(newEvals);
+                  };
+                  const levelButtons = ["Low", "Medium", "High"];
+                  const sliderValue = (val: string) => {
+                    if (/^\d+$/.test(val)) return parseInt(val, 10);
+                    if (val === "Low") return 3;
+                    if (val === "Medium") return 6;
+                    if (val === "High") return 9;
+                    return 0;
+                  };
+                  return (
+                    <div
+                      key={index}
+                      className="bg-white border-2 border-gray-300 rounded-lg p-5 space-y-5"
+                    >
+                      <div className="flex items-center justify-between pb-3 border-b-2 border-gray-200">
+                        <div className="flex items-center gap-2">
+                          <div className="bg-teal-600 text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center">
+                            {index + 1}
+                          </div>
+                          <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wide">
+                            Q&A Pair #{index + 1}
+                          </h3>
+                        </div>
+                        <span
+                          className={
+                            "text-xs px-2 py-0.5 rounded-full font-semibold " +
+                            (current.accuracy &&
+                            current.relevance &&
+                            current.completeness
+                              ? "bg-green-100 text-green-700 border border-green-300"
+                              : "bg-yellow-100 text-yellow-700 border border-yellow-300")
+                          }
                         >
-                          <path
-                            fillRule="evenodd"
-                            d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-3a1 1 0 00-.867.5 1 1 0 11-1.731-1A3 3 0 0113 8a3.001 3.001 0 01-2 2.83V11a1 1 0 11-2 0v-1a1 1 0 011-1 1 1 0 100-2zm0 8a1 1 0 100-2 1 1 0 000 2z"
-                            clipRule="evenodd"
-                          />
-                        </svg>
-                        <p className="text-xs font-bold text-gray-700 uppercase tracking-wide">
-                          Question
-                        </p>
+                          {current.accuracy &&
+                          current.relevance &&
+                          current.completeness
+                            ? "Done"
+                            : "Pending"}
+                        </span>
                       </div>
-                      <p className="text-sm text-gray-800 leading-relaxed whitespace-pre-wrap">
-                        {pair.question}
-                      </p>
-                    </div>
 
-                    {/* Answer to Evaluate */}
-                    <div className="bg-teal-50 border-2 border-teal-200 rounded-lg p-4">
-                      <div className="flex items-center gap-2 mb-2">
-                        <svg
-                          className="w-4 h-4 text-teal-600"
-                          fill="currentColor"
-                          viewBox="0 0 20 20"
-                        >
-                          <path
-                            fillRule="evenodd"
-                            d="M18 13V5a2 2 0 00-2-2H4a2 2 0 00-2 2v8a2 2 0 002 2h3l3 3 3-3h3a2 2 0 002-2zM5 7a1 1 0 011-1h8a1 1 0 110 2H6a1 1 0 01-1-1zm1 3a1 1 0 100 2h3a1 1 0 100-2H6z"
-                            clipRule="evenodd"
-                          />
-                        </svg>
-                        <p className="text-xs font-bold text-teal-900 uppercase tracking-wide">
-                          Answer to Evaluate
-                        </p>
-                      </div>
-                      <p className="text-sm text-gray-800 leading-relaxed whitespace-pre-wrap">
-                        {pair.answer}
-                      </p>
-                    </div>
-
-                    {/* Reference Answer (if provided) */}
-                    {pair.reference_answer && (
-                      <div className="bg-green-50 border-2 border-green-200 rounded-lg p-3">
-                        <div className="flex items-start gap-2">
+                      {/* Question */}
+                      <div className="bg-gray-50 border-2 border-gray-200 rounded-lg p-4">
+                        <div className="flex items-center gap-2 mb-2">
                           <svg
-                            className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5"
+                            className="w-4 h-4 text-teal-600"
                             fill="currentColor"
                             viewBox="0 0 20 20"
                           >
                             <path
                               fillRule="evenodd"
-                              d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                              d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-3a1 1 0 00-.867.5 1 1 0 11-1.731-1A3 3 0 0113 8a3.001 3.001 0 01-2 2.83V11a1 1 0 11-2 0v-1a1 1 0 011-1 1 1 0 100-2zm0 8a1 1 0 100-2 1 1 0 000 2z"
                               clipRule="evenodd"
                             />
                           </svg>
-                          <div className="flex-1">
-                            <p className="text-xs font-bold text-green-900 mb-1">
-                              Reference Answer
-                            </p>
-                            <p className="text-xs text-green-800 whitespace-pre-wrap">
-                              {pair.reference_answer}
-                            </p>
+                          <p className="text-xs font-bold text-gray-700 uppercase tracking-wide">
+                            Question
+                          </p>
+                        </div>
+                        <p className="text-sm text-gray-800 leading-relaxed whitespace-pre-wrap">
+                          {pair.question}
+                        </p>
+                      </div>
+
+                      {/* Answer */}
+                      <div className="bg-teal-50 border-2 border-teal-200 rounded-lg p-4">
+                        <div className="flex items-center gap-2 mb-2">
+                          <svg
+                            className="w-4 h-4 text-teal-600"
+                            fill="currentColor"
+                            viewBox="0 0 20 20"
+                          >
+                            <path
+                              fillRule="evenodd"
+                              d="M18 13V5a2 2 0 00-2-2H4a2 2 0 00-2 2v8a2 2 0 002 2h3l3 3 3-3h3a2 2 0 002-2zM5 7a1 1 0 011-1h8a1 1 0 110 2H6a1 1 0 01-1-1zm1 3a1 1 0 100 2h3a1 1 0 100-2H6z"
+                              clipRule="evenodd"
+                            />
+                          </svg>
+                          <p className="text-xs font-bold text-teal-900 uppercase tracking-wide">
+                            Answer to Evaluate
+                          </p>
+                        </div>
+                        <p className="text-sm text-gray-800 leading-relaxed whitespace-pre-wrap">
+                          {pair.answer}
+                        </p>
+                      </div>
+
+                      {pair.reference_answer && (
+                        <div className="bg-green-50 border-2 border-green-200 rounded-lg p-3">
+                          <div className="flex items-start gap-2">
+                            <svg
+                              className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5"
+                              fill="currentColor"
+                              viewBox="0 0 20 20"
+                            >
+                              <path
+                                fillRule="evenodd"
+                                d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                                clipRule="evenodd"
+                              />
+                            </svg>
+                            <div className="flex-1">
+                              <p className="text-xs font-bold text-green-900 mb-1">
+                                Reference Answer
+                              </p>
+                              <p className="text-xs text-green-800 whitespace-pre-wrap">
+                                {pair.reference_answer}
+                              </p>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    )}
+                      )}
 
-                    {/* Evaluation Inputs */}
-                    <div className="space-y-3 pt-2">
-                      {/* Accuracy */}
-                      <div>
-                        <label className="text-xs font-bold text-gray-700 uppercase tracking-wide mb-2 flex items-center gap-1">
-                          <svg
-                            className="w-4 h-4 text-teal-600"
-                            fill="currentColor"
-                            viewBox="0 0 20 20"
-                          >
-                            <path
-                              fillRule="evenodd"
-                              d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                              clipRule="evenodd"
-                            />
-                          </svg>
-                          Accuracy
-                          <span className="text-xs text-red-500 ml-0.5">*</span>
-                        </label>
-                        <input
-                          type="text"
-                          className="w-full px-3 py-2 text-sm border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-all bg-white"
-                          value={qaEvaluations[index]?.accuracy || ""}
-                          onChange={(e) => {
-                            const newEvals = [...qaEvaluations];
-                            if (!newEvals[index]) {
-                              newEvals[index] = {
-                                accuracy: "",
-                                relevance: "",
-                                completeness: "",
-                              };
-                            }
-                            newEvals[index].accuracy = e.target.value;
-                            setQaEvaluations(newEvals);
-                          }}
-                          placeholder="High / Medium / Low or 8/10"
-                          required
-                        />
-                      </div>
-
-                      {/* Relevance */}
-                      <div>
-                        <label className="text-xs font-bold text-gray-700 uppercase tracking-wide mb-2 flex items-center gap-1">
-                          <svg
-                            className="w-4 h-4 text-teal-600"
-                            fill="currentColor"
-                            viewBox="0 0 20 20"
-                          >
-                            <path
-                              fillRule="evenodd"
-                              d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z"
-                              clipRule="evenodd"
-                            />
-                          </svg>
-                          Relevance
-                          <span className="text-xs text-red-500 ml-0.5">*</span>
-                        </label>
-                        <input
-                          type="text"
-                          className="w-full px-3 py-2 text-sm border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-all bg-white"
-                          value={qaEvaluations[index]?.relevance || ""}
-                          onChange={(e) => {
-                            const newEvals = [...qaEvaluations];
-                            if (!newEvals[index]) {
-                              newEvals[index] = {
-                                accuracy: "",
-                                relevance: "",
-                                completeness: "",
-                              };
-                            }
-                            newEvals[index].relevance = e.target.value;
-                            setQaEvaluations(newEvals);
-                          }}
-                          placeholder="High / Medium / Low or 8/10"
-                          required
-                        />
-                      </div>
-
-                      {/* Completeness */}
-                      <div>
-                        <label className="text-xs font-bold text-gray-700 uppercase tracking-wide mb-2 flex items-center gap-1">
-                          <svg
-                            className="w-4 h-4 text-teal-600"
-                            fill="currentColor"
-                            viewBox="0 0 20 20"
-                          >
-                            <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" />
-                            <path
-                              fillRule="evenodd"
-                              d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm9.707 5.707a1 1 0 00-1.414-1.414L9 12.586l-1.293-1.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                              clipRule="evenodd"
-                            />
-                          </svg>
-                          Completeness
-                          <span className="text-xs text-red-500 ml-0.5">*</span>
-                        </label>
-                        <input
-                          type="text"
-                          className="w-full px-3 py-2 text-sm border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-all bg-white"
-                          value={qaEvaluations[index]?.completeness || ""}
-                          onChange={(e) => {
-                            const newEvals = [...qaEvaluations];
-                            if (!newEvals[index]) {
-                              newEvals[index] = {
-                                accuracy: "",
-                                relevance: "",
-                                completeness: "",
-                              };
-                            }
-                            newEvals[index].completeness = e.target.value;
-                            setQaEvaluations(newEvals);
-                          }}
-                          placeholder="High / Medium / Low or 8/10"
-                          required
-                        />
+                      {/* Evaluation Controls */}
+                      <div className="grid gap-6 md:grid-cols-3 pt-2">
+                        {(
+                          ["accuracy", "relevance", "completeness"] as const
+                        ).map((field) => (
+                          <div key={field} className="space-y-2">
+                            <label className="text-xs font-bold text-gray-700 uppercase tracking-wide flex items-center gap-1">
+                              <svg
+                                className="w-4 h-4 text-teal-600"
+                                fill="currentColor"
+                                viewBox="0 0 20 20"
+                              >
+                                <path
+                                  fillRule="evenodd"
+                                  d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                                  clipRule="evenodd"
+                                />
+                              </svg>
+                              {field.charAt(0).toUpperCase() + field.slice(1)}
+                              <span className="text-red-500">*</span>
+                            </label>
+                            <div className="flex gap-2">
+                              {levelButtons.map((lvl) => {
+                                const selected = current[field] === lvl;
+                                return (
+                                  <button
+                                    type="button"
+                                    key={lvl}
+                                    onClick={() => setValue(field, lvl)}
+                                    className={
+                                      "flex-1 text-xs font-semibold px-2 py-1 rounded-md border-2 transition-all " +
+                                      (selected
+                                        ? "border-teal-600 bg-teal-600 text-white"
+                                        : "border-gray-300 bg-white hover:border-teal-400")
+                                    }
+                                  >
+                                    {lvl}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <input
+                                type="range"
+                                min={1}
+                                max={10}
+                                value={sliderValue(current[field])}
+                                onChange={(e) =>
+                                  setValue(field, e.target.value)
+                                }
+                                className="w-full accent-teal-600"
+                              />
+                              <span className="text-xs font-mono w-7 text-center border-2 border-teal-300 rounded-md bg-teal-50 text-teal-700">
+                                {sliderValue(current[field]) || "-"}
+                              </span>
+                            </div>
+                            <p className="text-[10px] text-gray-500">
+                              Choose a level or adjust numeric score (1–10).
+                            </p>
+                          </div>
+                        ))}
                       </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
 
