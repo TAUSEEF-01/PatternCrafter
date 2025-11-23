@@ -160,10 +160,13 @@ export default function TaskAnnotatePage() {
   // Text Summarization
   const [summary, setSummary] = useState("");
 
-  // QA Evaluation
-  const [accuracy, setAccuracy] = useState("");
-  const [relevance, setRelevance] = useState("");
-  const [completeness, setCompleteness] = useState("");
+  // QA Evaluation - Multiple pairs support
+  interface QAEvaluation {
+    accuracy: string;
+    relevance: string;
+    completeness: string;
+  }
+  const [qaEvaluations, setQaEvaluations] = useState<QAEvaluation[]>([]);
 
   // LLM Response Grading
   const [grade, setGrade] = useState("");
@@ -188,6 +191,23 @@ export default function TaskAnnotatePage() {
           setElapsedTime(Math.floor(taskData.accumulated_time));
         }
 
+        // Initialize QA evaluations array based on qa_pairs length
+        if (
+          taskData.category === "qa_evaluation" &&
+          taskData.task_data?.qa_pairs
+        ) {
+          const pairsCount = taskData.task_data.qa_pairs.length;
+          setQaEvaluations(
+            Array(pairsCount)
+              .fill(null)
+              .map(() => ({
+                accuracy: "",
+                relevance: "",
+                completeness: "",
+              }))
+          );
+        }
+
         // If task has existing annotation (returned task), populate the form fields
         if (taskData.annotation) {
           const ann = taskData.annotation;
@@ -196,6 +216,11 @@ export default function TaskAnnotatePage() {
           if (ann.confidence !== undefined)
             setConfidence(String(ann.confidence));
           if (ann.notes) setNotes(ann.notes);
+
+          // QA Evaluation - restore multiple evaluations
+          if (taskData.category === "qa_evaluation" && ann.evaluations) {
+            setQaEvaluations(ann.evaluations);
+          }
 
           // Category-specific fields
           switch (taskData.category) {
@@ -223,11 +248,6 @@ export default function TaskAnnotatePage() {
               break;
             case "text_summarization":
               if (ann.summary) setSummary(ann.summary);
-              break;
-            case "qa_evaluation":
-              if (ann.accuracy) setAccuracy(ann.accuracy);
-              if (ann.relevance) setRelevance(ann.relevance);
-              if (ann.completeness) setCompleteness(ann.completeness);
               break;
             case "generative_ai_llm_response_grading":
               if (ann.grade) setGrade(ann.grade);
@@ -319,9 +339,7 @@ export default function TaskAnnotatePage() {
         annotationData.summary = summary;
         break;
       case "qa_evaluation":
-        annotationData.accuracy = accuracy;
-        annotationData.relevance = relevance;
-        annotationData.completeness = completeness;
+        annotationData.evaluations = qaEvaluations;
         break;
       case "generative_ai_llm_response_grading":
         annotationData.grade = grade;
@@ -1685,41 +1703,271 @@ export default function TaskAnnotatePage() {
 
             {/* QA Evaluation */}
             {task?.category === "qa_evaluation" && (
-              <>
-                <div>
-                  <label className="label">Accuracy</label>
-                  <input
-                    type="text"
-                    className="input"
-                    value={accuracy}
-                    onChange={(e) => setAccuracy(e.target.value)}
-                    placeholder="e.g., High, Medium, Low or 1-10"
-                    required
-                  />
+              <div className="space-y-6">
+                {/* Context Section - Always first */}
+                {task.task_data?.context && (
+                  <div className="bg-teal-50 border-2 border-teal-300 rounded-lg p-5">
+                    <div className="flex items-center gap-2 mb-3">
+                      <svg
+                        className="w-5 h-5 text-teal-600"
+                        fill="currentColor"
+                        viewBox="0 0 20 20"
+                      >
+                        <path
+                          fillRule="evenodd"
+                          d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z"
+                          clipRule="evenodd"
+                        />
+                      </svg>
+                      <h3 className="text-sm font-bold text-teal-900 uppercase tracking-wide">
+                        Context / Background
+                      </h3>
+                    </div>
+                    <div className="bg-white border-2 border-teal-200 rounded-lg p-4">
+                      <p className="text-sm text-teal-900 leading-relaxed whitespace-pre-wrap">
+                        {task.task_data.context}
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Evaluation Guidelines */}
+                <div className="bg-teal-50 border-2 border-teal-200 rounded-lg p-4">
+                  <div className="flex items-start gap-2">
+                    <svg
+                      className="w-5 h-5 text-teal-600 flex-shrink-0"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                    >
+                      <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                    </svg>
+                    <div className="flex-1">
+                      <p className="text-sm font-bold text-teal-900 mb-2">
+                        Evaluation Guidelines
+                      </p>
+                      <ul className="text-xs text-teal-800 space-y-1">
+                        <li>
+                          • Rate each criterion from 1-10 or use Low/Medium/High
+                        </li>
+                        <li>• Consider factual accuracy and correctness</li>
+                        <li>
+                          • Assess how well the answer addresses the question
+                        </li>
+                        <li>• Check if all key aspects are covered</li>
+                      </ul>
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <label className="label">Relevance</label>
-                  <input
-                    type="text"
-                    className="input"
-                    value={relevance}
-                    onChange={(e) => setRelevance(e.target.value)}
-                    placeholder="e.g., High, Medium, Low or 1-10"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="label">Completeness</label>
-                  <input
-                    type="text"
-                    className="input"
-                    value={completeness}
-                    onChange={(e) => setCompleteness(e.target.value)}
-                    placeholder="e.g., High, Medium, Low or 1-10"
-                    required
-                  />
-                </div>
-              </>
+
+                {/* Question-Answer Pairs */}
+                {task.task_data?.qa_pairs?.map((pair: any, index: number) => (
+                  <div
+                    key={index}
+                    className="bg-white border-2 border-gray-300 rounded-lg p-5 space-y-4"
+                  >
+                    {/* Q&A Pair Header */}
+                    <div className="flex items-center gap-2 pb-3 border-b-2 border-gray-200">
+                      <div className="bg-teal-600 text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center">
+                        {index + 1}
+                      </div>
+                      <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wide">
+                        Q&A Pair #{index + 1}
+                      </h3>
+                    </div>
+
+                    {/* Question */}
+                    <div className="bg-gray-50 border-2 border-gray-200 rounded-lg p-4">
+                      <div className="flex items-center gap-2 mb-2">
+                        <svg
+                          className="w-4 h-4 text-teal-600"
+                          fill="currentColor"
+                          viewBox="0 0 20 20"
+                        >
+                          <path
+                            fillRule="evenodd"
+                            d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-3a1 1 0 00-.867.5 1 1 0 11-1.731-1A3 3 0 0113 8a3.001 3.001 0 01-2 2.83V11a1 1 0 11-2 0v-1a1 1 0 011-1 1 1 0 100-2zm0 8a1 1 0 100-2 1 1 0 000 2z"
+                            clipRule="evenodd"
+                          />
+                        </svg>
+                        <p className="text-xs font-bold text-gray-700 uppercase tracking-wide">
+                          Question
+                        </p>
+                      </div>
+                      <p className="text-sm text-gray-800 leading-relaxed whitespace-pre-wrap">
+                        {pair.question}
+                      </p>
+                    </div>
+
+                    {/* Answer to Evaluate */}
+                    <div className="bg-teal-50 border-2 border-teal-200 rounded-lg p-4">
+                      <div className="flex items-center gap-2 mb-2">
+                        <svg
+                          className="w-4 h-4 text-teal-600"
+                          fill="currentColor"
+                          viewBox="0 0 20 20"
+                        >
+                          <path
+                            fillRule="evenodd"
+                            d="M18 13V5a2 2 0 00-2-2H4a2 2 0 00-2 2v8a2 2 0 002 2h3l3 3 3-3h3a2 2 0 002-2zM5 7a1 1 0 011-1h8a1 1 0 110 2H6a1 1 0 01-1-1zm1 3a1 1 0 100 2h3a1 1 0 100-2H6z"
+                            clipRule="evenodd"
+                          />
+                        </svg>
+                        <p className="text-xs font-bold text-teal-900 uppercase tracking-wide">
+                          Answer to Evaluate
+                        </p>
+                      </div>
+                      <p className="text-sm text-gray-800 leading-relaxed whitespace-pre-wrap">
+                        {pair.answer}
+                      </p>
+                    </div>
+
+                    {/* Reference Answer (if provided) */}
+                    {pair.reference_answer && (
+                      <div className="bg-green-50 border-2 border-green-200 rounded-lg p-3">
+                        <div className="flex items-start gap-2">
+                          <svg
+                            className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5"
+                            fill="currentColor"
+                            viewBox="0 0 20 20"
+                          >
+                            <path
+                              fillRule="evenodd"
+                              d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                              clipRule="evenodd"
+                            />
+                          </svg>
+                          <div className="flex-1">
+                            <p className="text-xs font-bold text-green-900 mb-1">
+                              Reference Answer
+                            </p>
+                            <p className="text-xs text-green-800 whitespace-pre-wrap">
+                              {pair.reference_answer}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Evaluation Inputs */}
+                    <div className="space-y-3 pt-2">
+                      {/* Accuracy */}
+                      <div>
+                        <label className="text-xs font-bold text-gray-700 uppercase tracking-wide mb-2 flex items-center gap-1">
+                          <svg
+                            className="w-4 h-4 text-teal-600"
+                            fill="currentColor"
+                            viewBox="0 0 20 20"
+                          >
+                            <path
+                              fillRule="evenodd"
+                              d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                              clipRule="evenodd"
+                            />
+                          </svg>
+                          Accuracy
+                          <span className="text-xs text-red-500 ml-0.5">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          className="w-full px-3 py-2 text-sm border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-all bg-white"
+                          value={qaEvaluations[index]?.accuracy || ""}
+                          onChange={(e) => {
+                            const newEvals = [...qaEvaluations];
+                            if (!newEvals[index]) {
+                              newEvals[index] = {
+                                accuracy: "",
+                                relevance: "",
+                                completeness: "",
+                              };
+                            }
+                            newEvals[index].accuracy = e.target.value;
+                            setQaEvaluations(newEvals);
+                          }}
+                          placeholder="High / Medium / Low or 8/10"
+                          required
+                        />
+                      </div>
+
+                      {/* Relevance */}
+                      <div>
+                        <label className="text-xs font-bold text-gray-700 uppercase tracking-wide mb-2 flex items-center gap-1">
+                          <svg
+                            className="w-4 h-4 text-teal-600"
+                            fill="currentColor"
+                            viewBox="0 0 20 20"
+                          >
+                            <path
+                              fillRule="evenodd"
+                              d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z"
+                              clipRule="evenodd"
+                            />
+                          </svg>
+                          Relevance
+                          <span className="text-xs text-red-500 ml-0.5">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          className="w-full px-3 py-2 text-sm border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-all bg-white"
+                          value={qaEvaluations[index]?.relevance || ""}
+                          onChange={(e) => {
+                            const newEvals = [...qaEvaluations];
+                            if (!newEvals[index]) {
+                              newEvals[index] = {
+                                accuracy: "",
+                                relevance: "",
+                                completeness: "",
+                              };
+                            }
+                            newEvals[index].relevance = e.target.value;
+                            setQaEvaluations(newEvals);
+                          }}
+                          placeholder="High / Medium / Low or 8/10"
+                          required
+                        />
+                      </div>
+
+                      {/* Completeness */}
+                      <div>
+                        <label className="text-xs font-bold text-gray-700 uppercase tracking-wide mb-2 flex items-center gap-1">
+                          <svg
+                            className="w-4 h-4 text-teal-600"
+                            fill="currentColor"
+                            viewBox="0 0 20 20"
+                          >
+                            <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" />
+                            <path
+                              fillRule="evenodd"
+                              d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm9.707 5.707a1 1 0 00-1.414-1.414L9 12.586l-1.293-1.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                              clipRule="evenodd"
+                            />
+                          </svg>
+                          Completeness
+                          <span className="text-xs text-red-500 ml-0.5">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          className="w-full px-3 py-2 text-sm border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-all bg-white"
+                          value={qaEvaluations[index]?.completeness || ""}
+                          onChange={(e) => {
+                            const newEvals = [...qaEvaluations];
+                            if (!newEvals[index]) {
+                              newEvals[index] = {
+                                accuracy: "",
+                                relevance: "",
+                                completeness: "",
+                              };
+                            }
+                            newEvals[index].completeness = e.target.value;
+                            setQaEvaluations(newEvals);
+                          }}
+                          placeholder="High / Medium / Low or 8/10"
+                          required
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
             )}
 
             {/* LLM Response Grading */}

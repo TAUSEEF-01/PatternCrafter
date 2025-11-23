@@ -77,6 +77,17 @@ export default function CreateTaskPage() {
   const [ts_guidelines, setTsGuidelines] = useState("");
   const [ts_max_length, setTsMaxLength] = useState("");
 
+  // QA Evaluation
+  interface QAPair {
+    question: string;
+    answer: string;
+    reference_answer?: string;
+  }
+  const [qa_context, setQaContext] = useState("");
+  const [qa_pairs, setQaPairs] = useState<QAPair[]>([
+    { question: "", answer: "", reference_answer: "" },
+  ]);
+
   // Get category from route state
   useEffect(() => {
     const state = (window.history.state as any)?.usr;
@@ -161,6 +172,22 @@ export default function CreateTaskPage() {
             text: ts_split ? paragraphs : ts_text,
             ...(ts_guidelines ? { guidelines: ts_guidelines } : {}),
             ...(ts_max_length ? { max_length: parseInt(ts_max_length) } : {}),
+          };
+          break;
+        }
+        case "qa_evaluation": {
+          const validPairs = qa_pairs.filter(
+            (pair) => pair.question.trim() && pair.answer.trim()
+          );
+          task_data = {
+            context: qa_context,
+            qa_pairs: validPairs.map((pair) => ({
+              question: pair.question,
+              answer: pair.answer,
+              ...(pair.reference_answer
+                ? { reference_answer: pair.reference_answer }
+                : {}),
+            })),
           };
           break;
         }
@@ -1412,6 +1439,328 @@ export default function CreateTaskPage() {
             </div>
           )}
 
+          {category === "qa_evaluation" && (
+            <div className="space-y-6">
+              {/* Header Section */}
+              <div className="bg-white border-2 border-gray-300 rounded-lg p-5">
+                <div className="flex items-center gap-2 mb-2">
+                  <svg
+                    className="w-5 h-5 text-teal-600"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-3a1 1 0 00-.867.5 1 1 0 11-1.731-1A3 3 0 0113 8a3.001 3.001 0 01-2 2.83V11a1 1 0 11-2 0v-1a1 1 0 011-1 1 1 0 100-2zm0 8a1 1 0 100-2 1 1 0 000 2z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                  <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wide">
+                    QA Evaluation Task
+                  </h3>
+                </div>
+                <p className="text-xs text-gray-600">
+                  Define context and multiple question-answer pairs for quality
+                  evaluation
+                </p>
+              </div>
+
+              {/* Context Section - First and Required */}
+              <div className="bg-teal-50 border-2 border-teal-300 rounded-lg p-5">
+                <div className="flex items-center gap-2 mb-4">
+                  <svg
+                    className="w-5 h-5 text-teal-600"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                  <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wide">
+                    Context / Background
+                  </h3>
+                  <span className="text-xs text-red-500 ml-1">*</span>
+                </div>
+                <textarea
+                  className="w-full px-4 py-3 text-base border-2 border-teal-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-all bg-white resize-none"
+                  value={qa_context}
+                  onChange={(e) => setQaContext(e.target.value)}
+                  rows={4}
+                  placeholder="Provide the shared context for all questions and answers below...&#10;&#10;Example: This is a geography assessment about European countries. All questions relate to capital cities and major landmarks."
+                  required
+                />
+                <p className="text-xs text-teal-700 mt-2 flex items-center gap-1">
+                  <svg
+                    className="w-3.5 h-3.5"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                  Shared background or domain information for all Q&A pairs
+                  below
+                </p>
+              </div>
+
+              {/* Question-Answer Pairs Section */}
+              <div className="bg-white border-2 border-gray-300 rounded-lg p-5">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <svg
+                      className="w-5 h-5 text-teal-600"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                    <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wide">
+                      Question-Answer Pairs
+                    </h3>
+                    <span className="text-xs bg-teal-100 text-teal-800 px-2 py-0.5 rounded-full font-semibold">
+                      {qa_pairs.length}{" "}
+                      {qa_pairs.length === 1 ? "Pair" : "Pairs"}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setQaPairs([
+                        ...qa_pairs,
+                        { question: "", answer: "", reference_answer: "" },
+                      ])
+                    }
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-teal-600 border-2 border-teal-600 rounded-lg hover:bg-teal-700 hover:border-teal-700 focus:outline-none focus:ring-2 focus:ring-teal-500 shadow-sm hover:shadow-md transition-all"
+                  >
+                    <svg
+                      className="w-4 h-4"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                    Add Q&A Pair
+                  </button>
+                </div>
+
+                <div className="space-y-5">
+                  {qa_pairs.map((pair, index) => (
+                    <div
+                      key={index}
+                      className="bg-gray-50 border-2 border-gray-200 rounded-lg p-4"
+                    >
+                      <div className="flex items-center justify-between mb-4">
+                        <h4 className="text-xs font-bold text-teal-900 uppercase tracking-wide">
+                          Q&A Pair #{index + 1}
+                        </h4>
+                        {qa_pairs.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setQaPairs(qa_pairs.filter((_, i) => i !== index))
+                            }
+                            className="text-xs font-medium text-red-600 hover:text-red-700 hover:underline flex items-center gap-1"
+                          >
+                            <svg
+                              className="w-4 h-4"
+                              fill="currentColor"
+                              viewBox="0 0 20 20"
+                            >
+                              <path
+                                fillRule="evenodd"
+                                d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"
+                                clipRule="evenodd"
+                              />
+                            </svg>
+                            Remove
+                          </button>
+                        )}
+                      </div>
+
+                      {/* Question */}
+                      <div className="mb-3">
+                        <label className="text-xs font-bold text-gray-700 uppercase tracking-wide mb-2 flex items-center gap-1">
+                          <svg
+                            className="w-4 h-4 text-teal-600"
+                            fill="currentColor"
+                            viewBox="0 0 20 20"
+                          >
+                            <path
+                              fillRule="evenodd"
+                              d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-3a1 1 0 00-.867.5 1 1 0 11-1.731-1A3 3 0 0113 8a3.001 3.001 0 01-2 2.83V11a1 1 0 11-2 0v-1a1 1 0 011-1 1 1 0 100-2zm0 8a1 1 0 100-2 1 1 0 000 2z"
+                              clipRule="evenodd"
+                            />
+                          </svg>
+                          Question
+                          <span className="text-xs text-red-500 ml-0.5">*</span>
+                        </label>
+                        <textarea
+                          className="w-full px-3 py-2 text-sm border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-all bg-white resize-none"
+                          value={pair.question}
+                          onChange={(e) => {
+                            const newPairs = [...qa_pairs];
+                            newPairs[index].question = e.target.value;
+                            setQaPairs(newPairs);
+                          }}
+                          rows={2}
+                          placeholder="What is the capital of France?"
+                          required
+                        />
+                      </div>
+
+                      {/* Answer to Evaluate */}
+                      <div className="mb-3">
+                        <label className="text-xs font-bold text-gray-700 uppercase tracking-wide mb-2 flex items-center gap-1">
+                          <svg
+                            className="w-4 h-4 text-teal-600"
+                            fill="currentColor"
+                            viewBox="0 0 20 20"
+                          >
+                            <path
+                              fillRule="evenodd"
+                              d="M18 13V5a2 2 0 00-2-2H4a2 2 0 00-2 2v8a2 2 0 002 2h3l3 3 3-3h3a2 2 0 002-2zM5 7a1 1 0 011-1h8a1 1 0 110 2H6a1 1 0 01-1-1zm1 3a1 1 0 100 2h3a1 1 0 100-2H6z"
+                              clipRule="evenodd"
+                            />
+                          </svg>
+                          Answer to Evaluate
+                          <span className="text-xs text-red-500 ml-0.5">*</span>
+                        </label>
+                        <textarea
+                          className="w-full px-3 py-2 text-sm border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-all bg-white resize-none"
+                          value={pair.answer}
+                          onChange={(e) => {
+                            const newPairs = [...qa_pairs];
+                            newPairs[index].answer = e.target.value;
+                            setQaPairs(newPairs);
+                          }}
+                          rows={3}
+                          placeholder="Paris is the capital and largest city of France."
+                          required
+                        />
+                      </div>
+
+                      {/* Reference Answer (Optional) */}
+                      <div>
+                        <label className="text-xs font-bold text-gray-700 uppercase tracking-wide mb-2 flex items-center gap-1">
+                          <svg
+                            className="w-4 h-4 text-teal-600"
+                            fill="currentColor"
+                            viewBox="0 0 20 20"
+                          >
+                            <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" />
+                            <path
+                              fillRule="evenodd"
+                              d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm9.707 5.707a1 1 0 00-1.414-1.414L9 12.586l-1.293-1.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                              clipRule="evenodd"
+                            />
+                          </svg>
+                          Reference Answer
+                          <span className="text-xs text-gray-500 ml-1">
+                            (Optional)
+                          </span>
+                        </label>
+                        <textarea
+                          className="w-full px-3 py-2 text-sm border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-all bg-white resize-none"
+                          value={pair.reference_answer || ""}
+                          onChange={(e) => {
+                            const newPairs = [...qa_pairs];
+                            newPairs[index].reference_answer = e.target.value;
+                            setQaPairs(newPairs);
+                          }}
+                          rows={2}
+                          placeholder="Ideal answer for comparison (optional)"
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {qa_pairs.length === 0 && (
+                  <div className="text-center py-8 bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg">
+                    <svg
+                      className="w-12 h-12 text-gray-400 mx-auto mb-2"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M8 12h.01M12 12h.01M16 12h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                      />
+                    </svg>
+                    <p className="text-sm text-gray-500">
+                      No Q&A pairs added yet
+                    </p>
+                    <p className="text-xs text-gray-400 mt-1">
+                      Click "Add Q&A Pair" to get started
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Evaluation Criteria Info */}
+              <div className="bg-teal-50 border-2 border-teal-200 rounded-lg p-5">
+                <div className="flex items-center gap-2 mb-3">
+                  <svg
+                    className="w-5 h-5 text-teal-600"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
+                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                  </svg>
+                  <h3 className="text-sm font-bold text-teal-900 uppercase tracking-wide">
+                    Evaluation Criteria
+                  </h3>
+                </div>
+                <p className="text-xs text-teal-800 mb-3">
+                  Annotators will evaluate the answer quality based on:
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <div className="bg-white border-2 border-teal-200 rounded-lg p-3">
+                    <p className="text-xs font-bold text-teal-900 mb-1">
+                      Accuracy
+                    </p>
+                    <p className="text-xs text-teal-700">
+                      Factual correctness and truthfulness of the answer
+                    </p>
+                  </div>
+                  <div className="bg-white border-2 border-teal-200 rounded-lg p-3">
+                    <p className="text-xs font-bold text-teal-900 mb-1">
+                      Relevance
+                    </p>
+                    <p className="text-xs text-teal-700">
+                      How well the answer addresses the question
+                    </p>
+                  </div>
+                  <div className="bg-white border-2 border-teal-200 rounded-lg p-3">
+                    <p className="text-xs font-bold text-teal-900 mb-1">
+                      Completeness
+                    </p>
+                    <p className="text-xs text-teal-700">
+                      Coverage of all key aspects of the question
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           {category === "text_summarization" && (
             <div className="space-y-6">
               {/* Header Section */}
@@ -2166,6 +2515,7 @@ export default function CreateTaskPage() {
               "named_entity_recognition",
               "sentiment_analysis",
               "text_summarization",
+              "qa_evaluation",
             ].indexOf(category) === -1) && (
             <div className="text-sm text-gray-600">
               No guided form for this category. A minimal empty task will be
