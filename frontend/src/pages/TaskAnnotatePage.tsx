@@ -1205,45 +1205,481 @@ export default function TaskAnnotatePage() {
 
             {/* Sentiment Analysis */}
             {task?.category === "sentiment_analysis" && (
-              <>
-                <div>
-                  <label className="label">Sentiment</label>
-                  <select
-                    className="select"
-                    value={sentiment}
-                    onChange={(e) => setSentiment(e.target.value)}
-                    required
-                  >
-                    <option value="">Select sentiment</option>
-                    <option value="positive">Positive</option>
-                    <option value="negative">Negative</option>
-                    <option value="neutral">Neutral</option>
-                  </select>
+              <div className="space-y-6">
+                {/* Text to Analyze Section */}
+                <div className="bg-white border-2 border-gray-300 rounded-lg p-5">
+                  <div className="flex items-center gap-2 mb-4">
+                    <svg
+                      className="w-5 h-5 text-emerald-600"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                    <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wide">
+                      Text to Analyze
+                    </h3>
+                  </div>
+                  <div className="bg-gray-50 border-2 border-gray-200 rounded-lg p-4 max-h-60 overflow-y-auto">
+                    <p className="text-sm text-gray-800 leading-relaxed whitespace-pre-wrap">
+                      {task.task_data?.text || "No text provided"}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-4 mt-3 text-xs text-gray-500">
+                    <span className="flex items-center gap-1">
+                      <svg
+                        className="w-3.5 h-3.5"
+                        fill="currentColor"
+                        viewBox="0 0 20 20"
+                      >
+                        <path
+                          fillRule="evenodd"
+                          d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                          clipRule="evenodd"
+                        />
+                      </svg>
+                      Analyze the sentiment of this text
+                    </span>
+                    <span>{task.task_data?.text?.length || 0} characters</span>
+                  </div>
                 </div>
-                <div>
-                  <label className="label">Label (optional)</label>
+
+                {/* Sentiment Selection Section */}
+                <div className="bg-white border-2 border-emerald-400 rounded-lg p-5">
+                  <div className="flex items-center gap-2 mb-4">
+                    <svg
+                      className="w-5 h-5 text-emerald-600"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M10 18a8 8 0 100-16 8 8 0 000 16zM7 9a1 1 0 100-2 1 1 0 000 2zm7-1a1 1 0 11-2 0 1 1 0 012 0zm-.464 5.535a1 1 0 10-1.415-1.414 3 3 0 01-4.242 0 1 1 0 00-1.415 1.414 5 5 0 007.072 0z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                    <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wide">
+                      Select Sentiment
+                    </h3>
+                    <span className="text-xs text-red-500 ml-1">*</span>
+                  </div>
+
+                  {/* Available Sentiments */}
+                  {Array.isArray(task.task_data?.sentiments) &&
+                  task.task_data.sentiments.length > 0 ? (
+                    <div className="space-y-3">
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                        {task.task_data.sentiments.map(
+                          (sentimentOption: string) => {
+                            const isSelected = sentiment === sentimentOption;
+                            const sentimentColors: Record<string, string> = {
+                              positive: "emerald",
+                              "very positive": "green",
+                              negative: "red",
+                              "very negative": "rose",
+                              neutral: "gray",
+                              mixed: "amber",
+                              happy: "yellow",
+                              sad: "blue",
+                              angry: "red",
+                              surprised: "purple",
+                            };
+                            const colorKey = sentimentOption.toLowerCase();
+                            const colorScheme =
+                              sentimentColors[colorKey] || "emerald";
+
+                            return (
+                              <button
+                                key={sentimentOption}
+                                type="button"
+                                onClick={() => setSentiment(sentimentOption)}
+                                className={`px-4 py-3 border-2 rounded-lg font-semibold text-sm transition-all ${
+                                  isSelected
+                                    ? `bg-${colorScheme}-100 border-${colorScheme}-500 text-${colorScheme}-900 shadow-md`
+                                    : `bg-white border-gray-300 text-gray-700 hover:border-${colorScheme}-300 hover:bg-${colorScheme}-50`
+                                }`}
+                                style={{
+                                  backgroundColor: isSelected
+                                    ? colorScheme === "emerald"
+                                      ? "#d1fae5"
+                                      : colorScheme === "green"
+                                      ? "#d9f99d"
+                                      : colorScheme === "red"
+                                      ? "#fee2e2"
+                                      : colorScheme === "rose"
+                                      ? "#ffe4e6"
+                                      : colorScheme === "gray"
+                                      ? "#f3f4f6"
+                                      : colorScheme === "amber"
+                                      ? "#fef3c7"
+                                      : colorScheme === "yellow"
+                                      ? "#fef9c3"
+                                      : colorScheme === "blue"
+                                      ? "#dbeafe"
+                                      : colorScheme === "purple"
+                                      ? "#e9d5ff"
+                                      : "#d1fae5"
+                                    : "white",
+                                  borderColor: isSelected
+                                    ? colorScheme === "emerald"
+                                      ? "#10b981"
+                                      : colorScheme === "green"
+                                      ? "#84cc16"
+                                      : colorScheme === "red"
+                                      ? "#ef4444"
+                                      : colorScheme === "rose"
+                                      ? "#f43f5e"
+                                      : colorScheme === "gray"
+                                      ? "#6b7280"
+                                      : colorScheme === "amber"
+                                      ? "#f59e0b"
+                                      : colorScheme === "yellow"
+                                      ? "#eab308"
+                                      : colorScheme === "blue"
+                                      ? "#3b82f6"
+                                      : colorScheme === "purple"
+                                      ? "#a855f7"
+                                      : "#10b981"
+                                    : "#d1d5db",
+                                  color: isSelected
+                                    ? colorScheme === "emerald"
+                                      ? "#047857"
+                                      : colorScheme === "green"
+                                      ? "#365314"
+                                      : colorScheme === "red"
+                                      ? "#991b1b"
+                                      : colorScheme === "rose"
+                                      ? "#9f1239"
+                                      : colorScheme === "gray"
+                                      ? "#374151"
+                                      : colorScheme === "amber"
+                                      ? "#92400e"
+                                      : colorScheme === "yellow"
+                                      ? "#854d0e"
+                                      : colorScheme === "blue"
+                                      ? "#1e40af"
+                                      : colorScheme === "purple"
+                                      ? "#6b21a8"
+                                      : "#047857"
+                                    : "#374151",
+                                }}
+                              >
+                                {isSelected && (
+                                  <svg
+                                    className="w-4 h-4 inline mr-1"
+                                    fill="currentColor"
+                                    viewBox="0 0 20 20"
+                                  >
+                                    <path
+                                      fillRule="evenodd"
+                                      d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                                      clipRule="evenodd"
+                                    />
+                                  </svg>
+                                )}
+                                {sentimentOption}
+                              </button>
+                            );
+                          }
+                        )}
+                      </div>
+                      {sentiment && (
+                        <div className="bg-emerald-50 border-2 border-emerald-200 rounded-lg p-3">
+                          <p className="text-xs text-emerald-900 font-semibold">
+                            ✓ Selected:{" "}
+                            <span className="font-bold">{sentiment}</span>
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <select
+                      className="w-full px-4 py-3 text-base border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all bg-white"
+                      value={sentiment}
+                      onChange={(e) => setSentiment(e.target.value)}
+                      required
+                    >
+                      <option value="">Select sentiment...</option>
+                      <option value="positive">Positive</option>
+                      <option value="negative">Negative</option>
+                      <option value="neutral">Neutral</option>
+                    </select>
+                  )}
+
+                  <p className="text-xs text-gray-500 mt-3 flex items-center gap-1">
+                    <svg
+                      className="w-3.5 h-3.5"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                    Choose the sentiment that best represents the text
+                  </p>
+                </div>
+
+                {/* Additional Notes (Optional) */}
+                <div className="bg-white border-2 border-gray-300 rounded-lg p-5">
+                  <div className="flex items-center gap-2 mb-3">
+                    <svg
+                      className="w-5 h-5 text-gray-600"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M18 13V5a2 2 0 00-2-2H4a2 2 0 00-2 2v8a2 2 0 002 2h3l3 3 3-3h3a2 2 0 002-2zM5 7a1 1 0 011-1h8a1 1 0 110 2H6a1 1 0 01-1-1zm1 3a1 1 0 100 2h3a1 1 0 100-2H6z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                    <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wide">
+                      Additional Notes
+                    </h3>
+                    <span className="text-xs text-gray-500">(Optional)</span>
+                  </div>
                   <input
                     type="text"
-                    className="input"
+                    className="w-full px-4 py-3 text-base border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all bg-white"
                     value={label}
                     onChange={(e) => setLabel(e.target.value)}
-                    placeholder="Additional label"
+                    placeholder="Add any additional notes or observations (optional)"
                   />
+                  <p className="text-xs text-gray-500 mt-2 flex items-center gap-1">
+                    <svg
+                      className="w-3.5 h-3.5"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                    Optional field for context or reasoning
+                  </p>
                 </div>
-              </>
+              </div>
             )}
 
             {/* Text Summarization */}
             {task?.category === "text_summarization" && (
-              <div>
-                <label className="label">Summary</label>
-                <textarea
-                  className="textarea h-32"
-                  value={summary}
-                  onChange={(e) => setSummary(e.target.value)}
-                  placeholder="Enter the summary"
-                  required
-                />
+              <div className="space-y-6">
+                {/* Source Text Section */}
+                <div className="bg-white border-2 border-gray-300 rounded-lg p-5">
+                  <div className="flex items-center gap-2 mb-4">
+                    <svg
+                      className="w-5 h-5 text-blue-600"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                    <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wide">
+                      Source Text
+                    </h3>
+                  </div>
+                  <div className="bg-gray-50 border-2 border-gray-200 rounded-lg p-4 max-h-96 overflow-y-auto">
+                    {Array.isArray(task.task_data?.text) ? (
+                      <div className="space-y-4">
+                        {task.task_data.text.map(
+                          (para: string, idx: number) => (
+                            <div
+                              key={idx}
+                              className="pb-3 border-b border-gray-300 last:border-0 last:pb-0"
+                            >
+                              <div className="flex items-center gap-2 mb-2">
+                                <span className="px-2 py-0.5 bg-blue-100 text-blue-800 text-xs font-bold rounded">
+                                  ¶{idx + 1}
+                                </span>
+                                <span className="text-xs text-gray-500">
+                                  {para.split(/\s+/).length} words
+                                </span>
+                              </div>
+                              <p className="text-sm text-gray-800 leading-relaxed whitespace-pre-wrap">
+                                {para}
+                              </p>
+                            </div>
+                          )
+                        )}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-gray-800 leading-relaxed whitespace-pre-wrap">
+                        {task.task_data?.text || "No text provided"}
+                      </p>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-4 mt-3 text-xs text-gray-500">
+                    <span className="flex items-center gap-1">
+                      <svg
+                        className="w-3.5 h-3.5"
+                        fill="currentColor"
+                        viewBox="0 0 20 20"
+                      >
+                        <path
+                          fillRule="evenodd"
+                          d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                          clipRule="evenodd"
+                        />
+                      </svg>
+                      Original text to summarize
+                    </span>
+                    <span>
+                      {Array.isArray(task.task_data?.text)
+                        ? `${task.task_data.text.length} paragraphs`
+                        : typeof task.task_data?.text === "string"
+                        ? `${task.task_data.text.split(/\s+/).length} words`
+                        : "0 words"}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Guidelines Section */}
+                {task.task_data?.guidelines && (
+                  <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-4">
+                    <div className="flex items-start gap-2">
+                      <svg
+                        className="w-4 h-4 text-blue-600 flex-shrink-0 mt-0.5"
+                        fill="currentColor"
+                        viewBox="0 0 20 20"
+                      >
+                        <path
+                          fillRule="evenodd"
+                          d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                          clipRule="evenodd"
+                        />
+                      </svg>
+                      <div className="flex-1">
+                        <p className="text-xs font-bold text-blue-900 mb-1">
+                          Summarization Guidelines
+                        </p>
+                        <p className="text-xs text-blue-800 whitespace-pre-wrap">
+                          {task.task_data.guidelines}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Summary Input Section */}
+                <div className="bg-white border-2 border-blue-400 rounded-lg p-5">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-2">
+                      <svg
+                        className="w-5 h-5 text-blue-600"
+                        fill="currentColor"
+                        viewBox="0 0 20 20"
+                      >
+                        <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" />
+                        <path
+                          fillRule="evenodd"
+                          d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z"
+                          clipRule="evenodd"
+                        />
+                      </svg>
+                      <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wide">
+                        Your Summary
+                      </h3>
+                      <span className="text-xs text-red-500 ml-1">*</span>
+                    </div>
+                    <div className="flex items-center gap-3 text-xs">
+                      <span className="text-gray-500">
+                        {summary.split(/\s+/).filter(Boolean).length} words
+                      </span>
+                      {task.task_data?.max_length && (
+                        <span
+                          className={`px-2 py-1 rounded font-semibold ${
+                            summary.split(/\s+/).filter(Boolean).length <=
+                            task.task_data.max_length
+                              ? "bg-green-100 text-green-700 border border-green-300"
+                              : "bg-red-100 text-red-700 border border-red-300"
+                          }`}
+                        >
+                          Max: {task.task_data.max_length}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <textarea
+                    className="w-full px-4 py-3 text-base border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all bg-white resize-none"
+                    rows={8}
+                    value={summary}
+                    onChange={(e) => setSummary(e.target.value)}
+                    placeholder="Write your summary here...&#10;&#10;Create a concise summary that captures the main points and key information from the source text."
+                    required
+                  />
+                  <div className="mt-3 space-y-2">
+                    <p className="text-xs text-gray-500 flex items-center gap-1">
+                      <svg
+                        className="w-3.5 h-3.5"
+                        fill="currentColor"
+                        viewBox="0 0 20 20"
+                      >
+                        <path
+                          fillRule="evenodd"
+                          d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                          clipRule="evenodd"
+                        />
+                      </svg>
+                      Focus on main ideas, key points, and essential information
+                    </p>
+                    {task.task_data?.max_length &&
+                      summary.split(/\s+/).filter(Boolean).length >
+                        task.task_data.max_length && (
+                        <p className="text-xs text-red-600 font-semibold flex items-center gap-1">
+                          <svg
+                            className="w-3.5 h-3.5"
+                            fill="currentColor"
+                            viewBox="0 0 20 20"
+                          >
+                            <path
+                              fillRule="evenodd"
+                              d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+                              clipRule="evenodd"
+                            />
+                          </svg>
+                          Summary exceeds maximum word limit
+                        </p>
+                      )}
+                  </div>
+                </div>
+
+                {/* Summary Quality Tips */}
+                <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-4">
+                  <div className="flex items-start gap-2">
+                    <svg
+                      className="w-5 h-5 text-blue-600 flex-shrink-0"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                    >
+                      <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                    </svg>
+                    <div className="flex-1">
+                      <p className="text-sm font-bold text-blue-900 mb-2">
+                        Quality Summary Tips
+                      </p>
+                      <ul className="text-xs text-blue-800 space-y-1">
+                        <li>• Include only the most important information</li>
+                        <li>• Use your own words (don't copy verbatim)</li>
+                        <li>• Maintain objectivity and neutrality</li>
+                        <li>• Ensure coherence and logical flow</li>
+                        <li>• Remove redundant details and examples</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
               </div>
             )}
 

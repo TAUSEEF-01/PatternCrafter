@@ -65,6 +65,18 @@ export default function CreateTaskPage() {
     "PERSON, ORG, LOCATION"
   );
 
+  // Sentiment Analysis
+  const [sa_text, setSaText] = useState("");
+  const [sa_sentiments, setSaSentiments] = useState(
+    "positive, negative, neutral"
+  );
+
+  // Text Summarization
+  const [ts_text, setTsText] = useState("");
+  const [ts_split, setTsSplit] = useState(false);
+  const [ts_guidelines, setTsGuidelines] = useState("");
+  const [ts_max_length, setTsMaxLength] = useState("");
+
   // Get category from route state
   useEffect(() => {
     const state = (window.history.state as any)?.usr;
@@ -130,6 +142,25 @@ export default function CreateTaskPage() {
           task_data = {
             text: ner_text,
             entity_types: parseList(ner_entity_types),
+          };
+          break;
+        }
+        case "sentiment_analysis": {
+          task_data = {
+            text: sa_text,
+            sentiments: parseList(sa_sentiments),
+          };
+          break;
+        }
+        case "text_summarization": {
+          const paragraphs = ts_text
+            .split(/\n\n+/)
+            .map((x) => x.trim())
+            .filter(Boolean);
+          task_data = {
+            text: ts_split ? paragraphs : ts_text,
+            ...(ts_guidelines ? { guidelines: ts_guidelines } : {}),
+            ...(ts_max_length ? { max_length: parseInt(ts_max_length) } : {}),
           };
           break;
         }
@@ -1381,6 +1412,534 @@ export default function CreateTaskPage() {
             </div>
           )}
 
+          {category === "text_summarization" && (
+            <div className="space-y-6">
+              {/* Header Section */}
+              <div className="bg-white border-2 border-gray-300 rounded-lg p-5">
+                <div className="flex items-center gap-2 mb-2">
+                  <svg
+                    className="w-5 h-5 text-blue-600"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
+                    <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" />
+                    <path
+                      fillRule="evenodd"
+                      d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                  <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wide">
+                    Text Summarization Task
+                  </h3>
+                </div>
+                <p className="text-xs text-gray-600">
+                  Configure the text that annotators will summarize
+                </p>
+              </div>
+
+              {/* Source Text Section */}
+              <div className="bg-white border-2 border-gray-300 rounded-lg p-5">
+                <div className="flex items-center gap-2 mb-4">
+                  <svg
+                    className="w-5 h-5 text-blue-600"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                  <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wide">
+                    Source Text
+                  </h3>
+                  <span className="text-xs text-red-500 ml-1">*</span>
+                </div>
+                <textarea
+                  className="w-full px-4 py-3 text-base border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all bg-white resize-none"
+                  value={ts_text}
+                  onChange={(e) => setTsText(e.target.value)}
+                  rows={8}
+                  placeholder="Enter the text to be summarized...&#10;&#10;You can paste an article, document, or any long-form text here. Annotators will create concise summaries of this content.&#10;&#10;Example: A research article, news story, blog post, etc."
+                  required
+                />
+                <div className="flex items-center justify-between mt-3">
+                  <p className="text-xs text-gray-500 flex items-center gap-1">
+                    <svg
+                      className="w-3.5 h-3.5"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                    Full text to be summarized
+                  </p>
+                  <span className="text-xs text-gray-500 font-mono">
+                    {ts_text.length} characters
+                  </span>
+                </div>
+
+                {/* Split into Paragraphs Option */}
+                <div className="mt-4 bg-blue-50 border-2 border-blue-200 rounded-lg p-3">
+                  <label className="flex items-center gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={ts_split}
+                      onChange={(e) => setTsSplit(e.target.checked)}
+                      className="w-4 h-4 text-blue-600 border-2 border-blue-300 rounded focus:ring-2 focus:ring-blue-500"
+                    />
+                    <div className="flex-1">
+                      <span className="text-sm font-semibold text-blue-900">
+                        Split into paragraphs
+                      </span>
+                      <p className="text-xs text-blue-700 mt-0.5">
+                        Automatically split text by double line breaks
+                        (paragraphs)
+                      </p>
+                    </div>
+                  </label>
+                  {ts_split && ts_text && (
+                    <div className="mt-2 pt-2 border-t border-blue-200">
+                      <p className="text-xs text-blue-800">
+                        Will be split into{" "}
+                        <span className="font-bold">
+                          {ts_text.split(/\n\n+/).filter(Boolean).length}
+                        </span>{" "}
+                        paragraph
+                        {ts_text.split(/\n\n+/).filter(Boolean).length !== 1
+                          ? "s"
+                          : ""}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Summarization Guidelines Section */}
+              <div className="bg-white border-2 border-gray-300 rounded-lg p-5">
+                <div className="flex items-center gap-2 mb-4">
+                  <svg
+                    className="w-5 h-5 text-blue-600"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                  <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wide">
+                    Summarization Guidelines
+                  </h3>
+                  <span className="text-xs text-gray-500">(Optional)</span>
+                </div>
+                <textarea
+                  className="w-full px-4 py-3 text-base border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all bg-white resize-none"
+                  value={ts_guidelines}
+                  onChange={(e) => setTsGuidelines(e.target.value)}
+                  rows={4}
+                  placeholder="Provide specific instructions for annotators...&#10;&#10;Example: Focus on main points, use third-person perspective, maintain formal tone, etc."
+                />
+                <p className="text-xs text-gray-500 mt-2 flex items-center gap-1">
+                  <svg
+                    className="w-3.5 h-3.5"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                  Optional instructions to guide annotators
+                </p>
+              </div>
+
+              {/* Maximum Length Section */}
+              <div className="bg-white border-2 border-gray-300 rounded-lg p-5">
+                <div className="flex items-center gap-2 mb-4">
+                  <svg
+                    className="w-5 h-5 text-blue-600"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                  <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wide">
+                    Maximum Summary Length
+                  </h3>
+                  <span className="text-xs text-gray-500">(Optional)</span>
+                </div>
+                <input
+                  type="number"
+                  className="w-full px-4 py-3 text-base border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all bg-white"
+                  value={ts_max_length}
+                  onChange={(e) => setTsMaxLength(e.target.value)}
+                  placeholder="Enter maximum number of words (e.g., 150)"
+                  min="10"
+                />
+                <p className="text-xs text-gray-500 mt-2 flex items-center gap-1">
+                  <svg
+                    className="w-3.5 h-3.5"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                  Leave empty for no word limit
+                </p>
+              </div>
+
+              {/* Preview Section */}
+              <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-5">
+                <div className="flex items-center gap-2 mb-3">
+                  <svg
+                    className="w-5 h-5 text-blue-600"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
+                    <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
+                    <path
+                      fillRule="evenodd"
+                      d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                  <h3 className="text-sm font-bold text-blue-900 uppercase tracking-wide">
+                    Task Preview
+                  </h3>
+                </div>
+                <div className="space-y-3">
+                  <div className="bg-white border-2 border-blue-200 rounded-lg p-3">
+                    <p className="text-xs font-semibold text-blue-900 mb-2">
+                      Task Configuration:
+                    </p>
+                    <ul className="text-xs text-blue-800 space-y-1">
+                      <li className="flex items-center gap-2">
+                        <svg
+                          className="w-3 h-3"
+                          fill="currentColor"
+                          viewBox="0 0 20 20"
+                        >
+                          <path
+                            fillRule="evenodd"
+                            d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                            clipRule="evenodd"
+                          />
+                        </svg>
+                        Text: {ts_text.length} characters
+                      </li>
+                      {ts_split && (
+                        <li className="flex items-center gap-2">
+                          <svg
+                            className="w-3 h-3"
+                            fill="currentColor"
+                            viewBox="0 0 20 20"
+                          >
+                            <path
+                              fillRule="evenodd"
+                              d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                              clipRule="evenodd"
+                            />
+                          </svg>
+                          Split into{" "}
+                          {ts_text.split(/\n\n+/).filter(Boolean).length}{" "}
+                          paragraphs
+                        </li>
+                      )}
+                      {ts_guidelines && (
+                        <li className="flex items-center gap-2">
+                          <svg
+                            className="w-3 h-3"
+                            fill="currentColor"
+                            viewBox="0 0 20 20"
+                          >
+                            <path
+                              fillRule="evenodd"
+                              d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                              clipRule="evenodd"
+                            />
+                          </svg>
+                          Guidelines provided
+                        </li>
+                      )}
+                      {ts_max_length && (
+                        <li className="flex items-center gap-2">
+                          <svg
+                            className="w-3 h-3"
+                            fill="currentColor"
+                            viewBox="0 0 20 20"
+                          >
+                            <path
+                              fillRule="evenodd"
+                              d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                              clipRule="evenodd"
+                            />
+                          </svg>
+                          Max length: {ts_max_length} words
+                        </li>
+                      )}
+                    </ul>
+                  </div>
+                  <p className="text-xs text-blue-800 italic flex items-center gap-1">
+                    <svg
+                      className="w-3.5 h-3.5"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                    Annotators will create concise summaries based on these
+                    settings
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {category === "sentiment_analysis" && (
+            <div className="space-y-6">
+              {/* Header Section */}
+              <div className="bg-white border-2 border-gray-300 rounded-lg p-5">
+                <div className="flex items-center gap-2 mb-2">
+                  <svg
+                    className="w-5 h-5 text-emerald-600"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M10 18a8 8 0 100-16 8 8 0 000 16zM7 9a1 1 0 100-2 1 1 0 000 2zm7-1a1 1 0 11-2 0 1 1 0 012 0zm-.464 5.535a1 1 0 10-1.415-1.414 3 3 0 01-4.242 0 1 1 0 00-1.415 1.414 5 5 0 007.072 0z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                  <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wide">
+                    Sentiment Analysis Task
+                  </h3>
+                </div>
+                <p className="text-xs text-gray-600">
+                  Configure the text and sentiment options for annotation
+                </p>
+              </div>
+
+              {/* Text Input Section */}
+              <div className="bg-white border-2 border-gray-300 rounded-lg p-5">
+                <div className="flex items-center gap-2 mb-4">
+                  <svg
+                    className="w-5 h-5 text-emerald-600"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                  <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wide">
+                    Text to Analyze
+                  </h3>
+                  <span className="text-xs text-red-500 ml-1">*</span>
+                </div>
+                <textarea
+                  className="w-full px-4 py-3 text-base border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all bg-white resize-none"
+                  value={sa_text}
+                  onChange={(e) => setSaText(e.target.value)}
+                  rows={6}
+                  placeholder="Enter the text that annotators will analyze for sentiment...&#10;&#10;Example: The product exceeded my expectations. The quality is outstanding and delivery was fast!"
+                  required
+                />
+                <div className="flex items-center justify-between mt-3">
+                  <p className="text-xs text-gray-500 flex items-center gap-1">
+                    <svg
+                      className="w-3.5 h-3.5"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                    Text to be analyzed by annotators
+                  </p>
+                  <span className="text-xs text-gray-500 font-mono">
+                    {sa_text.length} characters
+                  </span>
+                </div>
+              </div>
+
+              {/* Sentiment Options Section */}
+              <div className="bg-white border-2 border-gray-300 rounded-lg p-5">
+                <div className="flex items-center gap-2 mb-4">
+                  <svg
+                    className="w-5 h-5 text-emerald-600"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
+                    <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" />
+                    <path
+                      fillRule="evenodd"
+                      d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                  <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wide">
+                    Sentiment Options
+                  </h3>
+                  <span className="text-xs text-red-500 ml-1">*</span>
+                </div>
+                <input
+                  type="text"
+                  className="w-full px-4 py-3 text-base border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all bg-white"
+                  value={sa_sentiments}
+                  onChange={(e) => setSaSentiments(e.target.value)}
+                  placeholder="Enter sentiment options separated by commas"
+                  required
+                />
+                <div className="flex items-start justify-between mt-3">
+                  <p className="text-xs text-gray-500 flex items-center gap-1">
+                    <svg
+                      className="w-3.5 h-3.5"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                    Separate options with commas
+                  </p>
+                  <span className="text-xs text-emerald-600 font-semibold">
+                    {parseList(sa_sentiments).length} options
+                  </span>
+                </div>
+              </div>
+
+              {/* Preview Section */}
+              <div className="bg-emerald-50 border-2 border-emerald-200 rounded-lg p-5">
+                <div className="flex items-center gap-2 mb-3">
+                  <svg
+                    className="w-5 h-5 text-emerald-600"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
+                    <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
+                    <path
+                      fillRule="evenodd"
+                      d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                  <h3 className="text-sm font-bold text-emerald-900 uppercase tracking-wide">
+                    Preview
+                  </h3>
+                </div>
+                <div className="space-y-3">
+                  <div className="bg-white border-2 border-emerald-200 rounded-lg p-3">
+                    <p className="text-xs font-semibold text-emerald-900 mb-2">
+                      Available Sentiment Options:
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {parseList(sa_sentiments).map((sentiment, idx) => (
+                        <span
+                          key={idx}
+                          className="px-3 py-1.5 bg-emerald-100 border-2 border-emerald-300 text-emerald-800 rounded-lg text-sm font-semibold"
+                        >
+                          {sentiment}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                  <p className="text-xs text-emerald-800 italic flex items-center gap-1">
+                    <svg
+                      className="w-3.5 h-3.5"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                    Annotators will select one sentiment from these options
+                  </p>
+                </div>
+              </div>
+
+              {/* Quick Templates */}
+              <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-4">
+                <p className="text-xs font-bold text-blue-900 mb-3 flex items-center gap-1">
+                  <svg
+                    className="w-4 h-4"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
+                    <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+                  </svg>
+                  Quick Templates
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setSaSentiments("positive, negative, neutral")
+                    }
+                    className="px-3 py-1.5 bg-white border-2 border-emerald-300 rounded-lg text-xs font-semibold text-emerald-700 hover:bg-emerald-50 transition-colors"
+                  >
+                    Basic (3)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setSaSentiments(
+                        "very positive, positive, neutral, negative, very negative"
+                      )
+                    }
+                    className="px-3 py-1.5 bg-white border-2 border-emerald-300 rounded-lg text-xs font-semibold text-emerald-700 hover:bg-emerald-50 transition-colors"
+                  >
+                    Extended (5)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setSaSentiments(
+                        "happy, sad, angry, surprised, neutral, mixed"
+                      )
+                    }
+                    className="px-3 py-1.5 bg-white border-2 border-emerald-300 rounded-lg text-xs font-semibold text-emerald-700 hover:bg-emerald-50 transition-colors"
+                  >
+                    Emotions (6)
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
           {category === "named_entity_recognition" && (
             <div className="space-y-5">
               {/* Header Section */}
@@ -1605,6 +2164,8 @@ export default function CreateTaskPage() {
               "image_classification",
               "object_detection",
               "named_entity_recognition",
+              "sentiment_analysis",
+              "text_summarization",
             ].indexOf(category) === -1) && (
             <div className="text-sm text-gray-600">
               No guided form for this category. A minimal empty task will be
