@@ -303,7 +303,30 @@ async def export_completed_tasks(
         )
 
     if format.lower() == "json":
-        return JSONResponse(rows)
+        # For JSON export, return structured objects (not double-encoded strings)
+        json_rows = []
+        for r in rows:
+            try:
+                task_data_obj = json.loads(r.get("task_data", "{}")) if r.get("task_data") else {}
+            except json.JSONDecodeError:
+                task_data_obj = {}
+            try:
+                annotation_obj = json.loads(r.get("annotation", "{}")) if r.get("annotation") else {}
+            except json.JSONDecodeError:
+                annotation_obj = {}
+            try:
+                qa_annotation_obj = json.loads(r.get("qa_annotation", "{}")) if r.get("qa_annotation") else {}
+            except json.JSONDecodeError:
+                qa_annotation_obj = {}
+            json_rows.append(
+                {
+                    **r,
+                    "task_data": task_data_obj,
+                    "annotation": annotation_obj,
+                    "qa_annotation": qa_annotation_obj,
+                }
+            )
+        return JSONResponse(json_rows)
 
     # Default CSV
     output = io.StringIO()
