@@ -2458,29 +2458,205 @@ export default function TaskAnnotatePage() {
 
             {/* Response Selection */}
             {task?.category === "conversational_ai_response_selection" && (
-              <>
-                <div>
-                  <label className="label">Selected Response</label>
-                  <input
-                    type="text"
-                    className="input"
-                    value={selectedResponse}
-                    onChange={(e) => setSelectedResponse(e.target.value)}
-                    placeholder="Enter the selected response ID or text"
-                    required
-                  />
+              <div className="space-y-6">
+                {/* Dialogue Context */}
+                {Array.isArray(task.task_data?.dialogue) &&
+                  task.task_data.dialogue.length > 0 && (
+                    <div className="bg-white border-2 border-gray-300 rounded-lg p-5">
+                      <div className="flex items-center gap-2 mb-3">
+                        <svg
+                          className="w-5 h-5 text-purple-600"
+                          fill="currentColor"
+                          viewBox="0 0 20 20"
+                        >
+                          <path
+                            fillRule="evenodd"
+                            d="M18 13V5a2 2 0 00-2-2H4a2 2 0 00-2 2v8a2 2 0 002 2h3l3 3 3-3h3a2 2 0 002-2zM5 7a1 1 0 011-1h8a1 1 0 110 2H6a1 1 0 01-1-1zm1 3a1 1 0 100 2h3a1 1 0 100-2H6z"
+                            clipRule="evenodd"
+                          />
+                        </svg>
+                        <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wide">
+                          Dialogue Context
+                        </h3>
+                        <span className="text-xs bg-purple-100 text-purple-800 px-2 py-0.5 rounded-full font-semibold">
+                          {task.task_data.dialogue.length} turns
+                        </span>
+                      </div>
+                      <div className="max-h-64 overflow-auto space-y-3 pr-1">
+                        {task.task_data.dialogue.map(
+                          (msg: any, idx: number) => (
+                            <div key={idx} className="flex gap-3 items-start">
+                              <div
+                                className={
+                                  "text-xs font-semibold px-2 py-1 rounded-md border-2 " +
+                                  (msg.role === "user"
+                                    ? "border-gray-300 bg-gray-100 text-gray-800"
+                                    : "border-purple-300 bg-purple-50 text-purple-700")
+                                }
+                              >
+                                {msg.role === "assistant"
+                                  ? "Assistant"
+                                  : "User"}
+                              </div>
+                              <p className="text-sm text-gray-800 leading-relaxed whitespace-pre-wrap flex-1">
+                                {msg.content}
+                              </p>
+                            </div>
+                          )
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                {/* Response Options */}
+                {Array.isArray(task.task_data?.response_options) &&
+                  task.task_data.response_options.length > 0 && (
+                    <div className="bg-white border-2 border-gray-300 rounded-lg p-5">
+                      <div className="flex items-center gap-2 mb-3">
+                        <svg
+                          className="w-5 h-5 text-purple-600"
+                          fill="currentColor"
+                          viewBox="0 0 20 20"
+                        >
+                          <path
+                            fillRule="evenodd"
+                            d="M3 5a2 2 0 012-2h10a2 2 0 012 2v6a2 2 0 01-2 2H9l-4 4v-4H5a2 2 0 01-2-2V5zm3 2a1 1 0 000 2h6a1 1 0 100-2H6z"
+                            clipRule="evenodd"
+                          />
+                        </svg>
+                        <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wide">
+                          Response Options
+                        </h3>
+                        <span className="text-xs bg-purple-100 text-purple-800 px-2 py-0.5 rounded-full font-semibold">
+                          Select One
+                        </span>
+                      </div>
+                      <div className="grid gap-4 sm:grid-cols-2">
+                        {task.task_data.response_options.map(
+                          (opt: string, idx: number) => {
+                            const selected = selectedResponse === opt;
+                            return (
+                              <button
+                                type="button"
+                                key={idx}
+                                onClick={() => setSelectedResponse(opt)}
+                                className={
+                                  "text-left group relative rounded-lg border-2 p-4 transition-all focus:outline-none " +
+                                  (selected
+                                    ? "border-purple-600 bg-purple-50 shadow-md"
+                                    : "border-gray-300 bg-white hover:border-purple-400 hover:shadow-sm")
+                                }
+                              >
+                                <div className="flex items-start gap-2">
+                                  <div
+                                    className={
+                                      "w-5 h-5 flex items-center justify-center rounded-md text-xs font-bold border-2 " +
+                                      (selected
+                                        ? "border-purple-600 bg-purple-600 text-white"
+                                        : "border-gray-300 bg-gray-100 text-gray-600")
+                                    }
+                                  >
+                                    {idx + 1}
+                                  </div>
+                                  <p className="text-sm text-gray-800 whitespace-pre-wrap leading-relaxed flex-1">
+                                    {opt}
+                                  </p>
+                                </div>
+                                {selected && (
+                                  <div className="absolute top-2 right-2">
+                                    <svg
+                                      className="w-5 h-5 text-purple-600"
+                                      fill="currentColor"
+                                      viewBox="0 0 20 20"
+                                    >
+                                      <path
+                                        fillRule="evenodd"
+                                        d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                                        clipRule="evenodd"
+                                      />
+                                    </svg>
+                                  </div>
+                                )}
+                              </button>
+                            );
+                          }
+                        )}
+                      </div>
+                      <p className="text-xs text-gray-500 mt-3 flex items-center gap-1">
+                        <svg
+                          className="w-3.5 h-3.5"
+                          fill="currentColor"
+                          viewBox="0 0 20 20"
+                        >
+                          <path
+                            fillRule="evenodd"
+                            d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                            clipRule="evenodd"
+                          />
+                        </svg>
+                        Click a card to select the best response.
+                      </p>
+                    </div>
+                  )}
+
+                {/* Selection Summary */}
+                <div className="bg-purple-50 border-2 border-purple-200 rounded-lg p-5">
+                  <div className="flex items-center gap-2 mb-3">
+                    <svg
+                      className="w-5 h-5 text-purple-600"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                    >
+                      <path d="M10 3a1 1 0 01.894.553L11.618 5H15a1 1 0 010 2h-.382l-.724 1.447A1 1 0 0112 9h-.277a2 2 0 010 4H13a1 1 0 010 2h-1a2 2 0 01-2 2 2 2 0 01-2-2H7a1 1 0 010-2h1.277a2 2 0 010-4H8a1 1 0 01-.894-1.447L6.382 7H5a1 1 0 110-2h3.382l.724-1.447A1 1 0 0110 3z" />
+                    </svg>
+                    <h3 className="text-sm font-bold text-purple-900 uppercase tracking-wide">
+                      Selection Details
+                    </h3>
+                  </div>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="text-xs font-bold text-gray-700 uppercase tracking-wide mb-2 flex items-center gap-1">
+                        Selected Response<span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        className="w-full px-3 py-2 text-sm border-2 border-purple-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 bg-white"
+                        value={selectedResponse}
+                        onChange={(e) => setSelectedResponse(e.target.value)}
+                        placeholder="If you manually edit, ensure it matches an option"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs font-bold text-gray-700 uppercase tracking-wide mb-2 flex items-center gap-1">
+                        Selection Reason<span className="text-red-500">*</span>
+                      </label>
+                      <textarea
+                        className="w-full px-3 py-2 text-sm border-2 border-purple-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 bg-white resize-none h-28"
+                        value={selectionReason}
+                        onChange={(e) => setSelectionReason(e.target.value)}
+                        placeholder="Explain why this response is superior (clarity, relevance, completeness, tone, etc.)"
+                        required
+                      />
+                      <p className="text-xs text-purple-700 mt-2 flex items-center gap-1">
+                        <svg
+                          className="w-3.5 h-3.5"
+                          fill="currentColor"
+                          viewBox="0 0 20 20"
+                        >
+                          <path
+                            fillRule="evenodd"
+                            d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                            clipRule="evenodd"
+                          />
+                        </svg>
+                        Provide objective reasoning; avoid subjective preference
+                        only.
+                      </p>
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <label className="label">Selection Reason</label>
-                  <textarea
-                    className="textarea h-24"
-                    value={selectionReason}
-                    onChange={(e) => setSelectionReason(e.target.value)}
-                    placeholder="Why did you select this response?"
-                    required
-                  />
-                </div>
-              </>
+              </div>
             )}
 
             {/* Common fields for all categories */}
