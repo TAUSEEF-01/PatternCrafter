@@ -45,7 +45,7 @@ class PyObjectId(ObjectId):
 # Task Category Enums
 class TaskCategory(str, Enum):
     IMAGE_CLASSIFICATION = "image_classification"
-    # TEXT_CLASSIFICATION = "text_classification"
+    TEXT_CLASSIFICATION = "text_classification"
     OBJECT_DETECTION = "object_detection"
     NER = "named_entity_recognition"
     SENTIMENT_ANALYSIS = "sentiment_analysis"

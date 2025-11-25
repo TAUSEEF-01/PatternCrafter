@@ -7,6 +7,7 @@ import {
 import { apiFetch } from "@/api/client";
 import { Project, Task } from "@/types";
 import { useAuth } from "@/auth/AuthContext";
+import AnnotationViewer from "@/components/AnnotationViewer";
 
 // Helper component to render structured data
 function DataViewer({ data, title }: { data: any; title?: string }) {
@@ -343,8 +344,8 @@ export default function CompletedTasksPage() {
                   <summary className="cursor-pointer text-sm font-medium text-gray-700 hover:text-gray-900">
                     Annotation
                   </summary>
-                  <div className="bg-green-50 border border-green-200 rounded-lg p-4 mt-2 max-h-96 overflow-auto scrollbar-thin">
-                    <DataViewer data={t.annotation} />
+                  <div className="mt-2">
+                    <AnnotationViewer task={t} />
                   </div>
                 </details>
               )}
