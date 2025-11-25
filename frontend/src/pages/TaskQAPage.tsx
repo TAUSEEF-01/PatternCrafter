@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { apiFetch } from "@/api/client";
 import { Task, TaskRemark } from "@/types";
 import RemarksThread from "@/components/RemarksThread";
+import AnnotationViewer from "@/components/AnnotationViewer";
 import { useAuth } from "@/auth/AuthContext";
 
 function TaskDataViewer({ data }: { data: any }) {
@@ -331,10 +332,8 @@ export default function TaskQAPage() {
             </div>
             {task.annotation && (
               <div>
-                <h3 className="font-medium mb-2">Annotator Annotation</h3>
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 max-h-64 overflow-auto scrollbar-thin">
-                  <TaskDataViewer data={task.annotation} />
-                </div>
+                <h3 className="font-medium mb-3 text-lg">Annotator Annotation</h3>
+                <AnnotationViewer task={task} />
               </div>
             )}
           </div>

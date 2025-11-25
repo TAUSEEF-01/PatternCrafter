@@ -3,6 +3,16 @@ import { useParams, useNavigate } from "react-router-dom";
 import { apiFetch } from "@/api/client";
 import { Task, TaskRemark } from "@/types";
 import RemarksThread from "@/components/RemarksThread";
+import {
+  ImageClassificationAnnotator,
+  ImageClassificationData,
+  ImageClassificationAnnotation,
+} from "@/components/ImageClassification";
+import {
+  ObjectDetectionAnnotator,
+  MultiToolAnnotator,
+  ObjectDetectionAnnotation,
+} from "@/components/ObjectDetection";
 
 function TaskDataViewer({ data }: { data: any }) {
   if (!data || typeof data !== "object") {
@@ -121,25 +131,19 @@ export default function TaskAnnotatePage() {
   const [category, setCategory] = useState("");
   const [sentiment, setSentiment] = useState("");
 
-  // Image Classification
+  // Image Classification - NEW COMPONENT
+  const [imageClassificationAnnotation, setImageClassificationAnnotation] =
+    useState<ImageClassificationAnnotation | null>(null);
+
+  // Image Classification - OLD (kept for backward compatibility)
   const [predictedClass, setPredictedClass] = useState("");
 
-  // Object Detection
-  const [objects, setObjects] = useState("");
+  // Object Detection - NEW COMPONENT
+  const [objectDetectionAnnotation, setObjectDetectionAnnotation] =
+    useState<ObjectDetectionAnnotation | null>(null);
 
-  // Object Detection form fields
-  interface DetectedObject {
-    class: string;
-    bbox: number[];
-    confidence: number;
-  }
-  const [detectedObjects, setDetectedObjects] = useState<DetectedObject[]>([]);
-  const [currentObjClass, setCurrentObjClass] = useState("");
-  const [currentBboxX, setCurrentBboxX] = useState("");
-  const [currentBboxY, setCurrentBboxY] = useState("");
-  const [currentBboxW, setCurrentBboxW] = useState("");
-  const [currentBboxH, setCurrentBboxH] = useState("");
-  const [currentObjConfidence, setCurrentObjConfidence] = useState("0.95");
+  // Object Detection - OLD (kept for backward compatibility)
+  const [objects, setObjects] = useState("");
 
   // Named Entity Recognition
   const [entities, setEntities] = useState("");
@@ -229,12 +233,39 @@ export default function TaskAnnotatePage() {
             //   if (ann.category) setCategory(ann.category);
             //   break;
             case "image_classification":
+              // Restore new annotation format
+              if (ann.selected_label) {
+                setImageClassificationAnnotation({
+                  selected_label: ann.selected_label,
+                  confidence: ann.confidence,
+                  notes: ann.notes,
+                });
+              }
+              // Fallback to old format
               if (ann.predicted_class) setPredictedClass(ann.predicted_class);
               break;
             case "object_detection":
-              if (ann.objects) setObjects(JSON.stringify(ann.objects, null, 2));
-              if (ann.objects && Array.isArray(ann.objects)) {
-                setDetectedObjects(ann.objects);
+              // New multi-tool format: ObjectDetectionAnnotation with annotations array
+              if (ann.annotations && Array.isArray(ann.annotations)) {
+                setObjectDetectionAnnotation({
+                  annotations: ann.annotations,
+                  image_url: taskData.task_data.image_url,
+                  notes: ann.notes || "",
+                  bounding_boxes: ann.bounding_boxes || [],
+                });
+              }
+              // Legacy format: bounding_boxes only
+              else if (ann.bounding_boxes && Array.isArray(ann.bounding_boxes)) {
+                setObjectDetectionAnnotation({
+                  annotations: ann.bounding_boxes,
+                  image_url: taskData.task_data.image_url,
+                  notes: ann.notes || "",
+                  bounding_boxes: ann.bounding_boxes,
+                });
+              }
+              // Fallback to old format
+              else if (ann.objects) {
+                setObjects(JSON.stringify(ann.objects, null, 2));
               }
               break;
             case "named_entity_recognition":
@@ -316,10 +347,43 @@ export default function TaskAnnotatePage() {
       //   annotationData.category = category;
       //   break;
       case "image_classification":
-        annotationData.predicted_class = predictedClass;
+        // Use new annotation format if available
+        if (imageClassificationAnnotation) {
+          annotationData = {
+            ...annotationData,
+            ...imageClassificationAnnotation,
+          };
+        } else {
+          // Fallback to old format
+          annotationData.predicted_class = predictedClass;
+        }
         break;
       case "object_detection":
-        annotationData.objects = detectedObjects;
+        // Use new multi-tool annotation format if available
+        if (objectDetectionAnnotation && objectDetectionAnnotation.annotations && objectDetectionAnnotation.annotations.length > 0) {
+          annotationData = {
+            ...annotationData,
+            ...objectDetectionAnnotation,
+          };
+        } else if (objectDetectionAnnotation && objectDetectionAnnotation.bounding_boxes && objectDetectionAnnotation.bounding_boxes.length > 0) {
+          // Legacy format with bounding_boxes only
+          annotationData = {
+            ...annotationData,
+            ...objectDetectionAnnotation,
+          };
+        } else if (objects) {
+          // Fallback to old format (if objects string exists)
+          try {
+            annotationData.objects = JSON.parse(objects);
+          } catch {
+            annotationData.objects = [];
+          }
+        } else {
+          // No annotations drawn
+          setError("Please create at least one annotation before submitting");
+          setIsTimerActive(true); // Resume timer on error
+          return;
+        }
         break;
       case "named_entity_recognition":
         // Validate that at least one entity has been added
@@ -594,186 +658,27 @@ export default function TaskAnnotatePage() {
 
             {/* Image Classification */}
             {task?.category === "image_classification" && (
-              <div>
-                <label className="label">Predicted Class</label>
-                <input
-                  type="text"
-                  className="input"
-                  value={predictedClass}
-                  onChange={(e) => setPredictedClass(e.target.value)}
-                  placeholder="Enter predicted class"
-                  required
-                />
-              </div>
+              <ImageClassificationAnnotator
+                taskData={task.task_data as ImageClassificationData}
+                initialAnnotation={imageClassificationAnnotation || undefined}
+                onAnnotationChange={(annotation) =>
+                  setImageClassificationAnnotation(annotation)
+                }
+              />
             )}
 
             {/* Object Detection */}
             {task?.category === "object_detection" && (
-              <div className="space-y-4">
-                <div>
-                  <label className="label">Detected Objects</label>
-
-                  {/* List of added objects */}
-                  {detectedObjects.length > 0 && (
-                    <div className="mb-4 space-y-2">
-                      <p className="text-sm font-medium text-gray-700">
-                        Added Objects ({detectedObjects.length}):
-                      </p>
-                      {detectedObjects.map((obj, idx) => (
-                        <div
-                          key={idx}
-                          className="flex items-center justify-between p-3 bg-gray-50 border border-gray-200 rounded-md"
-                        >
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-1">
-                              <span className="font-medium text-gray-800">
-                                {obj.class}
-                              </span>
-                              <span className="badge badge-primary text-xs">
-                                Confidence: {(obj.confidence * 100).toFixed(0)}%
-                              </span>
-                            </div>
-                            <div className="text-xs text-gray-600">
-                              BBox: [{obj.bbox.join(", ")}]
-                            </div>
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setDetectedObjects((prev) =>
-                                prev.filter((_, i) => i !== idx)
-                              );
-                            }}
-                            className="btn btn-ghost btn-sm text-red-600"
-                          >
-                            ✕
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Add new object form */}
-                  <div className="p-4 bg-blue-50 border border-blue-200 rounded-md space-y-3">
-                    <p className="text-sm font-semibold text-blue-800 mb-2">
-                      Add New Object:
-                    </p>
-
-                    <div>
-                      <label className="label text-xs">Object Class</label>
-                      <input
-                        type="text"
-                        className="input input-sm"
-                        value={currentObjClass}
-                        onChange={(e) => setCurrentObjClass(e.target.value)}
-                        placeholder="e.g., car, person, dog"
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-4 gap-2">
-                      <div>
-                        <label className="label text-xs">X</label>
-                        <input
-                          type="number"
-                          className="input input-sm"
-                          value={currentBboxX}
-                          onChange={(e) => setCurrentBboxX(e.target.value)}
-                          placeholder="X"
-                        />
-                      </div>
-                      <div>
-                        <label className="label text-xs">Y</label>
-                        <input
-                          type="number"
-                          className="input input-sm"
-                          value={currentBboxY}
-                          onChange={(e) => setCurrentBboxY(e.target.value)}
-                          placeholder="Y"
-                        />
-                      </div>
-                      <div>
-                        <label className="label text-xs">Width</label>
-                        <input
-                          type="number"
-                          className="input input-sm"
-                          value={currentBboxW}
-                          onChange={(e) => setCurrentBboxW(e.target.value)}
-                          placeholder="W"
-                        />
-                      </div>
-                      <div>
-                        <label className="label text-xs">Height</label>
-                        <input
-                          type="number"
-                          className="input input-sm"
-                          value={currentBboxH}
-                          onChange={(e) => setCurrentBboxH(e.target.value)}
-                          placeholder="H"
-                        />
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="label text-xs">
-                        Confidence (0.0 - 1.0)
-                      </label>
-                      <input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        max="1"
-                        className="input input-sm"
-                        value={currentObjConfidence}
-                        onChange={(e) =>
-                          setCurrentObjConfidence(e.target.value)
-                        }
-                        placeholder="0.95"
-                      />
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (!currentObjClass.trim()) {
-                          alert("Please enter an object class");
-                          return;
-                        }
-                        if (
-                          !currentBboxX ||
-                          !currentBboxY ||
-                          !currentBboxW ||
-                          !currentBboxH
-                        ) {
-                          alert("Please enter all bounding box values");
-                          return;
-                        }
-
-                        const newObject: DetectedObject = {
-                          class: currentObjClass.trim(),
-                          bbox: [
-                            parseFloat(currentBboxX),
-                            parseFloat(currentBboxY),
-                            parseFloat(currentBboxW),
-                            parseFloat(currentBboxH),
-                          ],
-                          confidence: parseFloat(currentObjConfidence) || 0.95,
-                        };
-
-                        setDetectedObjects((prev) => [...prev, newObject]);
-                        setCurrentObjClass("");
-                        setCurrentBboxX("");
-                        setCurrentBboxY("");
-                        setCurrentBboxW("");
-                        setCurrentBboxH("");
-                        setCurrentObjConfidence("0.95");
-                      }}
-                      className="btn btn-primary btn-sm w-full"
-                    >
-                      ➕ Add Object
-                    </button>
-                  </div>
-                </div>
-              </div>
+              <MultiToolAnnotator
+                imageUrl={task.task_data.image_url}
+                classes={task.task_data.classes}
+                existingAnnotation={objectDetectionAnnotation || undefined}
+                onAnnotationChange={(annotation) =>
+                  setObjectDetectionAnnotation(annotation)
+                }
+                allowedTypes={task.task_data.annotation_types || ['bbox', 'polygon', 'polyline', 'point', 'mask']}
+                defaultTool={task.task_data.default_annotation_type || 'bbox'}
+              />
             )}
 
             {/* Named Entity Recognition */}

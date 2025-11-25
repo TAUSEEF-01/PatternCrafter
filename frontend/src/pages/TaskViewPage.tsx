@@ -3,6 +3,7 @@ import { Link as RouterLink, useParams } from "react-router-dom";
 import { apiFetch } from "@/api/client";
 import { Task } from "@/types";
 import { useAuth } from "@/auth/AuthContext";
+import AnnotationViewer from "@/components/AnnotationViewer";
 
 const LinkFix = RouterLink as unknown as any;
 
@@ -314,60 +315,64 @@ export default function TaskViewPage() {
         <div className="card">
           <div className="card-body">
             <h3 className="text-lg font-semibold mb-3">✍️ Annotation</h3>
-            <div className="grid md:grid-cols-2 gap-4">
-              {task.annotation.grade !== undefined && (
-                <div>
-                  <div className="text-sm font-semibold text-gray-700 mb-1">
-                    Grade
-                  </div>
-                  <div className="badge badge-primary text-lg">
-                    {task.annotation.grade}
-                  </div>
-                </div>
-              )}
-              {task.annotation.confidence !== undefined && (
-                <div>
-                  <div className="text-sm font-semibold text-gray-700 mb-1">
-                    Confidence
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="text-sm font-medium">
-                      {(task.annotation.confidence * 100).toFixed(0)}%
+            {task.category === 'object_detection' ? (
+              <AnnotationViewer task={task} />
+            ) : (
+              <div className="grid md:grid-cols-2 gap-4">
+                {task.annotation.grade !== undefined && (
+                  <div>
+                    <div className="text-sm font-semibold text-gray-700 mb-1">
+                      Grade
                     </div>
-                    <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-gradient-to-r from-purple-500 to-purple-700"
-                        style={{
-                          width: `${task.annotation.confidence * 100}%`,
-                        }}
-                      />
+                    <div className="badge badge-primary text-lg">
+                      {task.annotation.grade}
                     </div>
                   </div>
-                </div>
-              )}
-              {task.annotation.reasoning && (
-                <div className="md:col-span-2">
-                  <div className="text-sm font-semibold text-gray-700 mb-1">
-                    Reasoning
+                )}
+                {task.annotation.confidence !== undefined && (
+                  <div>
+                    <div className="text-sm font-semibold text-gray-700 mb-1">
+                      Confidence
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="text-sm font-medium">
+                        {(task.annotation.confidence * 100).toFixed(0)}%
+                      </div>
+                      <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-gradient-to-r from-purple-500 to-purple-700"
+                          style={{
+                            width: `${task.annotation.confidence * 100}%`,
+                          }}
+                        />
+                      </div>
+                    </div>
                   </div>
-                  <div className="p-3 bg-purple-50 border border-purple-200 rounded text-sm">
-                    {task.annotation.reasoning}
+                )}
+                {task.annotation.reasoning && (
+                  <div className="md:col-span-2">
+                    <div className="text-sm font-semibold text-gray-700 mb-1">
+                      Reasoning
+                    </div>
+                    <div className="p-3 bg-purple-50 border border-purple-200 rounded text-sm">
+                      {task.annotation.reasoning}
+                    </div>
                   </div>
-                </div>
-              )}
-              {task.annotation.notes && (
-                <div className="md:col-span-2">
-                  <div className="text-sm font-semibold text-gray-700 mb-1">
-                    Notes
+                )}
+                {task.annotation.notes && (
+                  <div className="md:col-span-2">
+                    <div className="text-sm font-semibold text-gray-700 mb-1">
+                      Notes
+                    </div>
+                    <div className="p-3 bg-gray-50 border border-gray-200 rounded text-sm">
+                      {task.annotation.notes || (
+                        <span className="text-gray-400 italic">No notes</span>
+                      )}
+                    </div>
                   </div>
-                  <div className="p-3 bg-gray-50 border border-gray-200 rounded text-sm">
-                    {task.annotation.notes || (
-                      <span className="text-gray-400 italic">No notes</span>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
       )}

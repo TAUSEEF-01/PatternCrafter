@@ -2,6 +2,14 @@ import { useEffect, useState } from "react";
 import { Link as RouterLink, useParams, useNavigate } from "react-router-dom";
 import { apiFetch } from "@/api/client";
 import { Task } from "@/types";
+import {
+  ImageClassificationTask,
+  ImageClassificationData,
+} from "@/components/ImageClassification";
+import {
+  ObjectDetectionTask,
+  ObjectDetectionData,
+} from "@/components/ObjectDetection";
 
 type Role = "user" | "assistant";
 type DialogueMessage = { role: Role; content: string };
@@ -14,10 +22,11 @@ export default function CreateTaskPage() {
   const [error, setError] = useState<string | null>(null);
   const [category, setCategory] = useState<string>("");
 
-  // Get category from route state
+  // Get category from route state (SINGLE useEffect - removed duplicate)
   useEffect(() => {
     const state = (window.history.state as any)?.usr;
     if (state?.category) {
+      console.log("Setting category from route state:", state.category);
       setCategory(state.category);
     }
   }, []);
@@ -51,11 +60,19 @@ export default function CreateTaskPage() {
   // const [tc_text, setTcText] = useState("");
   // const [tc_labels, setTcLabels] = useState("positive, negative");
 
-  // Image Classification
+  // Image Classification - NEW COMPONENT DATA
+  const [imageClassificationData, setImageClassificationData] =
+    useState<ImageClassificationData | null>(null);
+
+  // Image Classification - OLD (kept for backward compatibility if needed)
   const [ic_image, setIcImage] = useState("");
   const [ic_labels, setIcLabels] = useState("cat, dog");
 
-  // Object Detection
+  // Object Detection - NEW COMPONENT DATA
+  const [objectDetectionData, setObjectDetectionData] =
+    useState<ObjectDetectionData | null>(null);
+
+  // Object Detection - OLD (kept for backward compatibility if needed)
   const [od_image, setOdImage] = useState("");
   const [od_classes, setOdClasses] = useState("person, car");
 
@@ -87,14 +104,6 @@ export default function CreateTaskPage() {
   const [qa_pairs, setQaPairs] = useState<QAPair[]>([
     { question: "", answer: "", reference_answer: "" },
   ]);
-
-  // Get category from route state
-  useEffect(() => {
-    const state = (window.history.state as any)?.usr;
-    if (state?.category) {
-      setCategory(state.category);
-    }
-  }, []);
 
   // Common helpers
   const parseList = (s: string) =>
@@ -142,11 +151,21 @@ export default function CreateTaskPage() {
         //   break;
         // }
         case "image_classification": {
-          task_data = { image_url: ic_image, labels: parseList(ic_labels) };
+          // Use new component data if available, fallback to old data
+          if (imageClassificationData) {
+            task_data = imageClassificationData;
+          } else {
+            task_data = { image_url: ic_image, labels: parseList(ic_labels) };
+          }
           break;
         }
         case "object_detection": {
-          task_data = { image_url: od_image, classes: parseList(od_classes) };
+          // Use new component data if available, fallback to old data
+          if (objectDetectionData) {
+            task_data = objectDetectionData;
+          } else {
+            task_data = { image_url: od_image, classes: parseList(od_classes) };
+          }
           break;
         }
         case "named_entity_recognition": {
@@ -260,9 +279,46 @@ export default function CreateTaskPage() {
         <div className="card-body space-y-4">
           <div>
             <h2 className="card-title">Task Details</h2>
-            <div className="badge badge-primary w-fit mt-2">
-              {category || "Select category"}
-            </div>
+            {!category && (
+              <div className="mt-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Select Task Category
+                </label>
+                <select
+                  className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                  value={category}
+                  onChange={(e) => setCategory(e.target.value)}
+                >
+                  <option value="">-- Choose a category --</option>
+                  <option value="generative_ai_llm_response_grading">
+                    LLM Response Grading
+                  </option>
+                  <option value="generative_ai_chatbot_assessment">
+                    Chatbot Assessment
+                  </option>
+                  <option value="conversational_ai_response_selection">
+                    Response Selection
+                  </option>
+                  <option value="image_classification">
+                    Image Classification
+                  </option>
+                  <option value="object_detection">Object Detection</option>
+                  <option value="named_entity_recognition">
+                    Named Entity Recognition
+                  </option>
+                  <option value="sentiment_analysis">
+                    Sentiment Analysis
+                  </option>
+                  <option value="text_summarization">
+                    Text Summarization
+                  </option>
+                  <option value="qa_evaluation">QA Evaluation</option>
+                </select>
+              </div>
+            )}
+            {category && (
+              <div className="badge badge-primary w-fit mt-2">{category}</div>
+            )}
           </div>
 
           {/* Category-specific forms */}
@@ -1398,45 +1454,17 @@ export default function CreateTaskPage() {
           )} */}
 
           {category === "image_classification" && (
-            <div className="space-y-3">
-              <div>
-                <label className="block mb-1">Image URL</label>
-                <input
-                  className="w-full border rounded px-2 py-1"
-                  value={ic_image}
-                  onChange={(e) => setIcImage(e.target.value)}
-                />
-              </div>
-              <div>
-                <label className="block mb-1">Labels (comma separated)</label>
-                <input
-                  className="w-full border rounded px-2 py-1"
-                  value={ic_labels}
-                  onChange={(e) => setIcLabels(e.target.value)}
-                />
-              </div>
-            </div>
+            <ImageClassificationTask
+              onDataChange={(data) => setImageClassificationData(data)}
+              initialData={imageClassificationData || undefined}
+            />
           )}
 
           {category === "object_detection" && (
-            <div className="space-y-3">
-              <div>
-                <label className="block mb-1">Image URL</label>
-                <input
-                  className="w-full border rounded px-2 py-1"
-                  value={od_image}
-                  onChange={(e) => setOdImage(e.target.value)}
-                />
-              </div>
-              <div>
-                <label className="block mb-1">Classes (comma separated)</label>
-                <input
-                  className="w-full border rounded px-2 py-1"
-                  value={od_classes}
-                  onChange={(e) => setOdClasses(e.target.value)}
-                />
-              </div>
-            </div>
+            <ObjectDetectionTask
+              onDataChange={(data) => setObjectDetectionData(data)}
+              initialData={objectDetectionData || undefined}
+            />
           )}
 
           {category === "qa_evaluation" && (
