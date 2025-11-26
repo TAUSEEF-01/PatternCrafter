@@ -1,0 +1,441 @@
+Pattern 1: Singleton Pattern --> users_collection, projects_collection, tasks_collection
+
+async def create_indexes():
+    """Create database indexes for better performance"""
+    await users_collection.create_index("email", unique=True)
+    await users_collection.create_index("role")
+
+
+
+
+
+
+
+
+D:\sdp_final\PatternCrafter\backend\database.py
+import asyncio
+import os
+from typing import Optional
+from dotenv import load_dotenv
+from motor.motor_asyncio import AsyncIOMotorClient
+from motor.motor_asyncio import AsyncIOMotorDatabase
+
+load_dotenv()
+
+# MongoDB configuration
+MONGODB_URL = os.getenv("MONGODB_URL", "mongodb://localhost:27017")
+DATABASE_NAME = os.getenv("DATABASE_NAME", "patterncrafter")
+
+# Module-level variables kept for compatibility
+client: AsyncIOMotorClient = None
+database: AsyncIOMotorDatabase = None
+
+# Collections (will be set after connect)
+users_collection = None
+projects_collection = None
+tasks_collection = None
+invites_collection = None
+manager_projects_collection = None
+project_working_collection = None
+annotator_tasks_collection = None
+notifications_collection = None
+
+
+class MongoDB:
+    """Class-based singleton that holds the Motor client, database and collections.
+
+    Use `await MongoDB.connect()` to initialize and get the singleton instance.
+    """
+
+    _instance: "MongoDB" = None
+    _lock: Optional[asyncio.Lock] = None
+
+    def __init__(self, client: AsyncIOMotorClient, database: AsyncIOMotorDatabase):
+        self.client = client
+        self.database = database
+        # initialize collections
+        self.users = database.get_collection("users")
+        self.projects = database.get_collection("projects")
+        self.tasks = database.get_collection("tasks")
+        self.invites = database.get_collection("invites")
+        self.manager_projects = database.get_collection("manager_projects")
+        self.project_working = database.get_collection("project_working")
+        self.annotator_tasks = database.get_collection("annotator_tasks")
+        self.notifications = database.get_collection("notifications")
+
+    @classmethod
+    async def connect(cls) -> "MongoDB":
+        """Idempotent async connect that returns the singleton instance."""
+        if cls._instance is not None:
+            return cls._instance
+
+        # ensure lock exists and perform a safe async initialization
+        if cls._lock is None:
+            cls._lock = asyncio.Lock()
+
+        async with cls._lock:
+            if cls._instance is not None:
+                return cls._instance
+
+            print(f"Connecting to MongoDB at {MONGODB_URL}...")
+            client = AsyncIOMotorClient(MONGODB_URL)
+            database = client[DATABASE_NAME]
+
+            inst = MongoDB(client, database)
+            # create indexes
+            await inst._create_indexes()
+
+            cls._instance = inst
+            print("MongoDB connected successfully!")
+            return cls._instance
+
+    async def close(self) -> None:
+        if getattr(self, "client", None):
+            self.client.close()
+            type(self)._instance = None
+
+    async def _create_indexes(self) -> None:
+        await self.users.create_index("email", unique=True)
+        await self.users.create_index("role")
+        await self.projects.create_index("manager_id")
+        await self.projects.create_index("category")
+        await self.tasks.create_index("project_id")
+        await self.tasks.create_index("category")
+        await self.tasks.create_index("assigned_annotator_id")
+        await self.tasks.create_index(
+            [("completed_status.annotator_part", 1), ("completed_status.qa_part", 1)]
+        )
+        await self.invites.create_index([("project_id", 1), ("user_id", 1)])
+        await self.invites.create_index("accepted_status")
+        await self.manager_projects.create_index("project_id")
+        await self.project_working.create_index("project_id")
+        await self.annotator_tasks.create_index("project_id")
+        await self.annotator_tasks.create_index("annotator_id")
+        await self.annotator_tasks.create_index(
+            [("task_id", 1), ("annotator_id", 1)], unique=True
+        )
+        await self.notifications.create_index("recipient_id")
+        await self.notifications.create_index([("recipient_id", 1), ("is_read", 1)])
+        await self.notifications.create_index("created_at")
+
+
+async def connect_to_mongo():
+    """Compatibility wrapper: initialize singleton and populate module-level names."""
+    global client, database
+    global users_collection, projects_collection, tasks_collection
+    global invites_collection, manager_projects_collection
+    global project_working_collection, annotator_tasks_collection, notifications_collection
+
+    inst = await MongoDB.connect()
+
+    # mirror instance attributes to module-level names for backward compatibility
+    client = inst.client
+    database = inst.database
+
+    users_collection = inst.users
+    projects_collection = inst.projects
+    tasks_collection = inst.tasks
+    invites_collection = inst.invites
+    manager_projects_collection = inst.manager_projects
+    project_working_collection = inst.project_working
+    annotator_tasks_collection = inst.annotator_tasks
+    notifications_collection = inst.notifications
+
+
+async def close_mongo_connection():
+    """Close database connection via singleton."""
+    if MongoDB._instance is not None:
+        await MongoDB._instance.close()
+
+
+def get_database() -> AsyncIOMotorDatabase:
+    return database
+
+
+
+
+
+
+// for creating unique ids 
+
+
+
+
+
+
+Pattern 2: Adapter Pattern --> Adapter Pattern: ObjectId to JSON Conversion Pipeline
+
+
+def _stringify_object_ids(value):
+    if isinstance(value, ObjectId):
+        return str(value)
+    if isinstance(value, list):
+        return [_stringify_object_ids(v) for v in value]
+    if isinstance(value, dict):
+        return {k: _stringify_object_ids(v) for k, v in value.items()}
+    return value
+
+
+
+
+def as_response(model_cls, doc: Dict[str, Any]):
+    """Return an instance of model_cls with all ObjectIds converted to strings and aliases preserved."""
+    data = _stringify_object_ids(doc)
+    return model_cls(**data)
+
+
+# backend/schemas.py (PyObjectId)
+
+from bson import ObjectId
+from pydantic_core import core_schema
+
+class PyObjectId(ObjectId):
+    @classmethod
+    def __get_pydantic_core_schema__(cls, _source_type, _handler):
+        return core_schema.no_info_plain_validator_function(cls.validate)
+
+    @classmethod
+    def validate(cls, v):
+        if isinstance(v, ObjectId):
+            return v
+        if isinstance(v, (str, bytes)):
+            s = v.decode() if isinstance(v, bytes) else v
+            if ObjectId.is_valid(s):
+                return ObjectId(s)
+        raise ValueError("Invalid ObjectId")
+
+    @classmethod
+    def __get_pydantic_json_schema__(cls, core_schema_, handler):
+        json_schema = handler(core_schema_)
+        json_schema.update(type="string")
+        return json_schema
+
+
+
+
+
+
+Pattern 3: Front Controller Pattern --> provides a centralized entry point for all incoming requests
+
+# routes.py (Front Controller aggregator)
+from fastapi import APIRouter
+
+import auth_routes
+import user_routes
+import project_routes
+import task_routes
+import invite_routes
+import notification_routes
+
+router = APIRouter()
+
+router.include_router(auth_routes.router, tags=["Authentication"])
+router.include_router(user_routes.router, tags=["Users"])
+router.include_router(project_routes.router, tags=["Projects"])
+router.include_router(task_routes.router, tags=["Tasks"])
+router.include_router(invite_routes.router, tags=["Invites"])
+router.include_router(notification_routes.router, tags=["Notifications"])
+
+
+
+
+
+
+
+D:\sdp_final\PatternCrafter\frontend\src\lib\front.ts
+
+export interface RouteHandler {
+  (params?: Record<string, any>, body?: any): Promise<any> | any;
+}
+
+export interface FrontControllerInterface {
+  register(path: string, handler: RouteHandler): void;
+  unregister(path: string): void;
+  handle(path: string, params?: Record<string, any>, body?: any): Promise<any>;
+}
+
+export class FrontController implements FrontControllerInterface {
+  private handlers: Map<string, RouteHandler> = new Map();
+
+  register(path: string, handler: RouteHandler): void {
+    this.handlers.set(path, handler);
+  }
+
+  unregister(path: string): void {
+    this.handlers.delete(path);
+  }
+
+  async handle(path: string, params?: Record<string, any>, body?: any): Promise<any> {
+    const handler = this.handlers.get(path);
+    if (!handler) {
+      return { status: 404, message: `No handler for ${path}` };
+    }
+    try {
+      return await handler(params, body);
+    } catch (e) {
+      return { status: 500, message: String(e) };
+    }
+  }
+}
+
+// Example: not exported as a default or used by app — kept as a reference.
+export const ExampleFrontController = FrontController;
+
+
+
+
+
+
+
+
+
+
+Pattern 4: Observer Pattern --> 
+
+– frontend/src/providers/NotificationsProvider.tsx– Publisher
+– frontend/src/components/NotificationBell.tsx– Subscriber
+
+– NOTIFICATION UNREAD EVENT = ’notifications:unreadCount’
+- NOTIFICATION LIST EVENT = ’notifications:list’
+
+
+
+
+
+
+D:\sdp_final\PatternCrafter\frontend\src\lib\ob.ts
+export interface Observer<T = any> {
+  update(subject: Subject<T>, data?: T): void;
+}
+
+export interface Subject<T = any> {
+  attach(observer: Observer<T>): void;
+  detach(observer: Observer<T>): void;
+  notify(data?: T): void;
+}
+
+// Concrete Subject implementation
+export class ConcreteSubject<T = any> implements Subject<T> {
+  private observers: Set<Observer<T>> = new Set();
+
+  attach(observer: Observer<T>): void {
+    this.observers.add(observer);
+  }
+
+  detach(observer: Observer<T>): void {
+    this.observers.delete(observer);
+  }
+
+  notify(data?: T): void {
+    for (const obs of Array.from(this.observers)) {
+      try {
+        obs.update(this, data);
+      } catch (e) {
+        // swallow errors to keep notification robust
+        // (this is a contained example; in production you might log)
+      }
+    }
+  }
+}
+
+// Example concrete observer (kept local)
+export class LoggingObserver implements Observer<any> {
+  constructor(private readonly name = "observer") {}
+  update(subject: Subject<any>, data?: any): void {
+    // no console output in library code by default; this demonstrates
+    // how an observer would receive updates. Do not use this anywhere
+    // unless intentionally imported.
+    // console.log(`${this.name} received`, data);
+  }
+}
+
+export { ConcreteSubject as SubjectImpl, LoggingObserver as ObserverImpl };
+
+
+
+
+
+Pattern 5: Strategy Pattern -->  The Strategy pattern defines a family of algorithms, encapsulates each one
+
+
+# backend/schemas.py (TaskCategory enum snippet)
+class TaskCategory(str, Enum):
+    IMAGE_CLASSIFICATION = "image_classification"
+    TEXT_CLASSIFICATION = "text_classification"
+    OBJECT_DETECTION = "object_detection"
+    NER = "named_entity_recognition"
+    LLM_RESPONSE_GRADING = "generative_ai_llm_response_grading"
+    CHATBOT_MODEL_ASSESSMENT = "generative_ai_chatbot_assessment"
+    RESPONSE_SELECTION = "conversational_ai_response_selection"
+
+
+
+# backend/utils.py
+from schemas import (
+    LLMResponseGradingData,
+    ChatbotModelAssessmentData,
+    ResponseSelectionData,
+    ImageClassificationData,
+    TextClassificationData,
+    ObjectDetectionData,
+    NERData,
+    LLMResponseGradingAnnotation,
+    ChatbotModelAssessmentAnnotation,
+    ResponseSelectionAnnotation,
+    ImageClassificationAnnotation,
+    TextClassificationAnnotation,
+    ObjectDetectionAnnotation,
+    NERAnnotation,
+)
+
+from schemas import TaskCategory
+DATA_MODEL_BY_CATEGORY = {
+    TaskCategory.LLM_RESPONSE_GRADING: LLMResponseGradingData,
+    TaskCategory.CHATBOT_MODEL_ASSESSMENT: ChatbotModelAssessmentData,
+    TaskCategory.RESPONSE_SELECTION: ResponseSelectionData,
+    TaskCategory.IMAGE_CLASSIFICATION: ImageClassificationData,
+    TaskCategory.TEXT_CLASSIFICATION: TextClassificationData,
+    TaskCategory.OBJECT_DETECTION: ObjectDetectionData,
+    TaskCategory.NER: NERData,
+}
+
+ANNOTATION_MODEL_BY_CATEGORY = {
+    TaskCategory.LLM_RESPONSE_GRADING: LLMResponseGradingAnnotation,
+    TaskCategory.CHATBOT_MODEL_ASSESSMENT: ChatbotModelAssessmentAnnotation,
+    TaskCategory.RESPONSE_SELECTION: ResponseSelectionAnnotation,
+    TaskCategory.IMAGE_CLASSIFICATION: ImageClassificationAnnotation,
+    TaskCategory.TEXT_CLASSIFICATION: TextClassificationAnnotation,
+    TaskCategory.OBJECT_DETECTION: ObjectDetectionAnnotation,
+    TaskCategory.NER: NERAnnotation,
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

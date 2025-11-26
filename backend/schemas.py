@@ -37,9 +37,9 @@ class PyObjectId(ObjectId):
     def __get_pydantic_json_schema__(
         cls, core_schema_: core_schema.CoreSchema, handler: GetJsonSchemaHandler
     ) -> Dict[str, Any]:
-        json_schema = handler(core_schema_)
-        json_schema.update(type="string")
-        return json_schema
+        # Return a simple string schema directly instead of calling handler
+        # which fails on PlainValidatorFunctionSchema
+        return {"type": "string", "example": "507f1f77bcf86cd799439011"}
 
 
 # Task Category Enums
