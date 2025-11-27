@@ -53,6 +53,8 @@ function AppContent() {
   const Route = RRRoute as unknown as any;
   
   const isLandingPage = location.pathname === "/";
+  const isAuthPage = location.pathname === "/login" || location.pathname === "/register";
+  const hideGlobalUI = isLandingPage || isAuthPage;
 
   return (
     <div
@@ -64,10 +66,10 @@ function AppContent() {
         position: "relative",
       }}
     >
-      {!isLandingPage && <AnimatedBackground />}
-      {!isLandingPage && <NavBar />}
+      {!hideGlobalUI && <AnimatedBackground />}
+      {!hideGlobalUI && <NavBar />}
       <div
-        className={isLandingPage ? "" : "container-app py-6"}
+        className={hideGlobalUI ? "" : "container-app py-6"}
         style={{ position: "relative", zIndex: 1 }}
       >
         <Routes>

@@ -55,7 +55,7 @@ export type Notification = {
   id: Id;
   recipient_id: Id;
   sender_id?: Id | null;
-  type: "invite" | "task_assigned" | "task_completed";
+  type: "invite" | "task_assigned" | "task_completed" | "qa_assigned" | "annotation_submitted" | "qa_completed" | "qa_approved" | "task_returned";
   title: string;
   message: string;
   task_id?: Id | null;

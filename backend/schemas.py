@@ -519,7 +519,7 @@ class LoginRequest(BaseModel):
 class NotificationBase(BaseModel):
     recipient_id: str  # User ID who receives notification
     sender_id: Optional[str] = None  # User who triggered notification
-    type: Literal["invite", "task_assigned", "task_completed"]
+    type: Literal["invite", "task_assigned", "task_completed", "qa_assigned", "annotation_submitted", "qa_completed", "qa_approved", "task_returned"]
     title: str
     message: str
     task_id: Optional[str] = None  # Related task ID
@@ -536,7 +536,7 @@ class NotificationInDB(BaseModel):
     id: PyObjectId = Field(default_factory=PyObjectId, alias="_id")
     recipient_id: PyObjectId
     sender_id: Optional[PyObjectId] = None
-    type: Literal["invite", "task_assigned", "task_completed"]
+    type: Literal["invite", "task_assigned", "task_completed", "qa_assigned", "annotation_submitted", "qa_completed", "qa_approved", "task_returned"]
     title: str
     message: str
     task_id: Optional[PyObjectId] = None
@@ -554,7 +554,7 @@ class NotificationResponse(BaseModel):
     id: str = Field(alias="_id")
     recipient_id: str
     sender_id: Optional[str] = None
-    type: Literal["invite", "task_assigned", "task_completed"]
+    type: Literal["invite", "task_assigned", "task_completed", "qa_assigned", "annotation_submitted", "qa_completed", "qa_approved", "task_returned"]
     title: str
     message: str
     task_id: Optional[str] = None
