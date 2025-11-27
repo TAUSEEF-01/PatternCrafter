@@ -2,6 +2,7 @@ import {
   Navigate,
   Route as RRRoute,
   Routes as RRRoutes,
+  useLocation,
 } from "react-router-dom";
 import NavBar, {
   ThemeProvider,
@@ -47,8 +48,11 @@ function RequireNonAnnotator({ children }: { children: React.ReactNode }) {
 
 function AppContent() {
   const { darkMode } = useTheme();
+  const location = useLocation();
   const Routes = RRRoutes as unknown as any;
   const Route = RRRoute as unknown as any;
+  
+  const isLandingPage = location.pathname === "/";
 
   return (
     <div
@@ -60,10 +64,10 @@ function AppContent() {
         position: "relative",
       }}
     >
-      <AnimatedBackground />
-      <NavBar />
+      {!isLandingPage && <AnimatedBackground />}
+      {!isLandingPage && <NavBar />}
       <div
-        className="container-app py-6"
+        className={isLandingPage ? "" : "container-app py-6"}
         style={{ position: "relative", zIndex: 1 }}
       >
         <Routes>
