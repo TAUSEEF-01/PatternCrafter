@@ -11,10 +11,10 @@ dist/
 build/
 *.local
 
-# # Environment
-# .env
-# .env.local
-# .env.*.local
+# Environment
+.env
+.env.local
+.env.*.local
 
 # IDE
 .vscode/

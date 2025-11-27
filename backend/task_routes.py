@@ -4,7 +4,7 @@ from fastapi import APIRouter, HTTPException, status, Depends
 from fastapi.responses import StreamingResponse, JSONResponse
 from typing import List, Optional, Dict, Any
 from bson import ObjectId
-from datetime import datetime
+from datetime import datetime, timezone
 import io
 import csv
 import json
@@ -307,15 +307,23 @@ async def export_completed_tasks(
         json_rows = []
         for r in rows:
             try:
-                task_data_obj = json.loads(r.get("task_data", "{}")) if r.get("task_data") else {}
+                task_data_obj = (
+                    json.loads(r.get("task_data", "{}")) if r.get("task_data") else {}
+                )
             except json.JSONDecodeError:
                 task_data_obj = {}
             try:
-                annotation_obj = json.loads(r.get("annotation", "{}")) if r.get("annotation") else {}
+                annotation_obj = (
+                    json.loads(r.get("annotation", "{}")) if r.get("annotation") else {}
+                )
             except json.JSONDecodeError:
                 annotation_obj = {}
             try:
-                qa_annotation_obj = json.loads(r.get("qa_annotation", "{}")) if r.get("qa_annotation") else {}
+                qa_annotation_obj = (
+                    json.loads(r.get("qa_annotation", "{}"))
+                    if r.get("qa_annotation")
+                    else {}
+                )
             except json.JSONDecodeError:
                 qa_annotation_obj = {}
             json_rows.append(
@@ -601,6 +609,25 @@ async def assign_task(
         }
         await database.notifications_collection.insert_one(notification)
 
+    # Send notification to QA reviewer when task is assigned for QA
+    if payload.qa_id:
+        task_name = (
+            task.get("tag_task")
+            or f"Task in {project.get('details', 'Untitled Project')}"
+        )
+        notification = {
+            "recipient_id": ObjectId(payload.qa_id),
+            "sender_id": current_user.id,
+            "type": "qa_assigned",
+            "title": "QA Review Assigned",
+            "message": f"You have been assigned to review task: {task_name}",
+            "task_id": ObjectId(task_id),
+            "project_id": task["project_id"],
+            "is_read": False,
+            "created_at": datetime.utcnow(),
+        }
+        await database.notifications_collection.insert_one(notification)
+
     # If annotator was assigned, update project_working
     if payload.annotator_id:
         await database.project_working_collection.update_one(
@@ -765,6 +792,25 @@ async def submit_annotation(
         }
         await database.notifications_collection.insert_one(notification)
 
+    # Send notification to assigned QA reviewer when annotation is submitted
+    if task.get("assigned_qa_id"):
+        task_name = (
+            task.get("tag_task")
+            or f"Task in {project.get('details', 'Untitled Project')}"
+        )
+        notification = {
+            "recipient_id": task["assigned_qa_id"],
+            "sender_id": current_user.id,
+            "type": "annotation_submitted",
+            "title": "Annotation Submitted for Review",
+            "message": f"Annotation submitted for task: {task_name}. Ready for QA review.",
+            "task_id": ObjectId(task_id),
+            "project_id": task["project_id"],
+            "is_read": False,
+            "created_at": datetime.utcnow(),
+        }
+        await database.notifications_collection.insert_one(notification)
+
     # After submission: remove this task from project_working assigned task list
     if task.get("assigned_annotator_id"):
         await database.project_working_collection.update_one(
@@ -844,6 +890,45 @@ async def submit_qa(
     await database.tasks_collection.update_one(
         {"_id": ObjectId(task_id)}, {"$set": updates}
     )
+
+    # Send notifications when QA is completed
+    project = await database.projects_collection.find_one({"_id": task["project_id"]})
+    task_name = (
+        task.get("tag_task") or f"Task in {project.get('details', 'Untitled Project')}"
+        if project
+        else "Task"
+    )
+
+    # Notify project manager
+    if project and project.get("manager_id"):
+        notification = {
+            "recipient_id": project["manager_id"],
+            "sender_id": current_user.id,
+            "type": "qa_completed",
+            "title": "QA Review Completed",
+            "message": f"QA review completed for task: {task_name}",
+            "task_id": ObjectId(task_id),
+            "project_id": task["project_id"],
+            "is_read": False,
+            "created_at": datetime.utcnow(),
+        }
+        await database.notifications_collection.insert_one(notification)
+
+    # Notify the annotator if task was approved
+    if task.get("assigned_annotator_id") and not payload.qa_feedback:
+        notification = {
+            "recipient_id": task["assigned_annotator_id"],
+            "sender_id": current_user.id,
+            "type": "qa_approved",
+            "title": "Task Approved",
+            "message": f"Your annotation for task: {task_name} has been approved by QA.",
+            "task_id": ObjectId(task_id),
+            "project_id": task["project_id"],
+            "is_read": False,
+            "created_at": datetime.utcnow(),
+        }
+        await database.notifications_collection.insert_one(notification)
+
     return {"message": "QA submitted"}
 
 
@@ -947,6 +1032,27 @@ async def return_task_to_annotator(
         {"_id": ObjectId(task_id)},
         {"$set": updates, "$push": {"remarks": remark_entry.model_dump(by_alias=True)}},
     )
+
+    # Send notification to annotator when task is returned
+    if task.get("assigned_annotator_id"):
+        task_name = (
+            task.get("tag_task")
+            or f"Task in {project.get('details', 'Untitled Project')}"
+            if project
+            else "Task"
+        )
+        notification = {
+            "recipient_id": task["assigned_annotator_id"],
+            "sender_id": current_user.id,
+            "type": "task_returned",
+            "title": "Task Returned for Revision",
+            "message": f"Task returned for revision: {task_name}. Please review feedback and resubmit.",
+            "task_id": ObjectId(task_id),
+            "project_id": task["project_id"],
+            "is_read": False,
+            "created_at": datetime.utcnow(),
+        }
+        await database.notifications_collection.insert_one(notification)
 
     # Add task back to project_working for the annotator
     if task.get("assigned_annotator_id"):

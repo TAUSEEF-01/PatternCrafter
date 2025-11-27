@@ -37,9 +37,9 @@ class PyObjectId(ObjectId):
     def __get_pydantic_json_schema__(
         cls, core_schema_: core_schema.CoreSchema, handler: GetJsonSchemaHandler
     ) -> Dict[str, Any]:
-        json_schema = handler(core_schema_)
-        json_schema.update(type="string")
-        return json_schema
+        # Return a simple string schema directly instead of calling handler
+        # which fails on PlainValidatorFunctionSchema
+        return {"type": "string", "example": "507f1f77bcf86cd799439011"}
 
 
 # Task Category Enums
@@ -237,11 +237,20 @@ class ResponseSelectionAnnotation(BaseModel):
     reasoning: Optional[str] = None  # Why this response was selected
 
 
+class LabelConfidenceItem(BaseModel):
+    """Per-label confidence item"""
+
+    label: str
+    confidence: int = Field(ge=1, le=5)
+
+
 class ImageClassificationAnnotation(BaseModel):
     """Annotation for Image Classification"""
 
     selected_label: str
     confidence: Optional[int] = Field(None, ge=1, le=5)
+    label_confidences: Optional[List[LabelConfidenceItem]] = None
+    notes: Optional[str] = None
 
 
 class TextClassificationAnnotation(BaseModel):
@@ -510,7 +519,7 @@ class LoginRequest(BaseModel):
 class NotificationBase(BaseModel):
     recipient_id: str  # User ID who receives notification
     sender_id: Optional[str] = None  # User who triggered notification
-    type: Literal["invite", "task_assigned", "task_completed"]
+    type: Literal["invite", "task_assigned", "task_completed", "qa_assigned", "annotation_submitted", "qa_completed", "qa_approved", "task_returned"]
     title: str
     message: str
     task_id: Optional[str] = None  # Related task ID
@@ -527,7 +536,7 @@ class NotificationInDB(BaseModel):
     id: PyObjectId = Field(default_factory=PyObjectId, alias="_id")
     recipient_id: PyObjectId
     sender_id: Optional[PyObjectId] = None
-    type: Literal["invite", "task_assigned", "task_completed"]
+    type: Literal["invite", "task_assigned", "task_completed", "qa_assigned", "annotation_submitted", "qa_completed", "qa_approved", "task_returned"]
     title: str
     message: str
     task_id: Optional[PyObjectId] = None
@@ -545,7 +554,7 @@ class NotificationResponse(BaseModel):
     id: str = Field(alias="_id")
     recipient_id: str
     sender_id: Optional[str] = None
-    type: Literal["invite", "task_assigned", "task_completed"]
+    type: Literal["invite", "task_assigned", "task_completed", "qa_assigned", "annotation_submitted", "qa_completed", "qa_approved", "task_returned"]
     title: str
     message: str
     task_id: Optional[str] = None

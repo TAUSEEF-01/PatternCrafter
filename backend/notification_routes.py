@@ -3,6 +3,7 @@
 from fastapi import APIRouter, HTTPException, status, Depends
 from typing import List
 from bson import ObjectId
+from datetime import datetime, timezone
 
 import database
 from schemas import NotificationResponse, UserInDB
@@ -20,13 +21,26 @@ async def get_notifications(
     limit: int = 50, current_user: UserInDB = Depends(get_current_user)
 ):
     """Get all notifications for current user"""
+    from datetime import timezone
+    
     notifications = (
         await database.notifications_collection.find({"recipient_id": current_user.id})
         .sort("created_at", -1)
         .limit(limit)
         .to_list(limit)
     )
-    return [as_response(NotificationResponse, notif) for notif in notifications]
+    
+    # Convert notifications and ensure datetime is timezone-aware for proper serialization
+    result = []
+    for notif in notifications:
+        # Ensure created_at is timezone-aware (MongoDB stores as UTC but may be naive)
+        if notif.get("created_at") and isinstance(notif["created_at"], datetime):
+            if notif["created_at"].tzinfo is None:
+                # Naive datetime - assume UTC and make timezone-aware
+                notif["created_at"] = notif["created_at"].replace(tzinfo=timezone.utc)
+        result.append(as_response(NotificationResponse, notif))
+    
+    return result
 
 
 @router.get("/notifications/unread-count")

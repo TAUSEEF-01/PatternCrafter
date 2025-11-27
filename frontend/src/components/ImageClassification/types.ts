@@ -14,9 +14,15 @@ export interface ImageClassificationData {
   };
 }
 
+export interface LabelConfidence {
+  label: string;
+  confidence: number; // 1-5 scale
+}
+
 export interface ImageClassificationAnnotation {
   selected_label: string;
-  confidence?: number; // 1-5 scale
+  confidence?: number; // 1-5 scale (kept for backward compatibility)
+  label_confidences: LabelConfidence[]; // Confidence for each label
   notes?: string;
 }
 

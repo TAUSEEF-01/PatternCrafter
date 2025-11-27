@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/auth/AuthContext';
 import { apiFetch } from '@/api/client';
+import { useTheme } from '@/components/NavBar';
+import Card from '@/components/ui/Card';
 
 // Extend minimal user shape locally to include optional skills
 type Me = {
@@ -154,54 +156,66 @@ export default function ProfilePage() {
 
   if (!user) return null;
 
+  const { darkMode } = useTheme();
+
   return (
     <div className="space-y-6">
       <div>
-        <h1>Profile</h1>
-        <p className="muted mt-1">Manage your account information and preferences</p>
+        <h1 className="text-3xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+          Profile
+        </h1>
+        <p className={`mt-2 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+          Manage your account information and preferences
+        </p>
       </div>
 
-      <div className="card">
-        <div className="card-body">
-          <h2 className="card-title mb-4">Account Information</h2>
-          <div className="space-y-3">
-            <div className="flex items-center gap-3">
-              <span className="text-gray-600 w-20">Name:</span>
-              <span className="font-medium">{me?.name}</span>
-            </div>
-            <div className="flex items-center gap-3">
-              <span className="text-gray-600 w-20">Email:</span>
-              <span className="font-medium">{me?.email}</span>
-            </div>
-            <div className="flex items-center gap-3">
-              <span className="text-gray-600 w-20">Role:</span>
-              <span className="badge badge-primary">{me?.role}</span>
-            </div>
+      <Card className="p-6">
+        <h2 className={`text-xl font-bold mb-6 ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>
+          Account Information
+        </h2>
+        <div className="space-y-4">
+          <div className={`flex items-center gap-4 p-3 rounded-lg ${darkMode ? 'bg-slate-700/50' : 'bg-gray-50'}`}>
+            <span className={`font-semibold w-24 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Name:</span>
+            <span className={`font-medium ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>{me?.name}</span>
+          </div>
+          <div className={`flex items-center gap-4 p-3 rounded-lg ${darkMode ? 'bg-slate-700/50' : 'bg-gray-50'}`}>
+            <span className={`font-semibold w-24 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Email:</span>
+            <span className={`font-medium ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>{me?.email}</span>
+          </div>
+          <div className={`flex items-center gap-4 p-3 rounded-lg ${darkMode ? 'bg-slate-700/50' : 'bg-gray-50'}`}>
+            <span className={`font-semibold w-24 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Role:</span>
+            <span className="badge badge-primary capitalize">{me?.role}</span>
           </div>
         </div>
-      </div>
+      </Card>
 
       {me?.role === 'annotator' && (
-        <div className="card">
-          <div className="card-body space-y-6">
-            <h2 className="card-title">Skills & Expertise</h2>
+        <Card className="p-6">
+          <div className="space-y-6">
+            <h2 className={`text-xl font-bold ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>
+              Skills & Expertise
+            </h2>
 
             {/* Programming Languages */}
             <div>
-              <label className="label">Programming Languages</label>
-              <p className="text-sm text-gray-600 mb-3">
+              <label className={`block text-sm font-semibold mb-2 ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>
+                Programming Languages
+              </label>
+              <p className={`text-sm mb-4 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
                 Select all programming languages you're proficient in
               </p>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
                 {PROGRAMMING_LANGUAGES.map((lang) => (
                   <button
                     key={lang}
                     type="button"
                     onClick={() => toggleProgrammingLang(lang)}
-                    className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    className={`px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 ${
                       selectedProgrammingLangs.includes(lang)
-                        ? 'bg-indigo-600 text-white hover:bg-indigo-700'
-                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                        ? 'bg-gradient-to-r from-indigo-600 to-indigo-700 text-white shadow-lg hover:shadow-xl transform hover:scale-105'
+                        : darkMode
+                        ? 'bg-slate-700/50 text-gray-300 hover:bg-slate-600 border border-slate-600'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-200'
                     }`}
                   >
                     {lang}
@@ -212,20 +226,24 @@ export default function ProfilePage() {
 
             {/* Annotation Skills */}
             <div>
-              <label className="label">Annotation Skills</label>
-              <p className="text-sm text-gray-600 mb-3">
+              <label className={`block text-sm font-semibold mb-2 ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>
+                Annotation Skills
+              </label>
+              <p className={`text-sm mb-4 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
                 Select all annotation tasks you can perform
               </p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
                 {ANNOTATION_SKILLS.map((skill) => (
                   <button
                     key={skill}
                     type="button"
                     onClick={() => toggleAnnotationSkill(skill)}
-                    className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors text-left ${
+                    className={`px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 text-left ${
                       selectedAnnotationSkills.includes(skill)
-                        ? 'bg-green-600 text-white hover:bg-green-700'
-                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                        ? 'bg-gradient-to-r from-green-600 to-green-700 text-white shadow-lg hover:shadow-xl transform hover:scale-105'
+                        : darkMode
+                        ? 'bg-slate-700/50 text-gray-300 hover:bg-slate-600 border border-slate-600'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-200'
                     }`}
                   >
                     {skill}
@@ -235,10 +253,9 @@ export default function ProfilePage() {
             </div>
 
             {/* Selected Skills Summary */}
-            <div className="bg-gray-50 rounded-lg p-4">
-              <h3 className="text-sm font-semibold text-gray-700 mb-2">
-                Selected Skills ({selectedProgrammingLangs.length + selectedAnnotationSkills.length}
-                )
+            <div className={`rounded-xl p-5 ${darkMode ? 'bg-slate-700/50' : 'bg-gray-50'}`}>
+              <h3 className={`text-sm font-semibold mb-3 ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>
+                Selected Skills ({selectedProgrammingLangs.length + selectedAnnotationSkills.length})
               </h3>
               <div className="flex flex-wrap gap-2">
                 {selectedProgrammingLangs.map((lang) => (
@@ -252,19 +269,37 @@ export default function ProfilePage() {
                   </span>
                 ))}
                 {selectedProgrammingLangs.length === 0 && selectedAnnotationSkills.length === 0 && (
-                  <span className="text-sm text-gray-500">No skills selected yet</span>
+                  <span className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                    No skills selected yet
+                  </span>
                 )}
               </div>
             </div>
 
-            <div className="flex items-center gap-3">
-              <button disabled={saving} onClick={saveSkills} className="btn btn-primary">
-                {saving ? 'Saving...' : 'Save Skills'}
+            <div className="flex items-center gap-4">
+              <button
+                disabled={saving}
+                onClick={saveSkills}
+                className="px-6 py-3 rounded-xl font-semibold text-white bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 disabled:transform-none"
+              >
+                {saving ? (
+                  <span className="flex items-center gap-2">
+                    <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                    </svg>
+                    Saving...
+                  </span>
+                ) : (
+                  'Save Skills'
+                )}
               </button>
               {msg && (
                 <span
-                  className={`text-sm ${
-                    msg.includes('success') ? 'text-green-600' : 'text-gray-600'
+                  className={`text-sm font-medium ${
+                    msg.includes('success')
+                      ? 'text-green-600 dark:text-green-400'
+                      : 'text-red-600 dark:text-red-400'
                   }`}
                 >
                   {msg}
@@ -272,26 +307,34 @@ export default function ProfilePage() {
               )}
             </div>
           </div>
-        </div>
+        </Card>
       )}
 
       {me?.role === 'annotator' && (
-        <div className="card">
-          <div className="card-body space-y-4">
-            <h2 className="card-title">My Invites</h2>
+        <Card className="p-6">
+          <div className="space-y-4">
+            <h2 className={`text-xl font-bold ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>
+              My Invites
+            </h2>
             {invitesError && (
-              <div className="rounded-md bg-red-50 border border-red-200 p-3 text-sm text-red-700">
+              <div className="rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 p-4 text-sm text-red-700 dark:text-red-400">
                 {invitesError}
               </div>
             )}
             {invites.length === 0 ? (
-              <p className="muted text-center py-8">No invites yet</p>
+              <p className={`text-center py-12 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                No invites yet
+              </p>
             ) : (
               <div className="space-y-3">
                 {invites.map((inv) => (
                   <div
                     key={inv.id}
-                    className="border border-gray-200 rounded-lg p-4 flex items-center justify-between"
+                    className={`border rounded-xl p-5 flex items-center justify-between transition-all duration-200 hover:shadow-lg ${
+                      darkMode
+                        ? 'border-slate-700 bg-slate-800/50 hover:bg-slate-800'
+                        : 'border-gray-200 bg-white hover:bg-gray-50'
+                    }`}
                   >
                     <div className="space-y-1">
                       <div className="flex items-center gap-2">
@@ -318,19 +361,31 @@ export default function ProfilePage() {
                       <button
                         disabled={invBusy === inv.id}
                         onClick={() => acceptInvite(inv.id)}
-                        className="btn btn-primary btn-sm"
+                        className="px-4 py-2 rounded-xl text-sm font-semibold text-white bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-md hover:shadow-lg"
                       >
-                        {invBusy === inv.id ? 'Accepting...' : 'Accept'}
+                        {invBusy === inv.id ? (
+                          <span className="flex items-center gap-2">
+                            <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                            </svg>
+                            Accepting...
+                          </span>
+                        ) : (
+                          'Accept'
+                        )}
                       </button>
                     ) : (
-                      <span className="text-gray-400 text-sm">✓ Accepted</span>
+                      <span className={`text-sm font-medium ${darkMode ? 'text-green-400' : 'text-green-600'}`}>
+                        ✓ Accepted
+                      </span>
                     )}
                   </div>
                 ))}
               </div>
             )}
           </div>
-        </div>
+        </Card>
       )}
     </div>
   );

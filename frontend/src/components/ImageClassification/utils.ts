@@ -2,9 +2,12 @@
  * Image Classification Utility Functions
  */
 
+// Gemini API Key from environment variable
+const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
+
 export const validateImageUrl = (url: string): boolean => {
   if (!url) return false;
-  
+
   // Check if it's a valid URL format
   try {
     new URL(url);
@@ -12,6 +15,150 @@ export const validateImageUrl = (url: string): boolean => {
   } catch {
     return false;
   }
+};
+
+/**
+ * Generate image classification tags using Gemini API
+ * @param imageUrl - URL of the image to analyze
+ * @returns Promise<string[]> - Array of generated tags/labels
+ */
+export const generateImageTags = async (
+  imageUrl: string
+): Promise<string[]> => {
+  try {
+    // Try to fetch and convert image to base64 first
+    let requestBody;
+
+    try {
+      // Attempt to fetch the image (may fail due to CORS)
+      const imageResponse = await fetch(imageUrl, { mode: "cors" });
+      if (imageResponse.ok) {
+        const imageBlob = await imageResponse.blob();
+        const base64Image = await blobToBase64(imageBlob);
+        const mimeType = imageBlob.type || "image/jpeg";
+
+        requestBody = {
+          contents: [
+            {
+              parts: [
+                {
+                  text: `Analyze this image and generate classification labels/tags for it. 
+Return ONLY a comma-separated list of 5-10 relevant classification labels that could be used for image classification tasks.
+The labels should be single words or short phrases that describe:
+- What objects are in the image
+- The scene or setting
+- Key characteristics or attributes
+
+Example output format: dog, animal, pet, outdoor, running, brown, happy
+
+Only return the comma-separated labels, nothing else.`,
+                },
+                {
+                  inline_data: {
+                    mime_type: mimeType,
+                    data: base64Image.split(",")[1],
+                  },
+                },
+              ],
+            },
+          ],
+          generationConfig: {
+            temperature: 0.4,
+            maxOutputTokens: 200,
+          },
+        };
+      } else {
+        throw new Error("Image fetch failed");
+      }
+    } catch (corsError) {
+      // If CORS fails, use URL-based approach with file_data
+      console.log("Using URL-based approach due to CORS:", corsError);
+      requestBody = {
+        contents: [
+          {
+            parts: [
+              {
+                text: `Analyze this image and generate classification labels/tags for it. 
+Return ONLY a comma-separated list of 5-10 relevant classification labels that could be used for image classification tasks.
+The labels should be single words or short phrases that describe:
+- What objects are in the image
+- The scene or setting
+- Key characteristics or attributes
+
+Example output format: dog, animal, pet, outdoor, running, brown, happy
+
+Only return the comma-separated labels, nothing else.
+
+Image URL: ${imageUrl}`,
+              },
+            ],
+          },
+        ],
+        generationConfig: {
+          temperature: 0.4,
+          maxOutputTokens: 200,
+        },
+      };
+    }
+
+    // Call Gemini API
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-goog-api-key": GEMINI_API_KEY,
+        },
+        body: JSON.stringify(requestBody),
+      }
+    );
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      console.error("Gemini API error response:", errorData);
+      throw new Error(
+        `Gemini API error: ${response.status} - ${JSON.stringify(errorData)}`
+      );
+    }
+
+    const data = await response.json();
+    console.log("Gemini API response:", data);
+
+    // Extract the text from Gemini response
+    const generatedText = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+
+    if (!generatedText) {
+      throw new Error("No text generated from Gemini API");
+    }
+
+    // Parse the comma-separated labels
+    const labels = generatedText
+      .split(",")
+      .map((label: string) => label.trim().toLowerCase())
+      .filter((label: string) => label.length > 0 && label.length < 50);
+
+    if (labels.length === 0) {
+      throw new Error("No valid labels parsed from response");
+    }
+
+    return labels;
+  } catch (error) {
+    console.error("Error generating image tags:", error);
+    throw error;
+  }
+};
+
+/**
+ * Convert Blob to base64 string
+ */
+const blobToBase64 = (blob: Blob): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => resolve(reader.result as string);
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
 };
 
 export const validateLabels = (labels: string[]): boolean => {

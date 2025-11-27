@@ -4,6 +4,7 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from typing import Dict, Any
 from bson import ObjectId
+from datetime import datetime, timezone
 
 import database
 from schemas import UserInDB, TaskCategory
@@ -48,6 +49,11 @@ async def get_current_user(
         )
 
     return UserInDB(**user)
+
+
+def get_utc_now():
+    """Get current UTC datetime as timezone-aware datetime"""
+    return datetime.now(timezone.utc)
 
 
 # Helpers for category-specific validation

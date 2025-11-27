@@ -287,16 +287,102 @@ export default function TaskViewPage() {
                   key={key}
                   className="border-b border-gray-200 pb-3 last:border-b-0"
                 >
-                  <div className="text-sm font-semibold text-gray-700 mb-1 capitalize">
+                  <div className="text-sm font-semibold text-gray-700 mb-2 capitalize">
                     {key.replace(/_/g, " ")}
                   </div>
                   <div className="text-sm text-gray-900">
-                    {typeof value === "object" ? (
+                    {/* Render image for image_url field */}
+                    {(key === "image_url" || key === "imageUrl") &&
+                    typeof value === "string" ? (
+                      <div className="space-y-2">
+                        <img
+                          src={value}
+                          alt="Task image"
+                          className="max-w-full max-h-96 rounded-lg border border-gray-200 shadow-sm object-contain"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).style.display =
+                              "none";
+                            (
+                              e.target as HTMLImageElement
+                            ).nextElementSibling?.classList.remove("hidden");
+                          }}
+                        />
+                        <div className="hidden text-xs text-gray-500 bg-gray-50 p-2 rounded break-all">
+                          {value}
+                        </div>
+                      </div>
+                    ) : /* Render labels/tags as badges */
+                    (key === "labels" || key === "tags" || key === "classes") &&
+                      Array.isArray(value) ? (
+                      <div className="flex flex-wrap gap-2">
+                        {value.map((label: string, index: number) => (
+                          <span
+                            key={index}
+                            className="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium bg-blue-100 text-blue-800 border border-blue-200"
+                          >
+                            {label}
+                          </span>
+                        ))}
+                      </div>
+                    ) : /* Render entity_types as badges */
+                    key === "entity_types" && Array.isArray(value) ? (
+                      <div className="flex flex-wrap gap-2">
+                        {value.map((entity: string, index: number) => (
+                          <span
+                            key={index}
+                            className="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium bg-purple-100 text-purple-800 border border-purple-200"
+                          >
+                            {entity}
+                          </span>
+                        ))}
+                      </div>
+                    ) : /* Render response_options as numbered list */
+                    key === "response_options" && Array.isArray(value) ? (
+                      <div className="space-y-2">
+                        {value.map((option: string, index: number) => (
+                          <div
+                            key={index}
+                            className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200"
+                          >
+                            <span className="flex-shrink-0 w-6 h-6 flex items-center justify-center rounded-full bg-blue-500 text-white text-sm font-medium">
+                              {index + 1}
+                            </span>
+                            <span className="text-sm">{option}</span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : /* Render messages/dialogue as chat */
+                    (key === "messages" || key === "dialogue") &&
+                      Array.isArray(value) ? (
+                      <div className="space-y-3 max-h-80 overflow-y-auto">
+                        {value.map(
+                          (
+                            msg: { role: string; content: string },
+                            index: number
+                          ) => (
+                            <div
+                              key={index}
+                              className={`p-3 rounded-lg ${
+                                msg.role === "user" || msg.role === "human"
+                                  ? "bg-blue-50 border border-blue-200 ml-4"
+                                  : "bg-gray-50 border border-gray-200 mr-4"
+                              }`}
+                            >
+                              <div className="text-xs font-semibold text-gray-500 mb-1 uppercase">
+                                {msg.role}
+                              </div>
+                              <div className="text-sm">{msg.content}</div>
+                            </div>
+                          )
+                        )}
+                      </div>
+                    ) : /* Default: render objects as JSON, strings as text */
+                    typeof value === "object" ? (
                       <pre className="bg-gray-50 p-2 rounded text-xs overflow-x-auto">
                         {JSON.stringify(value, null, 2)}
                       </pre>
                     ) : (
-                      String(value)
+                      <span className="break-words">{String(value)}</span>
                     )}
                   </div>
                 </div>
@@ -315,7 +401,7 @@ export default function TaskViewPage() {
         <div className="card">
           <div className="card-body">
             <h3 className="text-lg font-semibold mb-3">✍️ Annotation</h3>
-            {task.category === 'object_detection' ? (
+            {task.category === "object_detection" ? (
               <AnnotationViewer task={task} />
             ) : (
               <div className="grid md:grid-cols-2 gap-4">

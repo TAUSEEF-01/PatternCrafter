@@ -11,10 +11,78 @@ function TaskDataViewer({ data }: { data: any }) {
     return <div className="text-gray-500 text-sm">No data available</div>;
   }
 
-  const renderValue = (value: any): React.ReactNode => {
+  // Check if a string is an image URL or base64
+  const isImageValue = (key: string, value: any): boolean => {
+    if (typeof value !== "string") return false;
+    const imageKeys = [
+      "image_url",
+      "image",
+      "imageUrl",
+      "img",
+      "photo",
+      "picture",
+    ];
+    if (imageKeys.some((k) => key.toLowerCase().includes(k.toLowerCase())))
+      return true;
+    if (value.startsWith("data:image/")) return true;
+    if (/\.(jpg|jpeg|png|gif|webp|svg|bmp)(\?.*)?$/i.test(value)) return true;
+    if (value.startsWith("http") && /image|img|photo/i.test(value)) return true;
+    return false;
+  };
+
+  // Check if a key represents labels/tags
+  const isLabelsArray = (key: string, value: any): boolean => {
+    if (!Array.isArray(value)) return false;
+    const labelKeys = ["labels", "tags", "classes", "categories", "options"];
+    return (
+      labelKeys.some((k) => key.toLowerCase().includes(k.toLowerCase())) &&
+      value.every((item) => typeof item === "string")
+    );
+  };
+
+  const renderValue = (key: string, value: any): React.ReactNode => {
     if (value === null || value === undefined)
       return <span className="text-gray-400">—</span>;
     if (typeof value === "boolean") return value ? "Yes" : "No";
+
+    // Render image
+    if (isImageValue(key, value)) {
+      return (
+        <div className="mt-2">
+          <img
+            src={value}
+            alt={key}
+            className="max-w-full max-h-80 rounded-lg border-2 border-gray-200 shadow-sm object-contain bg-gray-100"
+            onError={(e) => {
+              (e.target as HTMLImageElement).style.display = "none";
+              (
+                e.target as HTMLImageElement
+              ).nextElementSibling?.classList.remove("hidden");
+            }}
+          />
+          <div className="hidden text-sm text-red-500 mt-1">
+            Failed to load image
+          </div>
+        </div>
+      );
+    }
+
+    // Render labels/tags as badges
+    if (isLabelsArray(key, value)) {
+      return (
+        <div className="flex flex-wrap gap-2 mt-1">
+          {(value as string[]).map((item, idx) => (
+            <span
+              key={idx}
+              className="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium bg-purple-100 text-purple-800 border border-purple-200"
+            >
+              {item}
+            </span>
+          ))}
+        </div>
+      );
+    }
+
     if (Array.isArray(value)) {
       if (value.length === 0)
         return <span className="text-gray-400">Empty</span>;
@@ -59,7 +127,7 @@ function TaskDataViewer({ data }: { data: any }) {
           {Object.entries(value).map(([k, v]) => (
             <div key={k} className="text-sm">
               <span className="font-medium text-gray-600">{k}:</span>{" "}
-              <span className="text-gray-700">{renderValue(v)}</span>
+              <span className="text-gray-700">{renderValue(k, v)}</span>
             </div>
           ))}
         </div>
@@ -73,16 +141,46 @@ function TaskDataViewer({ data }: { data: any }) {
   };
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       {Object.entries(data).map(([key, value]) => (
         <div
           key={key}
-          className="border-b border-gray-100 pb-3 last:border-b-0 last:pb-0"
+          className="border-b border-gray-100 pb-4 last:border-b-0 last:pb-0"
         >
-          <div className="text-sm font-semibold text-gray-800 mb-1 capitalize">
+          <div className="text-sm font-semibold text-gray-800 mb-2 capitalize flex items-center gap-2">
+            {key === "image_url" && (
+              <svg
+                className="w-4 h-4 text-blue-500"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                />
+              </svg>
+            )}
+            {(key === "labels" || key === "tags") && (
+              <svg
+                className="w-4 h-4 text-purple-500"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"
+                />
+              </svg>
+            )}
             {key.replace(/_/g, " ")}
           </div>
-          <div className="text-sm">{renderValue(value)}</div>
+          <div className="text-sm">{renderValue(key, value)}</div>
         </div>
       ))}
     </div>
@@ -332,7 +430,9 @@ export default function TaskQAPage() {
             </div>
             {task.annotation && (
               <div>
-                <h3 className="font-medium mb-3 text-lg">Annotator Annotation</h3>
+                <h3 className="font-medium mb-3 text-lg">
+                  Annotator Annotation
+                </h3>
                 <AnnotationViewer task={task} />
               </div>
             )}

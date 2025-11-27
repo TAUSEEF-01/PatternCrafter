@@ -1,13 +1,11 @@
 import { useState, useEffect } from "react";
-import {
-  ImageClassificationState,
-  ImageClassificationData,
-} from "./types";
+import { ImageClassificationState, ImageClassificationData } from "./types";
 import {
   validateImageUrl,
   validateLabels,
   parseLabelsFromString,
   getImageDimensions,
+  generateImageTags,
 } from "./utils";
 
 interface ImageClassificationTaskProps {
@@ -38,6 +36,10 @@ export default function ImageClassificationTask({
   } | null>(null);
   const [labelsInput, setLabelsInput] = useState(
     initialData?.labels?.join(", ") || ""
+  );
+  const [isGeneratingTags, setIsGeneratingTags] = useState(false);
+  const [tagGenerationError, setTagGenerationError] = useState<string | null>(
+    null
   );
 
   // Validate and update parent component
@@ -83,7 +85,10 @@ export default function ImageClassificationTask({
 
   // Add individual label
   const addLabel = () => {
-    if (state.newLabel.trim() && !state.labels.includes(state.newLabel.trim())) {
+    if (
+      state.newLabel.trim() &&
+      !state.labels.includes(state.newLabel.trim())
+    ) {
       const newLabels = [...state.labels, state.newLabel.trim()];
       setState((prev) => ({ ...prev, labels: newLabels, newLabel: "" }));
       setLabelsInput(newLabels.join(", "));
@@ -95,6 +100,44 @@ export default function ImageClassificationTask({
     const newLabels = state.labels.filter((label) => label !== labelToRemove);
     setState((prev) => ({ ...prev, labels: newLabels }));
     setLabelsInput(newLabels.join(", "));
+  };
+
+  // Auto-generate tags using Gemini API
+  const handleGenerateTags = async () => {
+    if (!validateImageUrl(state.imageUrl) || !imageLoaded) {
+      setTagGenerationError(
+        "Please enter a valid image URL and wait for it to load"
+      );
+      return;
+    }
+
+    setIsGeneratingTags(true);
+    setTagGenerationError(null);
+
+    try {
+      const generatedTags = await generateImageTags(state.imageUrl);
+      if (generatedTags.length > 0) {
+        // Merge with existing labels, avoiding duplicates
+        const existingLabels = new Set(
+          state.labels.map((l) => l.toLowerCase())
+        );
+        const newLabels = [
+          ...state.labels,
+          ...generatedTags.filter(
+            (tag) => !existingLabels.has(tag.toLowerCase())
+          ),
+        ];
+        setState((prev) => ({ ...prev, labels: newLabels }));
+        setLabelsInput(newLabels.join(", "));
+      }
+    } catch (error) {
+      console.error("Failed to generate tags:", error);
+      setTagGenerationError(
+        "Failed to generate tags. Please try again or add labels manually."
+      );
+    } finally {
+      setIsGeneratingTags(false);
+    }
   };
 
   const isValidSetup =
@@ -255,19 +298,72 @@ export default function ImageClassificationTask({
               </div>
 
               {imageLoaded && (
-                <div className="mt-3 flex items-center gap-2 text-xs text-green-700 bg-green-50 border border-green-200 rounded px-3 py-2">
-                  <svg
-                    className="w-4 h-4"
-                    fill="currentColor"
-                    viewBox="0 0 20 20"
+                <div className="mt-3 space-y-3">
+                  <div className="flex items-center gap-2 text-xs text-green-700 bg-green-50 border border-green-200 rounded px-3 py-2">
+                    <svg
+                      className="w-4 h-4"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                    <span className="font-semibold">
+                      Image loaded successfully
+                    </span>
+                  </div>
+
+                  {/* Auto-generate Tags Button */}
+                  <button
+                    type="button"
+                    onClick={handleGenerateTags}
+                    disabled={isGeneratingTags}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-lg font-semibold hover:from-purple-700 hover:to-indigo-700 disabled:from-gray-400 disabled:to-gray-500 disabled:cursor-not-allowed transition-all shadow-md hover:shadow-lg"
                   >
-                    <path
-                      fillRule="evenodd"
-                      d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
-                  <span className="font-semibold">Image loaded successfully</span>
+                    {isGeneratingTags ? (
+                      <>
+                        <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></div>
+                        <span>Generating Tags with AI...</span>
+                      </>
+                    ) : (
+                      <>
+                        <svg
+                          className="w-5 h-5"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M13 10V3L4 14h7v7l9-11h-7z"
+                          />
+                        </svg>
+                        <span>Auto-Generate Tags with AI</span>
+                      </>
+                    )}
+                  </button>
+
+                  {tagGenerationError && (
+                    <div className="flex items-center gap-2 text-xs text-red-700 bg-red-50 border border-red-200 rounded px-3 py-2">
+                      <svg
+                        className="w-4 h-4 flex-shrink-0"
+                        fill="currentColor"
+                        viewBox="0 0 20 20"
+                      >
+                        <path
+                          fillRule="evenodd"
+                          d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                          clipRule="evenodd"
+                        />
+                      </svg>
+                      <span>{tagGenerationError}</span>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -292,7 +388,7 @@ export default function ImageClassificationTask({
         </div>
         <div className="p-5 space-y-4">
           {/* Bulk Input */}
-          <div>
+          {/* <div>
             <label className="text-xs font-bold text-gray-700 uppercase tracking-wide mb-2 block">
               Comma-separated labels
             </label>
@@ -317,7 +413,7 @@ export default function ImageClassificationTask({
               </svg>
               Separate multiple labels with commas
             </p>
-          </div>
+          </div> */}
 
           {/* Individual Label Addition */}
           <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-4">

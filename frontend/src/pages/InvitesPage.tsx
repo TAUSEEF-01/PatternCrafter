@@ -2,8 +2,12 @@ import { useEffect, useState, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { apiFetch } from '@/api/client';
 import { Invite } from '@/types';
+import { useTheme } from '@/components/NavBar';
+import Card from '@/components/ui/Card';
+import { motion } from 'framer-motion';
 
 export default function InvitesPage() {
+  const { darkMode } = useTheme();
   const [invites, setInvites] = useState<Invite[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [searchParams] = useSearchParams();
@@ -46,59 +50,72 @@ export default function InvitesPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1>Project Invites</h1>
-        <p className="muted mt-1">Review and accept project invitations</p>
+        <h1 className="text-3xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+          Project Invites
+        </h1>
+        <p className={`mt-2 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+          Review and accept project invitations
+        </p>
       </div>
+      
       {error && (
-        <div className="rounded-md bg-red-50 border border-red-200 p-3 text-sm text-red-700">
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 p-4 text-sm text-red-700 dark:text-red-400"
+        >
           {error}
-        </div>
+        </motion.div>
       )}
+      
       {invites.length === 0 ? (
-        <div className="card">
-          <div className="card-body text-center py-12">
-            <p className="muted">No invites yet</p>
-          </div>
-        </div>
+        <Card className="text-center py-12">
+          <p className={darkMode ? 'text-gray-400' : 'text-gray-500'}>No invites yet</p>
+        </Card>
       ) : (
-        <div className="grid gap-3">
-          {invites.map((inv) => {
+        <div className="grid gap-4">
+          {invites.map((inv, index) => {
             const isHighlighted = highlightProjectId === inv.project_id;
             return (
-              <div
+              <motion.div
                 key={inv.id}
                 ref={(el) => (cardRefs.current[inv.id] = el)}
-                className="card hover:shadow-lg transition-all duration-300"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.05 }}
+                className={`${
+                  isHighlighted
+                    ? 'bg-gradient-to-r from-indigo-600 to-purple-600 shadow-2xl scale-[1.02]'
+                    : darkMode
+                    ? 'bg-slate-800/90 border-slate-700'
+                    : 'bg-white border-gray-200'
+                } rounded-2xl border shadow-lg hover:shadow-xl transition-all duration-300`}
                 style={{
-                  backgroundColor: isHighlighted ? '#AD49E1' : '#EBD3F8',
-                  transform: isHighlighted ? 'scale(1.02)' : 'scale(1)',
-                  boxShadow: isHighlighted
-                    ? '0 10px 30px rgba(122, 28, 172, 0.4)'
-                    : undefined,
                   animation: isHighlighted ? 'pulse 2s ease-in-out 3' : undefined,
                 }}
               >
-                <div className="card-body flex items-center justify-between">
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2">
+                <div className="p-6 flex items-center justify-between">
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-3">
                       <span
-                        className="font-medium"
-                        style={{ color: isHighlighted ? '#FFFFFF' : '#2E073F' }}
+                        className={`font-semibold ${
+                          isHighlighted ? 'text-white' : darkMode ? 'text-gray-200' : 'text-gray-900'
+                        }`}
                       >
                         Project:
                       </span>
                       <span
-                        className="font-mono text-sm"
-                        style={{
-                          color: isHighlighted ? '#FFFFFF' : '#64748b',
-                        }}
+                        className={`font-mono text-sm ${
+                          isHighlighted ? 'text-white/90' : darkMode ? 'text-gray-400' : 'text-gray-600'
+                        }`}
                       >
                         {inv.project_id.slice(0, 8)}
                       </span>
                     </div>
                     <div
-                      className="text-sm"
-                      style={{ color: isHighlighted ? '#F3E5FF' : '#64748b' }}
+                      className={`text-sm ${
+                        isHighlighted ? 'text-white/80' : darkMode ? 'text-gray-400' : 'text-gray-600'
+                      }`}
                     >
                       Invited: {new Date(inv.invited_at || '').toLocaleString()}
                     </div>
@@ -113,12 +130,19 @@ export default function InvitesPage() {
                     </div>
                   </div>
                   {!inv.accepted_at && (
-                    <button className="btn btn-primary" onClick={() => accept(inv.id)}>
+                    <button
+                      className={`px-6 py-3 rounded-xl font-semibold transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 ${
+                        isHighlighted
+                          ? 'bg-white text-indigo-600 hover:bg-gray-50'
+                          : 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:from-indigo-700 hover:to-purple-700'
+                      }`}
+                      onClick={() => accept(inv.id)}
+                    >
                       Accept Invite
                     </button>
                   )}
                 </div>
-              </div>
+              </motion.div>
             );
           })}
         </div>

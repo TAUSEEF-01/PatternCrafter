@@ -104,8 +104,14 @@ export default function NotificationBell() {
     } else if (notification.type === "task_assigned") {
       // For task assignments, go to project page with task highlight
       path = `/projects/${notification.project_id}?highlightTask=${notification.task_id}`;
-    } else if (notification.type === "task_completed") {
-      // For task completion (managers), go to specific project with task highlight
+    } else if (notification.type === "qa_assigned" || notification.type === "annotation_submitted") {
+      // For QA assignments or annotation submissions, go to QA page
+      path = `/tasks/${notification.task_id}/qa`;
+    } else if (notification.type === "task_returned") {
+      // For returned tasks, go to annotate page
+      path = `/tasks/${notification.task_id}/annotate`;
+    } else if (notification.type === "task_completed" || notification.type === "qa_completed" || notification.type === "qa_approved") {
+      // For task/QA completion, go to specific project with task highlight
       path = `/projects/${notification.project_id}?highlightTask=${notification.task_id}`;
     }
 
@@ -161,6 +167,52 @@ export default function NotificationBell() {
             <polyline points="22 4 12 14.01 9 11.01" />
           </svg>
         );
+      case "qa_assigned":
+      case "annotation_submitted":
+        return (
+          <svg
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+          >
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+            <polyline points="14 2 14 8 20 8" />
+            <line x1="16" y1="13" x2="8" y2="13" />
+            <line x1="16" y1="17" x2="8" y2="17" />
+            <polyline points="10 9 9 9 8 9" />
+          </svg>
+        );
+      case "qa_completed":
+      case "qa_approved":
+        return (
+          <svg
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+          >
+            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+            <polyline points="22 4 12 14.01 9 11.01" />
+          </svg>
+        );
+      case "task_returned":
+        return (
+          <svg
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+          >
+            <path d="M3 12h18M12 3l9 9-9 9" />
+          </svg>
+        );
       default:
         return (
           <svg
@@ -186,21 +238,69 @@ export default function NotificationBell() {
         return "bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400";
       case "task_completed":
         return "bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400";
+      case "qa_assigned":
+      case "annotation_submitted":
+        return "bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400";
+      case "qa_completed":
+      case "qa_approved":
+        return "bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400";
+      case "task_returned":
+        return "bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400";
       default:
         return "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400";
     }
   };
 
   const formatTime = (timestamp: string) => {
-    const date = new Date(timestamp);
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    const diffMins = Math.floor(diffMs / 60000);
+    try {
+      // Parse timestamp - FastAPI/Pydantic serializes datetime as ISO 8601
+      // If it doesn't have timezone info, MongoDB stores as UTC, so we treat it as UTC
+      let date: Date;
+      
+      // Check if timestamp already has timezone indicator (Z, +, or - after time)
+      const hasTimezone = timestamp.includes('Z') || 
+                         (timestamp.includes('+') && timestamp.match(/[+-]\d{2}:\d{2}$/)) ||
+                         (timestamp.includes('-') && timestamp.match(/-\d{2}:\d{2}$/));
+      
+      if (hasTimezone) {
+        // Has timezone info, parse directly
+        date = new Date(timestamp);
+      } else {
+        // No timezone info - assume UTC (backend uses datetime.utcnow())
+        // Append 'Z' to indicate UTC
+        date = new Date(timestamp.endsWith('Z') ? timestamp : timestamp + 'Z');
+      }
+      
+      // Validate the date
+      if (isNaN(date.getTime())) {
+        // Fallback: try parsing without timezone
+        date = new Date(timestamp);
+      }
+      
+      const now = new Date();
+      const diffMs = now.getTime() - date.getTime();
+      const diffMins = Math.floor(diffMs / 60000);
+      const diffHours = Math.floor(diffMins / 60);
+      const diffDays = Math.floor(diffMins / 1440);
+      const diffWeeks = Math.floor(diffDays / 7);
 
-    if (diffMins < 1) return "Just now";
-    if (diffMins < 60) return `${diffMins}m ago`;
-    if (diffMins < 1440) return `${Math.floor(diffMins / 60)}h ago`;
-    return `${Math.floor(diffMins / 1440)}d ago`;
+      if (diffMins < 1) return "Just now";
+      if (diffMins < 60) return `${diffMins}m ago`;
+      if (diffMins < 1440) return `${diffHours}h ago`;
+      if (diffDays < 7) return `${diffDays}d ago`;
+      if (diffDays < 30) return `${diffWeeks}w ago`;
+      
+      // For older notifications, show the actual date
+      const dateStr = date.toLocaleDateString(undefined, { 
+        month: 'short', 
+        day: 'numeric', 
+        year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined 
+      });
+      return dateStr;
+    } catch (error) {
+      console.error('Error formatting timestamp:', timestamp, error);
+      return 'Recently';
+    }
   };
 
   return (

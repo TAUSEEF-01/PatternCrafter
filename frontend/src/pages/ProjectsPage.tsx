@@ -4,6 +4,7 @@ import { apiFetch } from "@/api/client";
 import { Link as RRLink } from "react-router-dom";
 import { Project } from "@/types";
 import { useAuth } from "@/auth/AuthContext";
+import { motion } from 'framer-motion';
 
 const Link = RRLink as unknown as any;
 
@@ -618,26 +619,23 @@ export default function ProjectsPage() {
       )}
 
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between mb-8">
         <div>
-          <h1
-            className={`text-3xl font-bold flex items-center gap-3 ${
-              darkMode ? "text-[#D78FEE]" : "text-[#2E073F]"
-            }`}
-          >
+          <h1 className="text-4xl font-bold flex items-center gap-3 bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
             <svg
-              width="32"
-              height="32"
+              width="36"
+              height="36"
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"
               strokeWidth="2"
+              className="text-indigo-600"
             >
               <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
             </svg>
             Projects
           </h1>
-          <p className={`${darkMode ? "text-gray-300" : "text-gray-600"} mt-2`}>
+          <p className={`${darkMode ? "text-gray-300" : "text-gray-600"} mt-2 text-lg`}>
             Manage your annotation projects
           </p>
         </div>
@@ -822,23 +820,29 @@ export default function ProjectsPage() {
         </div>
       ) : (
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {displayedProjects.map((p) => (
-            <Link
+          {displayedProjects.map((p, index) => (
+            <motion.div
               key={p.id}
-              to={
-                user?.role === "manager" || acceptedProjectIds.has(p.id)
-                  ? `/projects/${p.id}`
-                  : "#"
-              }
-              className={`p-6 rounded-2xl border shadow-md transition-all ${
-                user?.role === "manager" || acceptedProjectIds.has(p.id)
-                  ? "cursor-pointer hover:shadow-lg"
-                  : "cursor-default"
-              } ${
-                darkMode
-                  ? "bg-gray-800 border-purple-700"
-                  : "bg-white border-purple-300"
-              }`}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.1 }}
+              whileHover={{ y: -4 }}
+            >
+              <Link
+                to={
+                  user?.role === "manager" || acceptedProjectIds.has(p.id)
+                    ? `/projects/${p.id}`
+                    : "#"
+                }
+                className={`block p-6 rounded-2xl border-2 shadow-lg transition-all duration-300 ${
+                  user?.role === "manager" || acceptedProjectIds.has(p.id)
+                    ? "cursor-pointer hover:shadow-2xl hover:border-indigo-500 transform hover:scale-[1.02]"
+                    : "cursor-default opacity-60"
+                } ${
+                  darkMode
+                    ? "bg-slate-800/90 border-slate-700 backdrop-blur-sm"
+                    : "bg-white/90 border-gray-200 backdrop-blur-sm"
+                }`}
               onClick={(e: React.MouseEvent) => {
                 if (user?.role !== "manager" && !acceptedProjectIds.has(p.id)) {
                   e.preventDefault();
@@ -1028,7 +1032,8 @@ export default function ProjectsPage() {
                   </div>
                 )}
               </div>
-            </Link>
+              </Link>
+            </motion.div>
           ))}
         </div>
       )}
