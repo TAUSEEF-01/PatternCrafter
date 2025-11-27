@@ -495,7 +495,7 @@ export default function ProjectDetailPage() {
               <div className="text-3xl font-bold text-blue-600">
                 {taskStats.total}
               </div>
-              <div className="text-sm text-gray-600 mt-1">Total Tasks</div>
+              <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">Total Tasks</div>
             </div>
           </div>
           <div className="card">
@@ -503,7 +503,7 @@ export default function ProjectDetailPage() {
               <div className="text-3xl font-bold text-yellow-600">
                 {taskStats.inProgress}
               </div>
-              <div className="text-sm text-gray-600 mt-1">In Progress</div>
+              <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">In Progress</div>
             </div>
           </div>
           <div className="card">
@@ -511,7 +511,7 @@ export default function ProjectDetailPage() {
               <div className="text-3xl font-bold text-green-600">
                 {taskStats.completed}
               </div>
-              <div className="text-sm text-gray-600 mt-1">Completed</div>
+              <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">Completed</div>
             </div>
           </div>
           {taskStats.returned > 0 && (
@@ -520,7 +520,7 @@ export default function ProjectDetailPage() {
                 <div className="text-3xl font-bold text-amber-600">
                   {taskStats.returned}
                 </div>
-                <div className="text-sm text-gray-600 mt-1">Returned</div>
+                <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">Returned</div>
               </div>
             </div>
           )}
@@ -762,7 +762,7 @@ export default function ProjectDetailPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <h3 className="text-lg font-semibold">👥 Manage Invites</h3>
-                  <p className="text-sm text-gray-600 mt-1">
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
                     Invite annotators to this project
                   </p>
                 </div>
@@ -780,7 +780,7 @@ export default function ProjectDetailPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <h3 className="text-lg font-semibold">➕ Create Task</h3>
-                  <p className="text-sm text-gray-600 mt-1">
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
                     Add a new task to this project
                   </p>
                 </div>
@@ -799,7 +799,7 @@ export default function ProjectDetailPage() {
                   <h3 className="text-lg font-semibold">
                     ⏳Assign tasks to Annotators
                   </h3>
-                  <p className="text-sm text-gray-600 mt-1">
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
                     {tasks.filter((t) => !t.assigned_annotator_id).length}{" "}
                     task(s) to assign
                   </p>
@@ -844,7 +844,7 @@ export default function ProjectDetailPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <h3 className="text-lg font-semibold">✅ Fully Completed</h3>
-                  <p className="text-sm text-gray-600 mt-1">
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
                     {taskStats.completed} task(s) completed
                   </p>
                 </div>
@@ -861,7 +861,7 @@ export default function ProjectDetailPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <h3 className="text-lg font-semibold">👥 Manage Roles</h3>
-                  <p className="text-sm text-gray-600 mt-1">
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
                     Assign annotators and QA reviewers
                   </p>
                 </div>
@@ -888,7 +888,7 @@ export default function ProjectDetailPage() {
                   {projectAnnotators.map((annotator) => (
                     <div
                       key={annotator.id}
-                      className="flex items-center gap-2 p-2 bg-gray-50 rounded"
+                      className="flex items-center gap-2 p-2 bg-gray-50 dark:bg-gray-700 rounded"
                     >
                       <div className="flex-1">
                         <div className="font-medium text-sm">
@@ -931,7 +931,7 @@ export default function ProjectDetailPage() {
                   {qaAnnotators.map((qa) => (
                     <div
                       key={qa.id}
-                      className="flex items-center gap-2 p-2 bg-green-50 rounded"
+                      className="flex items-center gap-2 p-2 bg-green-50 dark:bg-green-900/30 rounded"
                     >
                       <div className="flex-1">
                         <div className="font-medium text-sm">{qa.name}</div>
@@ -1009,7 +1009,7 @@ export default function ProjectDetailPage() {
                       return (
                         <tr key={task.id}>
                           <td>
-                            <code className="text-xs bg-gray-100 px-2 py-1 rounded">
+                            <code className="text-xs bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 px-2 py-1 rounded">
                               {task.id.slice(0, 8)}...
                             </code>
                           </td>
@@ -1293,7 +1293,7 @@ function TaskCard({
             >
               View task data
             </summary>
-            <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mt-2 max-h-96 overflow-auto scrollbar-thin">
+            <div className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 mt-2 max-h-96 overflow-auto scrollbar-thin">
               <TaskDataViewer data={t.task_data} />
             </div>
           </details>
@@ -1309,7 +1309,7 @@ function TaskCard({
               >
                 📝 View annotator's work
               </summary>
-              <div className="bg-green-50 border border-green-200 rounded-lg p-4 mt-2 max-h-96 overflow-auto scrollbar-thin">
+              <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4 mt-2 max-h-96 overflow-auto scrollbar-thin">
                 <TaskDataViewer data={t.annotation} />
               </div>
             </details>
