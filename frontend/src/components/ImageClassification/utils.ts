@@ -2,8 +2,8 @@
  * Image Classification Utility Functions
  */
 
-// Gemini API Key
-const GEMINI_API_KEY = "AIzaSyBsYbjjtlMI7kHt24dXIW03QWolY4lA6Fg";
+// Gemini API Key from environment variable
+const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
 
 export const validateImageUrl = (url: string): boolean => {
   if (!url) return false;

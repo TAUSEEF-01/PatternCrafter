@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import {
   ImageClassificationAnnotation,
   ImageClassificationData,
+  LabelConfidence,
   CONFIDENCE_LEVELS,
 } from "./types";
 import { formatConfidenceLabel, getConfidenceColor } from "./utils";
@@ -16,6 +17,7 @@ interface ImageClassificationAnnotatorProps {
 /**
  * Image Classification Annotator Component
  * Provides Label Studio-style interface for annotating image classification tasks
+ * with per-label confidence scores
  */
 export default function ImageClassificationAnnotator({
   taskData,
@@ -23,31 +25,81 @@ export default function ImageClassificationAnnotator({
   onAnnotationChange,
   readonly = false,
 }: ImageClassificationAnnotatorProps) {
+  // Initialize label confidences from taskData labels
+  const initializeLabelConfidences = (): LabelConfidence[] => {
+    if (initialAnnotation?.label_confidences) {
+      return initialAnnotation.label_confidences;
+    }
+    return taskData.labels.map((label) => ({
+      label,
+      confidence: 3, // Default to medium confidence
+    }));
+  };
+
   const [selectedLabel, setSelectedLabel] = useState<string>(
     initialAnnotation?.selected_label || ""
   );
-  const [confidence, setConfidence] = useState<number>(
-    initialAnnotation?.confidence || 3
+  const [labelConfidences, setLabelConfidences] = useState<LabelConfidence[]>(
+    initializeLabelConfidences()
   );
   const [notes, setNotes] = useState<string>(initialAnnotation?.notes || "");
   const [imageLoaded, setImageLoaded] = useState(false);
   const [imageError, setImageError] = useState(false);
+  const [expandedLabel, setExpandedLabel] = useState<string | null>(null);
+
+  // Update label confidences when taskData.labels changes
+  useEffect(() => {
+    const existingLabels = new Set(labelConfidences.map((lc) => lc.label));
+    const newLabels = taskData.labels.filter(
+      (label) => !existingLabels.has(label)
+    );
+
+    if (newLabels.length > 0) {
+      setLabelConfidences((prev) => [
+        ...prev,
+        ...newLabels.map((label) => ({ label, confidence: 3 })),
+      ]);
+    }
+  }, [taskData.labels]);
 
   // Update parent component when annotation changes
   useEffect(() => {
     if (selectedLabel) {
+      const selectedConfidence =
+        labelConfidences.find((lc) => lc.label === selectedLabel)?.confidence ||
+        3;
+
       onAnnotationChange({
         selected_label: selectedLabel,
-        confidence,
+        confidence: selectedConfidence,
+        label_confidences: labelConfidences,
         notes: notes || undefined,
       });
     }
-  }, [selectedLabel, confidence, notes]);
+  }, [selectedLabel, labelConfidences, notes]);
 
   const handleLabelSelect = (label: string) => {
     if (!readonly) {
       setSelectedLabel(label);
     }
+  };
+
+  const handleConfidenceChange = (label: string, newConfidence: number) => {
+    if (!readonly) {
+      setLabelConfidences((prev) =>
+        prev.map((lc) =>
+          lc.label === label ? { ...lc, confidence: newConfidence } : lc
+        )
+      );
+    }
+  };
+
+  const getConfidenceForLabel = (label: string): number => {
+    return labelConfidences.find((lc) => lc.label === label)?.confidence || 3;
+  };
+
+  const toggleLabelExpansion = (label: string) => {
+    setExpandedLabel(expandedLabel === label ? null : label);
   };
 
   return (
@@ -168,67 +220,159 @@ export default function ImageClassificationAnnotator({
         </div>
       </div>
 
-      {/* Label Selection */}
+      {/* Label Selection with Per-Label Confidence */}
       <div className="bg-white border-2 border-gray-300 rounded-lg overflow-hidden">
         <div className="bg-gray-50 border-b-2 border-gray-300 px-5 py-3">
           <div className="flex items-center justify-between">
             <h4 className="text-sm font-bold text-gray-700 uppercase tracking-wide">
-              Select Classification Label
+              Classification Labels with Confidence
             </h4>
             {!readonly && (
               <span className="text-xs text-red-500 font-semibold">
-                * Required
+                * Select one label
               </span>
             )}
           </div>
           <p className="text-xs text-gray-500 mt-1">
-            Choose the most appropriate label for this image
+            Set confidence level for each label, then select the most
+            appropriate one
           </p>
         </div>
         <div className="p-5">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          <div className="space-y-3">
             {taskData.labels.map((label, index) => {
               const isSelected = selectedLabel === label;
+              const confidence = getConfidenceForLabel(label);
+              const isExpanded = expandedLabel === label;
+
               return (
-                <button
+                <div
                   key={index}
-                  type="button"
-                  onClick={() => handleLabelSelect(label)}
-                  disabled={readonly}
                   className={`
-                    relative p-4 rounded-lg border-2 transition-all text-left
+                    rounded-lg border-2 transition-all overflow-hidden
                     ${
                       isSelected
                         ? "border-blue-500 bg-blue-50 shadow-lg ring-2 ring-blue-300"
-                        : "border-gray-300 bg-white hover:border-blue-400 hover:bg-blue-50"
+                        : "border-gray-300 bg-white hover:border-gray-400"
                     }
-                    ${readonly ? "cursor-default" : "cursor-pointer"}
-                    disabled:opacity-50
                   `}
                 >
-                  <div className="flex items-center justify-between">
-                    <span
-                      className={`text-base font-semibold ${
-                        isSelected ? "text-blue-900" : "text-gray-700"
-                      }`}
-                    >
-                      {label}
-                    </span>
-                    {isSelected && (
-                      <svg
-                        className="w-6 h-6 text-blue-600 flex-shrink-0"
-                        fill="currentColor"
-                        viewBox="0 0 20 20"
+                  {/* Label Header */}
+                  <div
+                    className={`
+                      flex items-center justify-between p-4 cursor-pointer
+                      ${readonly ? "cursor-default" : ""}
+                    `}
+                    onClick={() => !readonly && handleLabelSelect(label)}
+                  >
+                    <div className="flex items-center gap-3">
+                      {/* Selection Radio */}
+                      <div
+                        className={`
+                          w-5 h-5 rounded-full border-2 flex items-center justify-center
+                          ${
+                            isSelected
+                              ? "border-blue-500 bg-blue-500"
+                              : "border-gray-400"
+                          }
+                        `}
                       >
-                        <path
-                          fillRule="evenodd"
-                          d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                          clipRule="evenodd"
-                        />
-                      </svg>
-                    )}
+                        {isSelected && (
+                          <div className="w-2 h-2 rounded-full bg-white"></div>
+                        )}
+                      </div>
+
+                      <span
+                        className={`text-base font-semibold ${
+                          isSelected ? "text-blue-900" : "text-gray-700"
+                        }`}
+                      >
+                        {label}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                      {/* Confidence Badge */}
+                      <div
+                        className={`
+                          px-3 py-1 rounded-full text-xs font-bold text-white
+                          ${getConfidenceColor(confidence)}
+                        `}
+                      >
+                        {formatConfidenceLabel(confidence)}
+                      </div>
+
+                      {/* Expand Button */}
+                      {!readonly && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleLabelExpansion(label);
+                          }}
+                          className="p-1 hover:bg-gray-200 rounded transition-colors"
+                        >
+                          <svg
+                            className={`w-5 h-5 text-gray-500 transition-transform ${
+                              isExpanded ? "rotate-180" : ""
+                            }`}
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M19 9l-7 7-7-7"
+                            />
+                          </svg>
+                        </button>
+                      )}
+                    </div>
                   </div>
-                </button>
+
+                  {/* Confidence Slider (Expanded) */}
+                  {isExpanded && !readonly && (
+                    <div className="px-4 pb-4 pt-2 border-t border-gray-200 bg-gray-50">
+                      <div className="text-xs font-semibold text-gray-600 mb-3">
+                        Set Confidence Level for "{label}"
+                      </div>
+                      <div className="flex items-center justify-between gap-2">
+                        {CONFIDENCE_LEVELS.map((level) => (
+                          <button
+                            key={level.value}
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleConfidenceChange(label, level.value);
+                            }}
+                            className={`
+                              flex-1 flex flex-col items-center gap-1 p-2 rounded-lg border-2 transition-all
+                              ${
+                                confidence === level.value
+                                  ? `border-gray-400 ${level.color} bg-opacity-20`
+                                  : "border-gray-200 bg-white hover:border-gray-300"
+                              }
+                            `}
+                          >
+                            <div
+                              className={`
+                                w-7 h-7 rounded-full ${level.color} text-white font-bold
+                                flex items-center justify-center text-xs
+                              `}
+                            >
+                              {level.value}
+                            </div>
+                            <span className="text-[10px] font-medium text-gray-600">
+                              {level.label}
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
               );
             })}
           </div>
@@ -247,90 +391,13 @@ export default function ImageClassificationAnnotator({
                 />
               </svg>
               <p className="text-sm text-amber-800">
-                Please select a label to continue
+                Please select a label to continue. Click the arrow to set
+                confidence for each label.
               </p>
             </div>
           )}
         </div>
       </div>
-
-      {/* Confidence Level */}
-      {selectedLabel && (
-        <div className="bg-white border-2 border-gray-300 rounded-lg overflow-hidden">
-          <div className="bg-gray-50 border-b-2 border-gray-300 px-5 py-3">
-            <h4 className="text-sm font-bold text-gray-700 uppercase tracking-wide">
-              Confidence Level
-            </h4>
-            <p className="text-xs text-gray-500 mt-1">
-              How confident are you in this classification?
-            </p>
-          </div>
-          <div className="p-5 space-y-4">
-            <div className="flex items-center justify-between mb-2">
-              {CONFIDENCE_LEVELS.map((level) => (
-                <button
-                  key={level.value}
-                  type="button"
-                  onClick={() => !readonly && setConfidence(level.value)}
-                  disabled={readonly}
-                  className={`
-                    flex flex-col items-center gap-2 p-3 rounded-lg border-2 transition-all
-                    ${
-                      confidence === level.value
-                        ? `border-${level.color.replace(
-                            "bg-",
-                            ""
-                          )} ${level.color} bg-opacity-20 ring-2 ring-${level.color.replace(
-                            "bg-",
-                            ""
-                          )}`
-                        : "border-gray-300 bg-white hover:border-gray-400"
-                    }
-                    ${readonly ? "cursor-default" : "cursor-pointer"}
-                    disabled:opacity-50
-                  `}
-                >
-                  <div
-                    className={`
-                    w-8 h-8 rounded-full ${level.color} text-white font-bold
-                    flex items-center justify-center text-sm
-                  `}
-                  >
-                    {level.value}
-                  </div>
-                  <span className="text-xs font-semibold text-gray-700">
-                    {level.label}
-                  </span>
-                </button>
-              ))}
-            </div>
-
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <div className="flex items-center gap-3">
-                <div
-                  className={`w-12 h-12 rounded-full ${getConfidenceColor(
-                    confidence
-                  )} text-white font-bold flex items-center justify-center text-lg`}
-                >
-                  {confidence}
-                </div>
-                <div className="flex-1">
-                  <p className="text-sm font-bold text-blue-900">
-                    Current Confidence: {formatConfidenceLabel(confidence)}
-                  </p>
-                  <p className="text-xs text-blue-700 mt-1">
-                    {confidence <= 2 &&
-                      "Consider reviewing the image again or seeking additional context"}
-                    {confidence === 3 && "Moderately confident in this classification"}
-                    {confidence >= 4 &&
-                      "Highly confident in this classification"}
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Notes */}
       {selectedLabel && (
@@ -386,10 +453,12 @@ export default function ImageClassificationAnnotator({
                   <span className="font-semibold">Confidence:</span>
                   <span
                     className={`px-2 py-1 ${getConfidenceColor(
-                      confidence
+                      getConfidenceForLabel(selectedLabel)
                     )} text-white rounded font-bold`}
                   >
-                    {formatConfidenceLabel(confidence)}
+                    {formatConfidenceLabel(
+                      getConfidenceForLabel(selectedLabel)
+                    )}
                   </span>
                 </div>
                 {notes && (

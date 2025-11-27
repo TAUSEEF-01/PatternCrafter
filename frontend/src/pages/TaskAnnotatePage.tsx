@@ -238,6 +238,7 @@ export default function TaskAnnotatePage() {
                 setImageClassificationAnnotation({
                   selected_label: ann.selected_label,
                   confidence: ann.confidence,
+                  label_confidences: ann.label_confidences || [],
                   notes: ann.notes,
                 });
               }
@@ -255,7 +256,10 @@ export default function TaskAnnotatePage() {
                 });
               }
               // Legacy format: bounding_boxes only
-              else if (ann.bounding_boxes && Array.isArray(ann.bounding_boxes)) {
+              else if (
+                ann.bounding_boxes &&
+                Array.isArray(ann.bounding_boxes)
+              ) {
                 setObjectDetectionAnnotation({
                   annotations: ann.bounding_boxes,
                   image_url: taskData.task_data.image_url,
@@ -360,12 +364,20 @@ export default function TaskAnnotatePage() {
         break;
       case "object_detection":
         // Use new multi-tool annotation format if available
-        if (objectDetectionAnnotation && objectDetectionAnnotation.annotations && objectDetectionAnnotation.annotations.length > 0) {
+        if (
+          objectDetectionAnnotation &&
+          objectDetectionAnnotation.annotations &&
+          objectDetectionAnnotation.annotations.length > 0
+        ) {
           annotationData = {
             ...annotationData,
             ...objectDetectionAnnotation,
           };
-        } else if (objectDetectionAnnotation && objectDetectionAnnotation.bounding_boxes && objectDetectionAnnotation.bounding_boxes.length > 0) {
+        } else if (
+          objectDetectionAnnotation &&
+          objectDetectionAnnotation.bounding_boxes &&
+          objectDetectionAnnotation.bounding_boxes.length > 0
+        ) {
           // Legacy format with bounding_boxes only
           annotationData = {
             ...annotationData,
@@ -676,8 +688,16 @@ export default function TaskAnnotatePage() {
                 onAnnotationChange={(annotation) =>
                   setObjectDetectionAnnotation(annotation)
                 }
-                allowedTypes={task.task_data.annotation_types || ['bbox', 'polygon', 'polyline', 'point', 'mask']}
-                defaultTool={task.task_data.default_annotation_type || 'bbox'}
+                allowedTypes={
+                  task.task_data.annotation_types || [
+                    "bbox",
+                    "polygon",
+                    "polyline",
+                    "point",
+                    "mask",
+                  ]
+                }
+                defaultTool={task.task_data.default_annotation_type || "bbox"}
               />
             )}
 
@@ -2603,7 +2623,7 @@ export default function TaskAnnotatePage() {
             )}
 
             {/* Common fields for all categories */}
-            <div className="border-t pt-4">
+            {/* <div className="border-t pt-4">
               <h3 className="font-medium mb-3 text-sm text-gray-700">
                 Additional Information
               </h3>
@@ -2634,7 +2654,7 @@ export default function TaskAnnotatePage() {
                   />
                 </div>
               </div>
-            </div>
+            </div> */}
 
             <button
               type="submit"

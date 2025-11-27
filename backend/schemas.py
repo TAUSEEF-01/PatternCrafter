@@ -237,11 +237,20 @@ class ResponseSelectionAnnotation(BaseModel):
     reasoning: Optional[str] = None  # Why this response was selected
 
 
+class LabelConfidenceItem(BaseModel):
+    """Per-label confidence item"""
+
+    label: str
+    confidence: int = Field(ge=1, le=5)
+
+
 class ImageClassificationAnnotation(BaseModel):
     """Annotation for Image Classification"""
 
     selected_label: str
     confidence: Optional[int] = Field(None, ge=1, le=5)
+    label_confidences: Optional[List[LabelConfidenceItem]] = None
+    notes: Optional[str] = None
 
 
 class TextClassificationAnnotation(BaseModel):
