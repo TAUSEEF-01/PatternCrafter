@@ -167,7 +167,11 @@ export function AnimatedBackground() {
 }
 
 // NavBar Component
-export default function NavBar() {
+interface NavBarProps {
+  isAuthPage?: boolean;
+}
+
+export default function NavBar({ isAuthPage = false }: NavBarProps) {
   const { user, logout } = useAuth();
   const { darkMode, toggleTheme } = useTheme();
   const navigate = useNavigate();
@@ -211,9 +215,20 @@ export default function NavBar() {
 
   return (
     <nav
-      className="sticky top-0 z-20 backdrop-blur-lg bg-white/90 dark:bg-slate-900/90 border-b border-gray-200 dark:border-slate-700 shadow-sm"
+      className={`${
+        isAuthPage ? "fixed" : "sticky"
+      } top-0 left-0 right-0 z-50 backdrop-blur-xl border-b shadow-lg`}
       style={{
-        backgroundColor: darkMode ? "rgba(15, 23, 42, 0.9)" : "rgba(255, 255, 255, 0.9)",
+        backgroundColor: isAuthPage
+          ? darkMode
+            ? "rgba(30, 27, 75, 0.8)"
+            : "rgba(238, 242, 255, 0.8)"
+          : darkMode
+          ? "rgba(30, 27, 75, 0.95)"
+          : "rgba(238, 242, 255, 0.95)",
+        borderColor: darkMode
+          ? "rgba(99, 102, 241, 0.3)"
+          : "rgba(99, 102, 241, 0.2)",
       }}
     >
       <div className="container-app py-4 flex items-center justify-between">
@@ -242,8 +257,8 @@ export default function NavBar() {
                     isActive
                       ? "bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md"
                       : darkMode
-                      ? "text-gray-300 hover:text-white hover:bg-slate-800"
-                      : "text-gray-700 hover:text-indigo-600 hover:bg-gray-100"
+                      ? "text-indigo-200 hover:text-white hover:bg-indigo-800/50"
+                      : "text-indigo-700 hover:text-indigo-900 hover:bg-indigo-100"
                   }`
                 }
                 to="/projects"
@@ -257,8 +272,8 @@ export default function NavBar() {
                       isActive
                         ? "bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md"
                         : darkMode
-                        ? "text-gray-300 hover:text-white hover:bg-slate-800"
-                        : "text-gray-700 hover:text-indigo-600 hover:bg-gray-100"
+                        ? "text-indigo-200 hover:text-white hover:bg-indigo-800/50"
+                        : "text-indigo-700 hover:text-indigo-900 hover:bg-indigo-100"
                     }`
                   }
                   to="/invites"
@@ -277,7 +292,7 @@ export default function NavBar() {
                   onClick={() => setDropdownOpen(!dropdownOpen)}
                   className="flex items-center gap-2"
                   style={{
-                    color: "#EBD3F8",
+                    color: darkMode ? "#a5b4fc" : "#6366f1",
                     background: "none",
                     border: "none",
                     cursor: "pointer",
@@ -286,17 +301,15 @@ export default function NavBar() {
                     transition: "background-color 0.3s ease",
                   }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor =
-                      "rgba(235, 211, 248, 0.1)";
+                    e.currentTarget.style.backgroundColor = darkMode
+                      ? "rgba(99, 102, 241, 0.15)"
+                      : "rgba(99, 102, 241, 0.1)";
                   }}
                   onMouseLeave={(e) => {
                     e.currentTarget.style.backgroundColor = "transparent";
                   }}
                 >
-                  <div
-                    className="h-8 w-8 rounded-full flex items-center justify-center text-sm font-semibold"
-                    style={{ backgroundColor: "#EBD3F8", color: "#2E073F" }}
-                  >
+                  <div className="h-8 w-8 rounded-full flex items-center justify-center text-sm font-semibold bg-gradient-to-r from-indigo-500 to-purple-500 text-white">
                     {user.name?.[0]?.toUpperCase() || "?"}
                   </div>
                 </button>
@@ -439,24 +452,11 @@ export default function NavBar() {
               {/* Theme Toggle */}
               <button
                 onClick={toggleTheme}
-                style={{
-                  padding: "0.5rem",
-                  borderRadius: "0.5rem",
-                  backgroundColor: "rgba(235, 211, 248, 0.2)",
-                  color: "#EBD3F8",
-                  border: "none",
-                  cursor: "pointer",
-                  fontSize: "1.25rem",
-                  transition: "all 0.3s ease",
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor =
-                    "rgba(235, 211, 248, 0.3)";
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor =
-                    "rgba(235, 211, 248, 0.2)";
-                }}
+                className={`p-2 rounded-lg transition-all duration-200 ${
+                  darkMode
+                    ? "bg-indigo-900/50 text-indigo-300 hover:bg-indigo-800/50"
+                    : "bg-indigo-100 text-indigo-600 hover:bg-indigo-200"
+                }`}
                 aria-label="Toggle theme"
               >
                 {darkMode ? "☀️" : "🌙"}
@@ -470,8 +470,8 @@ export default function NavBar() {
                     isActive
                       ? "bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md"
                       : darkMode
-                      ? "text-gray-300 hover:text-white hover:bg-slate-800"
-                      : "text-gray-700 hover:text-indigo-600 hover:bg-gray-100"
+                      ? "text-indigo-200 hover:text-white hover:bg-indigo-800/50"
+                      : "text-indigo-700 hover:text-indigo-900 hover:bg-indigo-100"
                   }`
                 }
                 to="/login"
@@ -490,8 +490,8 @@ export default function NavBar() {
                 onClick={toggleTheme}
                 className={`p-2 rounded-lg transition-all duration-200 ${
                   darkMode
-                    ? "bg-slate-800 text-yellow-400 hover:bg-slate-700"
-                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                    ? "bg-indigo-900/50 text-indigo-300 hover:bg-indigo-800/50"
+                    : "bg-indigo-100 text-indigo-600 hover:bg-indigo-200"
                 }`}
                 aria-label="Toggle theme"
               >

@@ -51,25 +51,30 @@ function AppContent() {
   const location = useLocation();
   const Routes = RRRoutes as unknown as any;
   const Route = RRRoute as unknown as any;
-  
+
   const isLandingPage = location.pathname === "/";
-  const isAuthPage = location.pathname === "/login" || location.pathname === "/register";
-  const hideGlobalUI = isLandingPage || isAuthPage;
+  const isAuthPage =
+    location.pathname === "/login" || location.pathname === "/register";
+  const hideGlobalUI = isLandingPage;
 
   return (
     <div
       className="min-h-full"
       style={{
-        backgroundColor: darkMode ? "#0f172a" : "#f8fafc",
+        backgroundColor: isAuthPage
+          ? "transparent"
+          : darkMode
+          ? "#0f172a"
+          : "#f8fafc",
         color: darkMode ? "#e2e8f0" : "#1e293b",
         minHeight: "100vh",
         position: "relative",
       }}
     >
-      {!hideGlobalUI && <AnimatedBackground />}
-      {!hideGlobalUI && <NavBar />}
+      {!hideGlobalUI && !isAuthPage && <AnimatedBackground />}
+      {!hideGlobalUI && <NavBar isAuthPage={isAuthPage} />}
       <div
-        className={hideGlobalUI ? "" : "container-app py-6"}
+        className={hideGlobalUI || isAuthPage ? "" : "container-app py-6"}
         style={{ position: "relative", zIndex: 1 }}
       >
         <Routes>
