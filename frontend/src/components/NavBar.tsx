@@ -211,28 +211,26 @@ export default function NavBar() {
 
   return (
     <nav
+      className="sticky top-0 z-20 backdrop-blur-lg bg-white/90 dark:bg-slate-900/90 border-b border-gray-200 dark:border-slate-700 shadow-sm"
       style={{
-        backgroundColor: "#7A1CAC",
-        color: "#EBD3F8",
-        position: "sticky",
-        top: 0,
-        zIndex: 20,
-        borderBottom: "1px solid rgba(235, 211, 248, 0.2)",
+        backgroundColor: darkMode ? "rgba(15, 23, 42, 0.9)" : "rgba(255, 255, 255, 0.9)",
       }}
     >
-      <div className="container-app py-3 flex items-center justify-between">
+      <div className="container-app py-4 flex items-center justify-between">
         <Link
           to="/"
-          className="flex items-center gap-2 font-semibold text-lg"
-          style={{ color: "#EBD3F8", textDecoration: "none" }}
+          className="flex items-center gap-3 font-bold text-xl hover:opacity-80 transition-opacity"
+          style={{ textDecoration: "none" }}
         >
           <img
             src="/favicon.png"
             alt="PatternCrafter Logo"
-            className="h-8 w-8"
+            className="h-10 w-10"
             style={{ objectFit: "contain" }}
           />
-          <span>PatternCrafter</span>
+          <span className="bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+            PatternCrafter
+          </span>
         </Link>
 
         <div className="flex items-center gap-6">
@@ -240,12 +238,14 @@ export default function NavBar() {
             <>
               <NavLink
                 className={({ isActive }: any) =>
-                  `text-sm ${isActive ? "font-semibold" : "hover:text-white"}`
+                  `text-sm font-medium px-3 py-2 rounded-lg transition-all duration-200 ${
+                    isActive
+                      ? "bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md"
+                      : darkMode
+                      ? "text-gray-300 hover:text-white hover:bg-slate-800"
+                      : "text-gray-700 hover:text-indigo-600 hover:bg-gray-100"
+                  }`
                 }
-                style={({ isActive }: any) => ({
-                  color: isActive ? "#ffffff" : "#EBD3F8",
-                  textDecoration: "none",
-                })}
                 to="/projects"
               >
                 Projects
@@ -253,12 +253,14 @@ export default function NavBar() {
               {user.role === "annotator" && (
                 <NavLink
                   className={({ isActive }: any) =>
-                    `text-sm ${isActive ? "font-semibold" : "hover:text-white"}`
+                    `text-sm font-medium px-3 py-2 rounded-lg transition-all duration-200 ${
+                      isActive
+                        ? "bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md"
+                        : darkMode
+                        ? "text-gray-300 hover:text-white hover:bg-slate-800"
+                        : "text-gray-700 hover:text-indigo-600 hover:bg-gray-100"
+                    }`
                   }
-                  style={({ isActive }: any) => ({
-                    color: isActive ? "#ffffff" : "#EBD3F8",
-                    textDecoration: "none",
-                  })}
                   to="/invites"
                 >
                   Invites
@@ -464,24 +466,20 @@ export default function NavBar() {
             <>
               <NavLink
                 className={({ isActive }: any) =>
-                  `text-sm ${isActive ? "font-semibold" : "hover:text-white"}`
+                  `text-sm font-medium px-4 py-2 rounded-lg transition-all duration-200 ${
+                    isActive
+                      ? "bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md"
+                      : darkMode
+                      ? "text-gray-300 hover:text-white hover:bg-slate-800"
+                      : "text-gray-700 hover:text-indigo-600 hover:bg-gray-100"
+                  }`
                 }
-                style={({ isActive }: any) => ({
-                  color: isActive ? "#ffffff" : "#EBD3F8",
-                  textDecoration: "none",
-                })}
                 to="/login"
               >
                 Login
               </NavLink>
               <NavLink
-                className={({ isActive }: any) =>
-                  `text-sm ${isActive ? "font-semibold" : "hover:text-white"}`
-                }
-                style={({ isActive }: any) => ({
-                  color: isActive ? "#ffffff" : "#EBD3F8",
-                  textDecoration: "none",
-                })}
+                className="text-sm font-semibold px-4 py-2 rounded-lg bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:from-indigo-700 hover:to-purple-700 transition-all duration-200 shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
                 to="/register"
               >
                 Register
@@ -490,24 +488,11 @@ export default function NavBar() {
               {/* Theme Toggle */}
               <button
                 onClick={toggleTheme}
-                style={{
-                  padding: "0.5rem",
-                  borderRadius: "0.5rem",
-                  backgroundColor: "rgba(235, 211, 248, 0.2)",
-                  color: "#EBD3F8",
-                  border: "none",
-                  cursor: "pointer",
-                  fontSize: "1.25rem",
-                  transition: "all 0.3s ease",
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor =
-                    "rgba(235, 211, 248, 0.3)";
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor =
-                    "rgba(235, 211, 248, 0.2)";
-                }}
+                className={`p-2 rounded-lg transition-all duration-200 ${
+                  darkMode
+                    ? "bg-slate-800 text-yellow-400 hover:bg-slate-700"
+                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                }`}
                 aria-label="Toggle theme"
               >
                 {darkMode ? "☀️" : "🌙"}

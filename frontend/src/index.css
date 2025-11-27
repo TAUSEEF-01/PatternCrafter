@@ -127,6 +127,73 @@ body,
   border-radius: 8px;
 }
 
+/* Professional global enhancements */
+h1 {
+  @apply text-3xl font-bold tracking-tight;
+}
+
+h2 {
+  @apply text-2xl font-semibold tracking-tight;
+}
+
+h3 {
+  @apply text-xl font-semibold;
+}
+
+/* Enhanced card styling */
+.card {
+  @apply rounded-2xl shadow-lg border transition-all duration-300;
+}
+
+.card:hover {
+  @apply shadow-xl;
+}
+
+/* Enhanced input styling */
+input, select, textarea {
+  @apply transition-all duration-200;
+}
+
+input:focus, select:focus, textarea:focus {
+  @apply ring-2 ring-offset-0;
+}
+
+/* Professional button enhancements */
+button {
+  @apply transition-all duration-200;
+}
+
+/* Smooth animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.3s ease-out;
+}
+
+/* Enhanced badge styling */
+.badge {
+  @apply px-2.5 py-0.5 rounded-full text-xs font-semibold;
+}
+
+/* Professional table styling */
+.table {
+  @apply rounded-lg overflow-hidden;
+}
+
+/* Professional modal backdrop */
+.modal-backdrop {
+  @apply fixed inset-0 bg-black/50 backdrop-blur-sm z-50;
+}
+
 /* Pulse animation for highlighted notification cards */
 @keyframes pulse {
   0%, 100% {

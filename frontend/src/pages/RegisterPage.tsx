@@ -1,12 +1,15 @@
 import { FormEvent, useState } from "react";
 import { useAuth } from "@/auth/AuthContext";
 import { Link as RRLink, useNavigate } from "react-router-dom";
+import { useTheme } from '@/components/NavBar';
+import Card from '@/components/ui/Card';
 
 const Link = RRLink as unknown as any;
 
 export default function RegisterPage() {
   const { register } = useAuth();
   const nav = useNavigate();
+  const { darkMode } = useTheme();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -30,18 +33,20 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="flex min-h-[calc(100vh-5rem)] items-center justify-center p-4">
-      <div className="card w-full max-w-md shadow-xl bg-[#EBD6FB] border border-purple-100">
-        <div className="card-body space-y-6 p-8">
-          <div className="text-center">
-            <h1 className="text-3xl font-bold mb-2 text-[#2E073F]">
+    <div className="flex min-h-[calc(100vh-5rem)] items-center justify-center p-4 bg-white dark:bg-slate-900">
+      <div className="w-full max-w-md">
+        <Card className="p-8 md:p-10 shadow-2xl border-2 border-gray-100 dark:border-slate-700">
+          <div className="text-center mb-8">
+            <h1 className="text-4xl font-bold mb-3 bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
               Create an account
             </h1>
-            <p className="text-gray-600">Get started with PatternCrafter</p>
+            <p className={`text-lg ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+              Get started with PatternCrafter
+            </p>
           </div>
 
           {error && (
-            <div className="rounded-lg bg-red-50 border border-red-200 p-4 text-sm text-red-700 flex items-start gap-2">
+            <div className="rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 p-4 text-sm text-red-700 dark:text-red-400 flex items-start gap-3 mb-6">
               <svg
                 className="w-5 h-5 flex-shrink-0 mt-0.5"
                 fill="currentColor"
@@ -57,13 +62,17 @@ export default function RegisterPage() {
             </div>
           )}
 
-          <form onSubmit={onSubmit} className="space-y-5">
+          <form onSubmit={onSubmit} className="space-y-6">
             <div>
-              <label className="block text-sm font-medium text-[#2E073F] mb-2">
+              <label className={`block text-sm font-semibold mb-2 ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>
                 Name
               </label>
               <input
-                className="w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-[#7A1CAC] focus:outline-none transition-colors text-[#2E073F] placeholder:text-gray-400"
+                className={`w-full px-4 py-3 rounded-xl border-2 focus:outline-none transition-all duration-200 ${
+                  darkMode
+                    ? 'bg-slate-700/50 border-slate-600 text-gray-100 placeholder:text-gray-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20'
+                    : 'bg-gray-50 border-gray-200 text-gray-900 placeholder:text-gray-500 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20'
+                }`}
                 placeholder="John Doe"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
@@ -72,11 +81,15 @@ export default function RegisterPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-[#2E073F] mb-2">
+              <label className={`block text-sm font-semibold mb-2 ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>
                 Email
               </label>
               <input
-                className="w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-[#7A1CAC] focus:outline-none transition-colors text-[#2E073F] placeholder:text-gray-400"
+                className={`w-full px-4 py-3 rounded-xl border-2 focus:outline-none transition-all duration-200 ${
+                  darkMode
+                    ? 'bg-slate-700/50 border-slate-600 text-gray-100 placeholder:text-gray-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20'
+                    : 'bg-gray-50 border-gray-200 text-gray-900 placeholder:text-gray-500 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20'
+                }`}
                 type="email"
                 placeholder="abc@gmail.com"
                 value={email}
@@ -86,12 +99,16 @@ export default function RegisterPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-[#2E073F] mb-2">
+              <label className={`block text-sm font-semibold mb-2 ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>
                 Password
               </label>
               <div className="relative">
                 <input
-                  className="w-full px-4 py-3 pr-12 rounded-lg border-2 border-gray-200 focus:border-[#7A1CAC] focus:outline-none transition-colors text-[#2E073F] placeholder:text-gray-400"
+                  className={`w-full px-4 py-3 pr-12 rounded-xl border-2 focus:outline-none transition-all duration-200 ${
+                    darkMode
+                      ? 'bg-slate-700/50 border-slate-600 text-gray-100 placeholder:text-gray-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20'
+                      : 'bg-gray-50 border-gray-200 text-gray-900 placeholder:text-gray-500 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20'
+                  }`}
                   type={showPassword ? "text" : "password"}
                   placeholder="••••••••"
                   value={password}
@@ -101,7 +118,11 @@ export default function RegisterPage() {
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-[#7A1CAC] transition-colors p-1"
+                  className={`absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-lg transition-colors ${
+                    darkMode
+                      ? 'text-gray-400 hover:text-indigo-400 hover:bg-slate-600'
+                      : 'text-gray-500 hover:text-indigo-600 hover:bg-gray-100'
+                  }`}
                   aria-label={showPassword ? "Hide password" : "Show password"}
                 >
                   {showPassword ? (
@@ -144,11 +165,15 @@ export default function RegisterPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-[#2E073F] mb-2">
+              <label className={`block text-sm font-semibold mb-2 ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>
                 Role
               </label>
               <select
-                className="w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-[#7A1CAC] focus:outline-none transition-colors text-[#2E073F] bg-white"
+                className={`w-full px-4 py-3 rounded-xl border-2 focus:outline-none transition-all duration-200 ${
+                  darkMode
+                    ? 'bg-slate-700/50 border-slate-600 text-gray-100 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20'
+                    : 'bg-gray-50 border-gray-200 text-gray-900 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20'
+                }`}
                 value={role}
                 onChange={(e) =>
                   setRole(e.target.value as "annotator" | "manager")
@@ -161,7 +186,7 @@ export default function RegisterPage() {
 
             <button
               disabled={loading}
-              className="w-full py-3 rounded-lg font-semibold text-white bg-gradient-to-r from-[#7A1CAC] to-[#9D4EDD] hover:from-[#6A1A9C] hover:to-[#8D3ECD] disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
+              className="w-full py-3.5 rounded-xl font-semibold text-white bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 disabled:transform-none"
             >
               {loading ? (
                 <span className="flex items-center justify-center gap-2">
@@ -189,16 +214,16 @@ export default function RegisterPage() {
             </button>
           </form>
 
-          <div className="text-center text-sm text-gray-600 pt-2">
+          <div className={`text-center text-sm pt-4 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
             Already have an account?{" "}
             <Link
               to="/login"
-              className="font-semibold text-[#7A1CAC] hover:text-[#9D4EDD] transition-colors"
+              className="font-semibold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent hover:from-indigo-700 hover:to-purple-700 transition-all"
             >
               Log in
             </Link>
           </div>
-        </div>
+        </Card>
       </div>
     </div>
   );
