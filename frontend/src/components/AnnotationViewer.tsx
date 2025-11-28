@@ -944,13 +944,80 @@ export default function AnnotationViewer({ task }: AnnotationViewerProps) {
   }
 
   if (task.category !== "object_detection") {
-    // Fallback for other non-object-detection tasks
+    // Structured display for other task types
+    const annotation = task.annotation;
+    if (!annotation || typeof annotation !== "object") {
+      return (
+        <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg p-6 text-center">
+          <div className="text-4xl mb-2">⚠️</div>
+          <p className="text-amber-800 dark:text-amber-300 font-medium">No annotation data</p>
+        </div>
+      );
+    }
+
+    const renderValue = (value: any): React.ReactNode => {
+      if (value === null || value === undefined)
+        return <span className="text-gray-400 dark:text-gray-500">—</span>;
+      if (typeof value === "boolean")
+        return (
+          <span className={`px-2 py-1 rounded-full text-xs font-semibold ${value ? "bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300" : "bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300"}`}>
+            {value ? "Yes" : "No"}
+          </span>
+        );
+      if (typeof value === "number")
+        return <span className="font-mono font-semibold text-indigo-600 dark:text-indigo-400">{value}</span>;
+      if (Array.isArray(value)) {
+        if (value.length === 0)
+          return <span className="text-gray-400 dark:text-gray-500 italic">Empty list</span>;
+        return (
+          <div className="space-y-1 pl-4 border-l-2 border-indigo-200 dark:border-indigo-800">
+            {value.map((item, idx) => (
+              <div key={idx} className="text-sm text-gray-700 dark:text-gray-300">
+                • {typeof item === "object" ? JSON.stringify(item) : String(item)}
+              </div>
+            ))}
+          </div>
+        );
+      }
+      if (typeof value === "object") {
+        return (
+          <div className="pl-4 space-y-2 border-l-2 border-purple-200 dark:border-purple-800">
+            {Object.entries(value).map(([k, v]) => (
+              <div key={k}>
+                <span className="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide">
+                  {k.replace(/_/g, " ")}:
+                </span>
+                <div className="mt-1">{renderValue(v)}</div>
+              </div>
+            ))}
+          </div>
+        );
+      }
+      return (
+        <div className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap break-words">
+          {String(value)}
+        </div>
+      );
+    };
+
     return (
-      <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-        <h3 className="font-medium mb-2">Annotation Data</h3>
-        <pre className="text-sm overflow-auto max-h-96 bg-white p-3 rounded border">
-          {JSON.stringify(task.annotation, null, 2)}
-        </pre>
+      <div className="space-y-3">
+        {Object.entries(annotation).map(([key, value]) => (
+          <div
+            key={key}
+            className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow"
+          >
+            <div className="flex items-center gap-2 mb-3">
+              <div className="w-2 h-2 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full"></div>
+              <h4 className="text-sm font-bold text-gray-800 dark:text-gray-200 uppercase tracking-wide">
+                {key.replace(/_/g, " ")}
+              </h4>
+            </div>
+            <div className="pl-4">
+              {renderValue(value)}
+            </div>
+          </div>
+        ))}
       </div>
     );
   }
