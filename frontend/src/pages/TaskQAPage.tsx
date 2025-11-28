@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useState, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { apiFetch } from "@/api/client";
 import { Task, TaskRemark } from "@/types";
@@ -203,6 +203,23 @@ export default function TaskQAPage() {
 
   const isManagerView = user?.role === "manager";
 
+  // Timer state - tracks time in seconds
+  const [elapsedTime, setElapsedTime] = useState(0);
+  const [isTimerActive, setIsTimerActive] = useState(false);
+  
+  // Refs to track current values for cleanup
+  const currentTaskIdRef = useRef<string | null>(null);
+  const currentElapsedTimeRef = useRef<number>(0);
+  
+  // Update refs when values change
+  useEffect(() => {
+    currentTaskIdRef.current = taskId || null;
+  }, [taskId]);
+  
+  useEffect(() => {
+    currentElapsedTimeRef.current = elapsedTime;
+  }, [elapsedTime]);
+
   // QA Review Fields
   const [decision, setDecision] = useState<"approve" | "reject" | "revise">(
     "approve"
@@ -236,10 +253,164 @@ export default function TaskQAPage() {
 
   useEffect(() => {
     if (!taskId) return;
+    
+    // Save previous task's time before switching
+    const previousTaskId = currentTaskIdRef.current;
+    const previousTime = currentElapsedTimeRef.current;
+    
+    if (previousTaskId && previousTaskId !== taskId && previousTime > 0) {
+      console.log('🔄 Switching tasks - saving previous task time');
+      console.log('Previous Task ID:', previousTaskId);
+      console.log('Time to save:', previousTime, 'seconds');
+      apiFetch(`/tasks/${previousTaskId}/qa-time`, {
+        method: "PUT",
+        body: { qa_accumulated_time: previousTime },
+      })
+        .then(() => console.log('✅ Previous task time saved successfully'))
+        .catch((e) => console.error("❌ Failed to save previous task time:", e));
+    }
+    
+    // Reset timer when switching tasks
+    setIsTimerActive(false);
+    setElapsedTime(0);
+    
     apiFetch<Task>(`/tasks/${taskId}`)
-      .then(setTask)
-      .catch((e) => setError(String(e)));
+      .then((taskData) => {
+        console.log('=== TASK LOADED ===');
+        console.log('Full task data:', JSON.stringify(taskData, null, 2));
+        console.log('Task ID:', taskData.id);
+        console.log('QA accumulated time:', taskData.qa_accumulated_time);
+        console.log('Type of qa_accumulated_time:', typeof taskData.qa_accumulated_time);
+        console.log('==================');
+        
+        setTask(taskData);
+
+        // Load accumulated QA time if it exists for THIS specific task
+        if (taskData.qa_accumulated_time !== undefined && taskData.qa_accumulated_time !== null) {
+          const timeToSet = Math.floor(taskData.qa_accumulated_time);
+          console.log('✅ Loading saved QA time:', timeToSet, 'seconds');
+          setElapsedTime(timeToSet);
+        } else {
+          console.log('⚠️ No QA accumulated time found, starting from 0');
+          setElapsedTime(0);
+        }
+      })
+      .catch((e) => {
+        console.error('❌ Error loading task:', e);
+        setError(String(e));
+      });
   }, [taskId]);
+
+  // Timer effect - start timer when task is loaded and not completed
+  useEffect(() => {
+    if (task && !task.completed_status?.qa_part && !isManagerView) {
+      setIsTimerActive(true);
+    }
+  }, [task, isManagerView]);
+
+  // Timer interval effect
+  useEffect(() => {
+    let interval: NodeJS.Timeout | null = null;
+
+    if (isTimerActive) {
+      interval = setInterval(() => {
+        setElapsedTime((prevTime) => prevTime + 1);
+      }, 1000);
+    }
+
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [isTimerActive]);
+
+  // Auto-save accumulated time every 30 seconds
+  useEffect(() => {
+    if (!taskId || !isTimerActive) return;
+
+    console.log('Setting up auto-save interval for QA time');
+    const saveInterval = setInterval(async () => {
+      // Use a function to get the latest elapsedTime value
+      setElapsedTime((currentTime) => {
+        if (currentTime > 0) {
+          console.log('Auto-saving QA accumulated time:', currentTime);
+          apiFetch(`/tasks/${taskId}/qa-time`, {
+            method: "PUT",
+            body: { qa_accumulated_time: currentTime },
+          })
+            .then(() => console.log('QA time saved successfully'))
+            .catch((e) => console.error("Failed to save QA accumulated time:", e));
+        }
+        return currentTime; // Return unchanged
+      });
+    }, 30000); // Save every 30 seconds
+
+    return () => {
+      console.log('Clearing auto-save interval');
+      clearInterval(saveInterval);
+    };
+  }, [taskId, isTimerActive]);
+
+  // Save time when component unmounts (page close/refresh)
+  useEffect(() => {
+    return () => {
+      const finalTaskId = currentTaskIdRef.current;
+      const finalTime = currentElapsedTimeRef.current;
+      
+      if (finalTaskId && finalTime > 0) {
+        console.log('Component unmounting - saving final QA time:', finalTaskId, finalTime);
+        // Use sendBeacon for reliable save on page unload
+        const data = JSON.stringify({ qa_accumulated_time: finalTime });
+        const blob = new Blob([data], { type: 'application/json' });
+        navigator.sendBeacon(`/api/tasks/${finalTaskId}/qa-time`, blob);
+      }
+    };
+  }, []); // Empty deps - only run on mount/unmount
+
+  // Save time when user leaves page, closes browser, or navigates away
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      const finalTaskId = currentTaskIdRef.current;
+      const finalTime = currentElapsedTimeRef.current;
+      
+      if (finalTaskId && finalTime > 0) {
+        console.log('Page unloading - saving QA time via beforeunload:', finalTaskId, finalTime);
+        // Use sendBeacon for reliable save on page unload
+        const data = JSON.stringify({ qa_accumulated_time: finalTime });
+        const blob = new Blob([data], { type: 'application/json' });
+        navigator.sendBeacon(`/api/tasks/${finalTaskId}/qa-time`, blob);
+      }
+    };
+
+    // Add event listener for page unload
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, []); // Empty deps - only run on mount/unmount
+
+  // Save time when navigating away using React Router
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') {
+        const finalTaskId = currentTaskIdRef.current;
+        const finalTime = currentElapsedTimeRef.current;
+        
+        if (finalTaskId && finalTime > 0) {
+          console.log('Page hidden - saving QA time:', finalTaskId, finalTime);
+          const data = JSON.stringify({ qa_accumulated_time: finalTime });
+          const blob = new Blob([data], { type: 'application/json' });
+          navigator.sendBeacon(`/api/tasks/${finalTaskId}/qa-time`, blob);
+        }
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, []);
 
   const handleReturnTask = async (reason?: string) => {
     if (!taskId) return false;
@@ -313,9 +484,13 @@ export default function TaskQAPage() {
     }
 
     try {
+      // Stop the timer
+      setIsTimerActive(false);
+
       const body = {
         qa_annotation: qaAnnotation,
         qa_feedback: feedback.trim() || undefined,
+        qa_time_spent: elapsedTime, // Send time spent in seconds
       };
       await apiFetch(`/tasks/${taskId}/qa`, { method: "PUT", body });
       setSuccess(
@@ -332,6 +507,8 @@ export default function TaskQAPage() {
     } catch (e: any) {
       setError(e?.message || "Failed to submit QA review");
       setSuccess(null);
+      // Restart timer if submission failed
+      setIsTimerActive(true);
     }
   };
 
@@ -413,14 +590,43 @@ export default function TaskQAPage() {
       {task && (
         <div className="card">
           <div className="card-body space-y-4">
-            <div>
-              <h2 className="card-title mb-2">Task Information</h2>
-              <div className="flex items-center gap-2 text-sm">
-                <span className="font-mono text-gray-600">
-                  {task.id.slice(0, 8)}
-                </span>
-                <span className="badge badge-primary">{task.category}</span>
+            <div className="flex items-start justify-between">
+              <div>
+                <h2 className="card-title mb-2">Task Information</h2>
+                <div className="flex items-center gap-2 text-sm">
+                  <span className="font-mono text-gray-600 dark:text-gray-400">
+                    {task.id.slice(0, 8)}
+                  </span>
+                  <span className="badge badge-primary">{task.category}</span>
+                </div>
               </div>
+              {/* Timer Display - Only show for QA annotators, not managers */}
+              {!isManagerView && (
+                <div className="flex flex-col items-end">
+                  <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">Time Elapsed</div>
+                  <div
+                    className={`font-mono text-2xl font-bold ${
+                      isTimerActive ? "text-blue-600 dark:text-blue-400" : "text-gray-400 dark:text-gray-500"
+                    }`}
+                  >
+                    {Math.floor(elapsedTime / 3600)
+                      .toString()
+                      .padStart(2, "0")}
+                    :
+                    {Math.floor((elapsedTime % 3600) / 60)
+                      .toString()
+                      .padStart(2, "0")}
+                    :
+                    {(elapsedTime % 60).toString().padStart(2, "0")}
+                  </div>
+                  {isTimerActive && (
+                    <>
+                      <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
+                      <span className="text-xs text-gray-500 dark:text-gray-400">Recording</span>
+                    </>
+                  )}
+                </div>
+              )}
             </div>
             <div>
               <h3 className="font-medium mb-2">Task Data</h3>

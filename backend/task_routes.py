@@ -887,6 +887,10 @@ async def submit_qa(
         "qa_completed_at": datetime.utcnow(),
     }
 
+    # Save QA time spent if provided
+    if payload.qa_time_spent is not None:
+        updates["qa_accumulated_time"] = payload.qa_time_spent
+
     await database.tasks_collection.update_one(
         {"_id": ObjectId(task_id)}, {"$set": updates}
     )
@@ -930,6 +934,46 @@ async def submit_qa(
         await database.notifications_collection.insert_one(notification)
 
     return {"message": "QA submitted"}
+
+
+@router.put("/tasks/{task_id}/qa-time")
+async def update_qa_accumulated_time(
+    task_id: str,
+    body: Dict[str, Any],
+    current_user: UserInDB = Depends(get_current_user),
+):
+    """Update QA accumulated time for a task (auto-save from frontend)"""
+    if not ObjectId.is_valid(task_id):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid task ID"
+        )
+
+    task = await database.tasks_collection.find_one({"_id": ObjectId(task_id)})
+    if not task:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Task not found"
+        )
+
+    # Permission check - only assigned QA annotator can update their time
+    if current_user.role == "annotator" and task.get("assigned_qa_id") != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to update QA time for this task",
+        )
+
+    qa_accumulated_time = body.get("qa_accumulated_time")
+    if qa_accumulated_time is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="qa_accumulated_time is required",
+        )
+
+    await database.tasks_collection.update_one(
+        {"_id": ObjectId(task_id)},
+        {"$set": {"qa_accumulated_time": qa_accumulated_time}},
+    )
+
+    return {"message": "QA accumulated time updated"}
 
 
 @router.put("/tasks/{task_id}/return")
