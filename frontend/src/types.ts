@@ -35,6 +35,7 @@ export type Task = {
   return_reason?: string;
   returned_by?: Id | null;
   accumulated_time?: number | null;
+  qa_accumulated_time?: number | null;
   remarks?: TaskRemark[];
   created_at?: string;
   annotator_started_at?: string | null;

@@ -489,48 +489,85 @@ export default function ProjectDetailPage() {
       {/* Task Statistics */}
       {user?.role !== "annotator" ? (
         // Manager View - Show all project statistics
+        <>
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+            <div className="card">
+              <div className="card-body text-center">
+                <div className="text-3xl font-bold text-blue-600 dark:text-blue-400">
+                  {taskStats.total}
+                </div>
+                <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">Total Tasks</div>
+              </div>
+            </div>
+            <div className="card">
+              <div className="card-body text-center">
+                <div className="text-3xl font-bold text-yellow-600 dark:text-yellow-400">
+                  {taskStats.inProgress}
+                </div>
+                <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">In Progress</div>
+              </div>
+            </div>
+            <div className="card">
+              <div className="card-body text-center">
+                <div className="text-3xl font-bold text-green-600 dark:text-green-400">
+                  {taskStats.completed}
+                </div>
+                <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">Completed</div>
+              </div>
+            </div>
+            {taskStats.returned > 0 && (
+              <div className="card">
+                <div className="card-body text-center">
+                  <div className="text-3xl font-bold text-amber-600 dark:text-amber-400">
+                    {taskStats.returned}
+                  </div>
+                  <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">Returned</div>
+                </div>
+              </div>
+            )}
+            
+            {/* Total Project Time Card */}
+            <div className="card bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-950/30 dark:to-pink-950/30 border-2 border-purple-200 dark:border-purple-800 shadow-lg">
+              <div className="card-body text-center">
+                <div className="flex items-center justify-center gap-2 mb-2">
+                  <svg className="w-6 h-6 text-purple-600 dark:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <div className="text-2xl font-bold text-purple-600 dark:text-purple-400 font-mono">
+                  {(() => {
+                    // Calculate total time: annotation time + QA time for all tasks
+                    const totalSeconds = tasks.reduce((sum, t) => {
+                      const annotatorTime = t.accumulated_time || 0;
+                      const qaTime = t.qa_accumulated_time || 0;
+                      return sum + annotatorTime + qaTime;
+                    }, 0);
+                    
+                    const hours = Math.floor(totalSeconds / 3600);
+                    const minutes = Math.floor((totalSeconds % 3600) / 60);
+                    
+                    if (hours > 0) {
+                      return `${hours}h ${minutes}m`;
+                    } else if (minutes > 0) {
+                      return `${minutes}m`;
+                    } else {
+                      return `${Math.floor(totalSeconds)}s`;
+                    }
+                  })()}
+                </div>
+                <div className="text-sm text-gray-600 dark:text-gray-400 mt-1 font-semibold">
+                  Total Project Time
+                </div>
+              </div>
+            </div>
+          </div>
+        </>
+      ) : (
+        // Annotator View - Show personal statistics only
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div className="card">
             <div className="card-body text-center">
-              <div className="text-3xl font-bold text-blue-600">
-                {taskStats.total}
-              </div>
-              <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">Total Tasks</div>
-            </div>
-          </div>
-          <div className="card">
-            <div className="card-body text-center">
-              <div className="text-3xl font-bold text-yellow-600">
-                {taskStats.inProgress}
-              </div>
-              <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">In Progress</div>
-            </div>
-          </div>
-          <div className="card">
-            <div className="card-body text-center">
-              <div className="text-3xl font-bold text-green-600">
-                {taskStats.completed}
-              </div>
-              <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">Completed</div>
-            </div>
-          </div>
-          {taskStats.returned > 0 && (
-            <div className="card">
-              <div className="card-body text-center">
-                <div className="text-3xl font-bold text-amber-600">
-                  {taskStats.returned}
-                </div>
-                <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">Returned</div>
-              </div>
-            </div>
-          )}
-        </div>
-      ) : (
-        // Annotator View - Show personal statistics only
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-          <div className="card">
-            <div className="card-body text-center">
-              <div className="text-3xl font-bold text-blue-600">
+              <div className="text-3xl font-bold text-blue-600 dark:text-blue-400">
                 {
                   tasks.filter(
                     (t) =>
@@ -540,14 +577,14 @@ export default function ProjectDetailPage() {
                   ).length
                 }
               </div>
-              <div className="text-sm text-gray-600 mt-1">
+              <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">
                 My Tasks Remaining
               </div>
             </div>
           </div>
           <div className="card">
             <div className="card-body text-center">
-              <div className="text-3xl font-bold text-green-600">
+              <div className="text-3xl font-bold text-green-600 dark:text-green-400">
                 {
                   tasks.filter(
                     (t) =>
@@ -557,7 +594,7 @@ export default function ProjectDetailPage() {
                   ).length
                 }
               </div>
-              <div className="text-sm text-gray-600 mt-1">
+              <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">
                 My Tasks Completed
               </div>
             </div>
@@ -567,7 +604,7 @@ export default function ProjectDetailPage() {
           ).length > 0 && (
             <div className="card">
               <div className="card-body text-center">
-                <div className="text-3xl font-bold text-amber-600">
+                <div className="text-3xl font-bold text-amber-600 dark:text-amber-400">
                   {
                     tasks.filter(
                       (t) =>
@@ -575,10 +612,42 @@ export default function ProjectDetailPage() {
                     ).length
                   }
                 </div>
-                <div className="text-sm text-gray-600 mt-1">Returned</div>
+                <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">Returned</div>
               </div>
             </div>
           )}
+          {/* Total Time Spent Card */}
+          <div className="card bg-gradient-to-br from-purple-50 to-indigo-50 dark:from-purple-950/30 dark:to-indigo-950/30 border-2 border-purple-200 dark:border-purple-800 shadow-lg">
+            <div className="card-body text-center">
+              <div className="flex items-center justify-center gap-2 mb-2">
+                <svg className="w-6 h-6 text-purple-600 dark:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <div className="text-2xl font-bold text-purple-600 dark:text-purple-400 font-mono">
+                {(() => {
+                  // Calculate total time spent on all tasks assigned to this annotator
+                  const totalSeconds = tasks
+                    .filter((t) => t.assigned_annotator_id === user?.id)
+                    .reduce((sum, t) => sum + (t.accumulated_time || 0), 0);
+                  
+                  const hours = Math.floor(totalSeconds / 3600);
+                  const minutes = Math.floor((totalSeconds % 3600) / 60);
+                  
+                  if (hours > 0) {
+                    return `${hours}h ${minutes}m`;
+                  } else if (minutes > 0) {
+                    return `${minutes}m`;
+                  } else {
+                    return `${Math.floor(totalSeconds)}s`;
+                  }
+                })()}
+              </div>
+              <div className="text-sm text-gray-600 dark:text-gray-400 mt-1 font-semibold">
+                Total Time Spent
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
@@ -687,10 +756,85 @@ export default function ProjectDetailPage() {
           {/* Section: QA Review Tasks */}
           {tasks.filter((t) => t.assigned_qa_id === user?.id).length > 0 && (
             <div>
-              <h2 className="text-xl font-semibold mb-3 text-purple-800">
+              <h2 className="text-xl font-semibold mb-3 text-purple-800 dark:text-purple-400">
                 🔍 My QA Review Work
               </h2>
-              <div className="grid md:grid-cols-2 gap-4">
+              
+              {/* QA Statistics Cards */}
+              <div className="grid md:grid-cols-3 gap-4 mb-4">
+                {/* Tasks to Review Card */}
+                <div className="card border-l-4 border-purple-500">
+                  <div className="card-body text-center">
+                    <div className="text-3xl font-bold text-purple-600 dark:text-purple-400">
+                      {
+                        tasks.filter(
+                          (t) =>
+                            t.assigned_qa_id === user?.id &&
+                            t.completed_status?.annotator_part &&
+                            !t.completed_status?.qa_part
+                        ).length
+                      }
+                    </div>
+                    <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                      Tasks to Review
+                    </div>
+                  </div>
+                </div>
+
+                {/* Completed Reviews Card */}
+                <div className="card border-l-4 border-green-500">
+                  <div className="card-body text-center">
+                    <div className="text-3xl font-bold text-green-600 dark:text-green-400">
+                      {
+                        tasks.filter(
+                          (t) =>
+                            t.assigned_qa_id === user?.id &&
+                            t.completed_status?.qa_part
+                        ).length
+                      }
+                    </div>
+                    <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                      Reviews Completed
+                    </div>
+                  </div>
+                </div>
+
+                {/* Total QA Time Spent Card */}
+                <div className="card bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-indigo-950/30 dark:to-purple-950/30 border-2 border-indigo-200 dark:border-indigo-800 shadow-lg">
+                  <div className="card-body text-center">
+                    <div className="flex items-center justify-center gap-2 mb-2">
+                      <svg className="w-6 h-6 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                    </div>
+                    <div className="text-2xl font-bold text-indigo-600 dark:text-indigo-400 font-mono">
+                      {(() => {
+                        // Calculate total QA time spent on all tasks assigned to this QA annotator
+                        const totalSeconds = tasks
+                          .filter((t) => t.assigned_qa_id === user?.id)
+                          .reduce((sum, t) => sum + (t.qa_accumulated_time || 0), 0);
+                        
+                        const hours = Math.floor(totalSeconds / 3600);
+                        const minutes = Math.floor((totalSeconds % 3600) / 60);
+                        
+                        if (hours > 0) {
+                          return `${hours}h ${minutes}m`;
+                        } else if (minutes > 0) {
+                          return `${minutes}m`;
+                        } else {
+                          return `${Math.floor(totalSeconds)}s`;
+                        }
+                      })()}
+                    </div>
+                    <div className="text-sm text-gray-600 dark:text-gray-400 mt-1 font-semibold">
+                      Total QA Time
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Navigation Card */}
+              <div className="grid md:grid-cols-1 gap-4">
                 <LinkFix
                   to={`/projects/${projectId}/tasks/qa-pending`}
                   className="card hover:shadow-xl transition-shadow border-l-4 border-purple-500"
@@ -699,18 +843,10 @@ export default function ProjectDetailPage() {
                     <div className="flex items-center justify-between">
                       <div>
                         <h3 className="text-lg font-semibold">
-                          Tasks to Review
+                          Go to QA Review Tasks
                         </h3>
-                        <p className="text-sm text-gray-600 mt-1">
-                          {
-                            tasks.filter(
-                              (t) =>
-                                t.assigned_qa_id === user?.id &&
-                                t.completed_status?.annotator_part &&
-                                !t.completed_status?.qa_part
-                            ).length
-                          }{" "}
-                          task(s) assigned for review
+                        <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                          Review and approve annotations
                         </p>
                       </div>
                       <div className="text-3xl">→</div>
@@ -992,6 +1128,9 @@ export default function ProjectDetailPage() {
                       <th>Status</th>
                       <th>Assigned To</th>
                       <th>QA Reviewer</th>
+                      <th>Annotation Time</th>
+                      <th>QA Time</th>
+                      <th>Total Time</th>
                       <th>Created</th>
                       <th>Actions</th>
                     </tr>
@@ -1060,6 +1199,86 @@ export default function ProjectDetailPage() {
                               <span className="text-gray-400 text-sm">-</span>
                             )}
                           </td>
+                          
+                          {/* Annotation Time */}
+                          <td>
+                            <div className="text-sm font-mono">
+                              {task.accumulated_time ? (
+                                <span className="text-purple-600 dark:text-purple-400 font-semibold">
+                                  {(() => {
+                                    const seconds = Math.floor(task.accumulated_time);
+                                    const hours = Math.floor(seconds / 3600);
+                                    const minutes = Math.floor((seconds % 3600) / 60);
+                                    const remainingSeconds = seconds % 60;
+                                    
+                                    if (hours > 0) {
+                                      return `${hours}h ${minutes}m`;
+                                    } else if (minutes > 0) {
+                                      return `${minutes}m ${remainingSeconds}s`;
+                                    } else {
+                                      return `${remainingSeconds}s`;
+                                    }
+                                  })()}
+                                </span>
+                              ) : (
+                                <span className="text-gray-400 dark:text-gray-500">—</span>
+                              )}
+                            </div>
+                          </td>
+                          
+                          {/* QA Time */}
+                          <td>
+                            <div className="text-sm font-mono">
+                              {task.qa_accumulated_time ? (
+                                <span className="text-indigo-600 dark:text-indigo-400 font-semibold">
+                                  {(() => {
+                                    const seconds = Math.floor(task.qa_accumulated_time);
+                                    const hours = Math.floor(seconds / 3600);
+                                    const minutes = Math.floor((seconds % 3600) / 60);
+                                    const remainingSeconds = seconds % 60;
+                                    
+                                    if (hours > 0) {
+                                      return `${hours}h ${minutes}m`;
+                                    } else if (minutes > 0) {
+                                      return `${minutes}m ${remainingSeconds}s`;
+                                    } else {
+                                      return `${remainingSeconds}s`;
+                                    }
+                                  })()}
+                                </span>
+                              ) : (
+                                <span className="text-gray-400 dark:text-gray-500">—</span>
+                              )}
+                            </div>
+                          </td>
+                          
+                          {/* Total Time */}
+                          <td>
+                            <div className="text-sm font-mono">
+                              {(() => {
+                                const annotationTime = task.accumulated_time || 0;
+                                const qaTime = task.qa_accumulated_time || 0;
+                                const totalSeconds = Math.floor(annotationTime + qaTime);
+                                
+                                if (totalSeconds > 0) {
+                                  const hours = Math.floor(totalSeconds / 3600);
+                                  const minutes = Math.floor((totalSeconds % 3600) / 60);
+                                  const remainingSeconds = totalSeconds % 60;
+                                  
+                                  return (
+                                    <span className="text-gray-900 dark:text-gray-100 font-bold">
+                                      {hours > 0 ? `${hours}h ${minutes}m` : 
+                                       minutes > 0 ? `${minutes}m ${remainingSeconds}s` : 
+                                       `${remainingSeconds}s`}
+                                    </span>
+                                  );
+                                } else {
+                                  return <span className="text-gray-400 dark:text-gray-500">—</span>;
+                                }
+                              })()}
+                            </div>
+                          </td>
+                          
                           <td>
                             <span className="text-sm text-gray-600">
                               {task.created_at

@@ -350,7 +350,8 @@ class Task(BaseModel):
     is_returned: bool = False  # Whether task has been returned to annotator
     return_reason: Optional[str] = None  # Feedback provided when task is returned
     returned_by: Optional[PyObjectId] = None  # User who returned the task
-    accumulated_time: Optional[float] = None  # Time spent before return (in seconds)
+    accumulated_time: Optional[float] = None  # Time spent by annotator before return (in seconds)
+    qa_accumulated_time: Optional[float] = None  # Time spent by QA annotator (in seconds)
     remarks: List[TaskRemark] = Field(default_factory=list)
 
     # Timestamps
@@ -472,6 +473,7 @@ class TaskResponse(BaseModel):
     return_reason: Optional[str] = None
     returned_by: Optional[str] = None
     accumulated_time: Optional[float] = None
+    qa_accumulated_time: Optional[float] = None
     remarks: List[TaskRemark] = Field(default_factory=list)
     created_at: datetime
     annotator_started_at: Optional[datetime] = None
@@ -493,6 +495,7 @@ class SubmitAnnotationRequest(BaseModel):
 class SubmitQARequest(BaseModel):
     qa_annotation: Dict[str, Any]
     qa_feedback: Optional[str] = None
+    qa_time_spent: Optional[float] = None  # Time in seconds from frontend timer
 
 
 class TaskRemarkCreate(BaseModel):
