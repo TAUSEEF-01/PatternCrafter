@@ -229,14 +229,14 @@ export default function CreateTaskPage() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
+    <div className="max-w-4xl mx-auto space-y-6 p-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-semibold tracking-tight">
+          <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
             Create New Task
           </h1>
           {category === "generative_ai_chatbot_assessment" && (
-            <p className="mt-1 text-sm text-gray-500">
+            <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
               Define the conversation and metadata used to evaluate your
               chatbot's responses.
             </p>
@@ -246,7 +246,7 @@ export default function CreateTaskPage() {
           <LinkFix
             aria-label="Back to Project"
             to={`/projects/${projectId}`}
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg border border-gray-300 bg-white text-gray-700 text-sm font-medium shadow-sm hover:border-gray-400 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-purple-500 transition-colors"
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl border-2 border-purple-300 dark:border-purple-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 text-sm font-semibold shadow-md hover:shadow-lg hover:border-purple-400 dark:hover:border-purple-600 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-purple-500 transition-all duration-300"
           >
             <svg
               className="w-4 h-4"
@@ -263,7 +263,7 @@ export default function CreateTaskPage() {
             </svg>
             <span className="hidden sm:inline">Back to Project</span>
           </LinkFix>
-          <div className="absolute -top-10 right-0 bg-gray-900 text-white text-xs py-1 px-2 rounded opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity">
+          <div className="absolute -top-10 right-0 bg-gray-900 dark:bg-gray-700 text-white text-xs py-1 px-2 rounded opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity shadow-lg">
             Return without saving
           </div>
         </div>
@@ -275,17 +275,17 @@ export default function CreateTaskPage() {
         </div>
       )}
 
-      <div className="card">
+      <div className="card shadow-xl">
         <div className="card-body space-y-4">
           <div>
-            <h2 className="card-title">Task Details</h2>
+            <h2 className="card-title text-xl font-bold">Task Details</h2>
             {!category && (
               <div className="mt-4">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
                   Select Task Category
                 </label>
                 <select
-                  className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                  className="w-full px-4 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-300 shadow-sm"
                   value={category}
                   onChange={(e) => setCategory(e.target.value)}
                 >
@@ -325,9 +325,9 @@ export default function CreateTaskPage() {
           {category === "generative_ai_llm_response_grading" && (
             <div className="space-y-6">
               {/* Header Section */}
-              <div className="bg-white border-b-2 border-gray-200 pb-5">
+              <div className="bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-950/30 dark:to-purple-950/30 border-b-2 border-indigo-200 dark:border-indigo-800 pb-5 rounded-t-xl p-5">
                 <div className="flex items-center gap-3">
-                  <div className="w-11 h-11 bg-indigo-600 rounded-lg flex items-center justify-center">
+                  <div className="w-11 h-11 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
                     <svg
                       className="w-6 h-6 text-white"
                       fill="none"
@@ -343,10 +343,10 @@ export default function CreateTaskPage() {
                     </svg>
                   </div>
                   <div>
-                    <h3 className="text-lg font-bold text-gray-900">
+                    <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">
                       LLM Response Grading
                     </h3>
-                    <p className="text-sm text-gray-500 mt-0.5">
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mt-0.5">
                       Evaluate AI-generated summaries against source documents
                     </p>
                   </div>
@@ -354,29 +354,29 @@ export default function CreateTaskPage() {
               </div>
 
               {/* Document Section */}
-              <div className="bg-white border-2 border-gray-300 rounded-lg overflow-hidden">
-                <div className="bg-gray-50 border-b-2 border-gray-300 px-5 py-3">
+              <div className="bg-white dark:bg-gray-800 border-2 border-gray-300 dark:border-gray-700 rounded-xl overflow-hidden shadow-md">
+                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30 border-b-2 border-blue-200 dark:border-blue-800 px-5 py-3">
                   <div className="flex items-center justify-between">
-                    <h4 className="text-sm font-bold text-gray-700 uppercase tracking-wide">
-                      Source Document
+                    <h4 className="text-sm font-bold text-gray-800 dark:text-gray-200 uppercase tracking-wide flex items-center gap-2">
+                      📄 Source Document
                     </h4>
-                    <span className="text-xs text-gray-500 bg-white px-3 py-1.5 rounded border border-gray-300 font-mono font-semibold">
+                    <span className="text-xs text-gray-600 dark:text-gray-400 bg-white dark:bg-gray-700 px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 font-mono font-semibold shadow-sm">
                       {llm_document.length} chars
                     </span>
                   </div>
-                  <p className="text-xs text-gray-500 mt-1">
+                  <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
                     The original text that was summarized by the LLM
                   </p>
                 </div>
                 <div className="p-5">
                   <textarea
-                    className="w-full px-4 py-3 text-base border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all resize-none"
+                    className="w-full px-4 py-3 text-base border-2 border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all resize-none shadow-sm"
                     rows={8}
                     value={llm_document}
                     onChange={(e) => setLLMDocument(e.target.value)}
                     placeholder="Paste the source document text here..."
                   />
-                  <div className="mt-4 p-4 bg-blue-50 border-2 border-blue-200 rounded-lg">
+                  <div className="mt-4 p-4 bg-blue-50 dark:bg-blue-950/30 border-2 border-blue-200 dark:border-blue-800 rounded-xl">
                     <label className="flex items-start gap-3 cursor-pointer group">
                       <div className="flex items-center h-6">
                         <input
@@ -388,11 +388,11 @@ export default function CreateTaskPage() {
                       </div>
                       <div className="flex-1">
                         <div className="flex items-center gap-2">
-                          <span className="text-sm font-bold text-gray-900">
+                          <span className="text-sm font-bold text-gray-900 dark:text-gray-100">
                             Split into paragraphs
                           </span>
                           <svg
-                            className="w-4 h-4 text-blue-600"
+                            className="w-4 h-4 text-blue-600 dark:text-blue-400"
                             fill="currentColor"
                             viewBox="0 0 20 20"
                           >
@@ -403,7 +403,7 @@ export default function CreateTaskPage() {
                             />
                           </svg>
                         </div>
-                        <p className="text-xs text-gray-600 mt-1">
+                        <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
                           Automatically split the document by blank lines to
                           create separate paragraphs for better organization
                         </p>
@@ -414,23 +414,23 @@ export default function CreateTaskPage() {
               </div>
 
               {/* Summary Section */}
-              <div className="bg-white border-2 border-gray-300 rounded-lg overflow-hidden">
-                <div className="bg-gray-50 border-b-2 border-gray-300 px-5 py-3">
+              <div className="bg-white dark:bg-gray-800 border-2 border-gray-300 dark:border-gray-700 rounded-xl overflow-hidden shadow-md">
+                <div className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950/30 dark:to-emerald-950/30 border-b-2 border-green-200 dark:border-green-800 px-5 py-3">
                   <div className="flex items-center justify-between">
-                    <h4 className="text-sm font-bold text-gray-700 uppercase tracking-wide">
-                      AI-Generated Summary
+                    <h4 className="text-sm font-bold text-gray-800 dark:text-gray-200 uppercase tracking-wide flex items-center gap-2">
+                      ✨ AI-Generated Summary
                     </h4>
-                    <span className="text-xs text-gray-500 bg-white px-3 py-1.5 rounded border border-gray-300 font-mono font-semibold">
+                    <span className="text-xs text-gray-600 dark:text-gray-400 bg-white dark:bg-gray-700 px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 font-mono font-semibold shadow-sm">
                       {llm_summary.length} chars
                     </span>
                   </div>
-                  <p className="text-xs text-gray-500 mt-1">
+                  <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
                     The summary produced by the language model
                   </p>
                 </div>
                 <div className="p-5">
                   <textarea
-                    className="w-full px-4 py-3 text-base border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all resize-none"
+                    className="w-full px-4 py-3 text-base border-2 border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all resize-none shadow-sm"
                     rows={6}
                     value={llm_summary}
                     onChange={(e) => setLLMSummary(e.target.value)}
@@ -2320,26 +2320,26 @@ export default function CreateTaskPage() {
           {category === "named_entity_recognition" && (
             <div className="space-y-5">
               {/* Header Section */}
-              <div className="flex items-center justify-between pb-3 border-b-2 border-purple-200">
+              <div className="flex items-center justify-between pb-4 border-b-2 border-purple-300 dark:border-purple-700 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-950/30 dark:to-pink-950/30 rounded-t-xl p-5 -mx-5 -mt-4">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-500 rounded-lg flex items-center justify-center shadow-md">
-                    <span className="text-xl">🏷️</span>
+                  <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl flex items-center justify-center shadow-lg">
+                    <span className="text-2xl">🏷️</span>
                   </div>
                   <div>
-                    <h3 className="text-lg font-bold text-gray-800">
+                    <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">
                       Named Entity Recognition Task
                     </h3>
-                    <p className="text-xs text-gray-500">
+                    <p className="text-xs text-gray-600 dark:text-gray-400">
                       Configure the text and entity types for annotation
                     </p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2 text-xs">
                   <span
-                    className={`px-3 py-1 rounded-full font-semibold ${
+                    className={`px-3 py-1.5 rounded-full font-semibold shadow-sm ${
                       ner_text.trim() && ner_entity_types.trim()
-                        ? "bg-green-100 text-green-700 border border-green-300"
-                        : "bg-gray-100 text-gray-500 border border-gray-300"
+                        ? "bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300 border border-green-300 dark:border-green-700"
+                        : "bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 border border-gray-300 dark:border-gray-600"
                     }`}
                   >
                     {ner_text.trim() && ner_entity_types.trim()
@@ -2350,63 +2350,58 @@ export default function CreateTaskPage() {
               </div>
 
               {/* Source Text Section */}
-              <div className="relative">
-                <div className="absolute -top-2 left-3 bg-white px-2 z-10">
-                  <span className="text-xs font-bold text-indigo-600 uppercase tracking-wide flex items-center gap-1">
-                    <svg
-                      className="w-3.5 h-3.5"
-                      fill="currentColor"
-                      viewBox="0 0 20 20"
-                    >
-                      <path d="M9 4.804A7.968 7.968 0 005.5 4c-1.255 0-2.443.29-3.5.804v10A7.969 7.969 0 015.5 14c1.669 0 3.218.51 4.5 1.385A7.962 7.962 0 0114.5 14c1.255 0 2.443.29 3.5.804v-10A7.968 7.968 0 0014.5 4c-1.255 0-2.443.29-3.5.804V12a1 1 0 11-2 0V4.804z" />
-                    </svg>
-                    Source Text
-                  </span>
+              <div className="bg-white dark:bg-gray-800 border-2 border-indigo-300 dark:border-indigo-700 rounded-xl overflow-hidden shadow-md">
+                <div className="bg-gradient-to-r from-indigo-50 to-blue-50 dark:from-indigo-950/30 dark:to-blue-950/30 border-b-2 border-indigo-200 dark:border-indigo-800 px-5 py-3">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-sm font-bold text-gray-800 dark:text-gray-200 uppercase tracking-wide flex items-center gap-2">
+                      <svg
+                        className="w-4 h-4 text-indigo-600 dark:text-indigo-400"
+                        fill="currentColor"
+                        viewBox="0 0 20 20"
+                      >
+                        <path d="M9 4.804A7.968 7.968 0 005.5 4c-1.255 0-2.443.29-3.5.804v10A7.969 7.969 0 015.5 14c1.669 0 3.218.51 4.5 1.385A7.962 7.962 0 0114.5 14c1.255 0 2.443.29 3.5.804v-10A7.968 7.968 0 0014.5 4c-1.255 0-2.443.29-3.5.804V12a1 1 0 11-2 0V4.804z" />
+                      </svg>
+                      Source Text
+                    </h4>
+                    <span className="text-xs text-gray-600 dark:text-gray-400 bg-white dark:bg-gray-700 px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 font-mono font-semibold shadow-sm">
+                      {ner_text.length} chars
+                    </span>
+                  </div>
+                  <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                    The text that annotators will analyze for named entities
+                  </p>
                 </div>
-                <div className="border-2 border-indigo-200 rounded-xl p-4 bg-gradient-to-br from-indigo-50 to-blue-50 shadow-sm">
+                <div className="p-5">
                   <textarea
-                    className="w-full border-2 border-indigo-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white transition-all resize-none"
+                    className="w-full border-2 border-indigo-300 dark:border-indigo-700 rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 transition-all resize-none shadow-sm"
                     value={ner_text}
                     onChange={(e) => setNerText(e.target.value)}
                     rows={6}
                     placeholder="Enter the text that annotators will analyze for named entities...&#10;&#10;Example: John Smith works at Microsoft in Seattle and graduated from Stanford University."
                   />
-                  <div className="mt-2 flex items-center justify-between text-xs">
-                    <div className="flex items-center gap-4 text-indigo-600">
-                      <span className="flex items-center gap-1">
-                        <svg
-                          className="w-3.5 h-3.5"
-                          fill="currentColor"
-                          viewBox="0 0 20 20"
-                        >
-                          <path
-                            fillRule="evenodd"
-                            d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
-                            clipRule="evenodd"
-                          />
-                        </svg>
-                        Annotators will identify entities in this text
-                      </span>
-                    </div>
-                    <span
-                      className={`font-mono font-semibold ${
-                        ner_text.length > 0
-                          ? "text-indigo-700"
-                          : "text-gray-400"
-                      }`}
+                  <div className="mt-3 flex items-center gap-2 text-xs text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/30 p-3 rounded-lg border border-indigo-200 dark:border-indigo-800">
+                    <svg
+                      className="w-4 h-4 flex-shrink-0"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
                     >
-                      {ner_text.length} characters
-                    </span>
+                      <path
+                        fillRule="evenodd"
+                        d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                    <span>Annotators will identify entities in this text</span>
                   </div>
                 </div>
               </div>
 
               {/* Entity Types Section */}
-              <div className="relative">
-                <div className="absolute -top-2 left-3 bg-white px-2 z-10">
-                  <span className="text-xs font-bold text-green-600 uppercase tracking-wide flex items-center gap-1">
+              <div className="bg-white dark:bg-gray-800 border-2 border-green-300 dark:border-green-700 rounded-xl overflow-hidden shadow-md">
+                <div className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950/30 dark:to-emerald-950/30 border-b-2 border-green-200 dark:border-green-800 px-5 py-3">
+                  <h4 className="text-sm font-bold text-gray-800 dark:text-gray-200 uppercase tracking-wide flex items-center gap-2">
                     <svg
-                      className="w-3.5 h-3.5"
+                      className="w-4 h-4 text-green-600 dark:text-green-400"
                       fill="currentColor"
                       viewBox="0 0 20 20"
                     >
@@ -2417,22 +2412,25 @@ export default function CreateTaskPage() {
                       />
                     </svg>
                     Entity Types
-                  </span>
+                  </h4>
+                  <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                    Comma-separated list of entity types to identify
+                  </p>
                 </div>
-                <div className="border-2 border-green-200 rounded-xl p-4 bg-gradient-to-br from-green-50 to-emerald-50 shadow-sm space-y-3">
+                <div className="p-5 space-y-3">
                   <input
-                    className="w-full border-2 border-green-300 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 bg-white transition-all font-medium"
+                    className="w-full border-2 border-green-300 dark:border-green-700 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 transition-all font-medium shadow-sm"
                     value={ner_entity_types}
                     onChange={(e) => setNerEntityTypes(e.target.value)}
-                    placeholder="PERSON, ORGANIZATION, LOCATION, DATE, PRODUCT"
+                    placeholder="PERSON, ORG, LOCATION"
                   />
 
                   {/* Entity Types Preview */}
                   {ner_entity_types.trim() && (
-                    <div className="space-y-2">
-                      <p className="text-xs font-semibold text-green-700 flex items-center gap-1">
+                    <div className="space-y-2 bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 rounded-xl p-4">
+                      <p className="text-xs font-semibold text-green-700 dark:text-green-400 flex items-center gap-1">
                         <svg
-                          className="w-3.5 h-3.5"
+                          className="w-4 h-4"
                           fill="currentColor"
                           viewBox="0 0 20 20"
                         >
@@ -2449,9 +2447,9 @@ export default function CreateTaskPage() {
                         {parseList(ner_entity_types).map((type, idx) => (
                           <span
                             key={idx}
-                            className="px-3 py-1.5 bg-gradient-to-r from-green-600 to-emerald-600 text-white text-xs font-bold rounded-full shadow-sm border border-green-400 flex items-center gap-1"
+                            className="px-3 py-1.5 bg-gradient-to-r from-green-600 to-emerald-600 dark:from-green-700 dark:to-emerald-700 text-white text-xs font-bold rounded-full shadow-md border border-green-400 dark:border-green-600 flex items-center gap-1.5"
                           >
-                            <span className="w-1.5 h-1.5 bg-white rounded-full"></span>
+                            <span className="w-1.5 h-1.5 bg-white rounded-full animate-pulse"></span>
                             {type}
                           </span>
                         ))}
@@ -2459,8 +2457,8 @@ export default function CreateTaskPage() {
                     </div>
                   )}
 
-                  <div className="pt-2 border-t border-green-200">
-                    <p className="text-xs text-green-700 flex items-start gap-2">
+                  <div className="pt-3 border-t border-green-200 dark:border-green-800">
+                    <p className="text-xs text-green-700 dark:text-green-400 flex items-start gap-2">
                       <svg
                         className="w-4 h-4 flex-shrink-0 mt-0.5"
                         fill="currentColor"

@@ -644,82 +644,26 @@ export default function ProjectsPage() {
       {/* Manager: Create Project Card */}
       {user?.role === "manager" && (
         <div
-          className={`rounded-2xl border-2 shadow-lg p-6 ${
+          className={`rounded-2xl border-2 p-6 shimmer-effect transition-all duration-300 ${
             darkMode
-              ? "bg-purple-950/30 border-purple-700"
-              : "bg-purple-50 border-purple-200"
+              ? "bg-gradient-to-br from-purple-950/50 via-purple-900/30 to-indigo-950/50 border-purple-700/50 card-glow-dark"
+              : "bg-gradient-to-br from-purple-50 via-white to-indigo-50 border-purple-300 card-glow shadow-xl"
           }`}
+          style={{
+            boxShadow: darkMode 
+              ? '0 0 30px rgba(215, 143, 238, 0.3), 0 10px 40px rgba(0, 0, 0, 0.3)'
+              : '0 0 25px rgba(124, 58, 237, 0.2), 0 10px 30px rgba(0, 0, 0, 0.1)'
+          }}
         >
           <h2
             className={`text-xl font-bold mb-4 flex items-center gap-2 ${
               darkMode ? "text-[#D78FEE]" : "text-[#2E073F]"
             }`}
           >
-            <svg
-              width="24"
-              height="24"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-            >
-              <line x1="12" y1="5" x2="12" y2="19" />
-              <line x1="5" y1="12" x2="19" y2="12" />
-            </svg>
-            Create New Project
-          </h2>
-          <form onSubmit={submit} className="space-y-4">
-            <div>
-              <label
-                className={`block text-sm font-medium mb-2 ${
-                  darkMode ? "text-[#D78FEE]" : "text-[#2E073F]"
-                }`}
-              >
-                Project Name
-              </label>
-              <input
-                className={`w-full px-4 py-3 rounded-xl border-2 focus:outline-none transition-colors ${
-                  darkMode
-                    ? "dark:border-gray-600 dark:text-[#D78FEE] dark:bg-gray-800 dark:placeholder:text-gray-500 focus:border-[#D78FEE]"
-                    : "border-gray-200 text-[#2E073F] bg-white placeholder:text-gray-400 focus:border-[#7A1CAC]"
-                }`}
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="e.g., Q3 Sentiment Analysis"
-                required
-              />
-            </div>
-            <div>
-              <label
-                className={`block text-sm font-medium mb-2 ${
-                  darkMode ? "text-[#D78FEE]" : "text-[#2E073F]"
-                }`}
-              >
-                Category
-              </label>
-              <select
-                className={`w-full px-4 py-3 rounded-xl border-2 focus:outline-none transition-colors ${
-                  darkMode
-                    ? "dark:border-gray-600 dark:text-[#D78FEE] dark:bg-gray-800 focus:border-[#D78FEE]"
-                    : "border-gray-200 text-[#2E073F] bg-white focus:border-[#7A1CAC]"
-                }`}
-                value={category}
-                onChange={(e) => setCategory(e.target.value)}
-              >
-                {CATEGORIES.map((c) => (
-                  <option key={c.value} value={c.value}>
-                    {c.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <button
-              type="submit"
-              className="w-full py-3 rounded-xl font-semibold text-white bg-gradient-to-r from-[#7A1CAC] to-[#9D4EDD] hover:from-[#6A1A9C] hover:to-[#8D3ECD] transition-all duration-200 shadow-md hover:shadow-lg flex items-center justify-center gap-2"
-            >
+            <div className={`p-2 rounded-lg ${darkMode ? 'bg-purple-900/50' : 'bg-purple-200/50'}`}>
               <svg
-                width="20"
-                height="20"
+                width="24"
+                height="24"
                 viewBox="0 0 24 24"
                 fill="none"
                 stroke="currentColor"
@@ -728,7 +672,118 @@ export default function ProjectsPage() {
                 <line x1="12" y1="5" x2="12" y2="19" />
                 <line x1="5" y1="12" x2="19" y2="12" />
               </svg>
-              Create Project
+            </div>
+            Create New Project
+          </h2>
+          <form onSubmit={submit} className="space-y-4">
+            <div>
+              <label
+                className={`block text-sm font-semibold mb-2 ${
+                  darkMode ? "text-purple-300" : "text-purple-800"
+                }`}
+              >
+                Project Name
+              </label>
+              <input
+                className={`w-full px-4 py-3 rounded-xl border-2 focus:outline-none transition-all duration-300 ${
+                  darkMode
+                    ? "border-gray-700 text-purple-200 bg-gray-800/50 placeholder:text-gray-500 focus:border-purple-500 focus:bg-gray-800/70 shadow-md focus:shadow-lg"
+                    : "border-purple-200 text-purple-900 bg-white/80 placeholder:text-gray-400 focus:border-purple-500 focus:bg-white shadow-sm focus:shadow-md"
+                }`}
+                style={{
+                  boxShadow: darkMode
+                    ? '0 0 10px rgba(168, 85, 247, 0.1)'
+                    : '0 0 8px rgba(139, 92, 246, 0.08)'
+                }}
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="e.g., Q3 Sentiment Analysis"
+                required
+              />
+            </div>
+            <div>
+              <label
+                className={`block text-sm font-semibold mb-2 ${
+                  darkMode ? "text-purple-300" : "text-purple-800"
+                }`}
+              >
+                Category
+              </label>
+              <div className="relative group">
+                <select
+                  className={`w-full px-4 py-3.5 pr-12 rounded-xl border-2 focus:outline-none transition-all duration-300 appearance-none cursor-pointer font-medium ${
+                    darkMode
+                      ? "border-purple-700/50 text-purple-200 bg-gradient-to-br from-gray-800/70 to-gray-900/70 hover:border-purple-600/70 focus:border-purple-500 focus:from-gray-800/90 focus:to-gray-900/90 shadow-lg focus:shadow-xl"
+                      : "border-purple-300/60 text-purple-900 bg-gradient-to-br from-white to-purple-50/40 hover:border-purple-400/80 focus:border-purple-500 focus:from-white focus:to-purple-50/60 shadow-md focus:shadow-lg"
+                  }`}
+                  style={{
+                    boxShadow: darkMode
+                      ? '0 0 15px rgba(168, 85, 247, 0.15), inset 0 1px 2px rgba(0, 0, 0, 0.1)'
+                      : '0 0 12px rgba(139, 92, 246, 0.1), inset 0 1px 2px rgba(255, 255, 255, 0.5)',
+                    backgroundImage: 'none'
+                  }}
+                  value={category}
+                  onChange={(e) => setCategory(e.target.value)}
+                >
+                  {CATEGORIES.map((c) => (
+                    <option 
+                      key={c.value} 
+                      value={c.value}
+                      className={`py-3 ${darkMode ? "bg-gray-900 text-purple-200 hover:bg-purple-900" : "bg-white text-purple-900 hover:bg-purple-50"}`}
+                    >
+                      {c.label}
+                    </option>
+                  ))}
+                </select>
+                {/* Custom Dropdown Arrow */}
+                <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none transition-all duration-300 group-hover:scale-110">
+                  <div className={`p-1.5 rounded-lg transition-all duration-300 ${
+                    darkMode 
+                      ? "bg-gradient-to-br from-purple-900/50 to-purple-800/50 shadow-md" 
+                      : "bg-gradient-to-br from-purple-100 to-purple-200 shadow-sm"
+                  }`}
+                  style={{
+                    boxShadow: darkMode
+                      ? '0 0 8px rgba(168, 85, 247, 0.3)'
+                      : '0 0 6px rgba(139, 92, 246, 0.2)'
+                  }}>
+                    <svg
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke={darkMode ? "#D78FEE" : "#7A1CAC"}
+                      strokeWidth="2.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <polyline points="6 9 12 15 18 9" />
+                    </svg>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <button
+              type="submit"
+              className="w-full py-3 rounded-xl font-semibold text-white bg-gradient-to-r from-[#7A1CAC] via-[#9D4EDD] to-[#7A1CAC] hover:from-[#6A1A9C] hover:via-[#8D3ECD] hover:to-[#6A1A9C] transition-all duration-300 shadow-lg hover:shadow-2xl flex items-center justify-center gap-2 relative overflow-hidden group"
+              style={{
+                boxShadow: '0 4px 20px rgba(122, 28, 172, 0.4)'
+              }}
+            >
+              <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-200%] group-hover:translate-x-[200%] transition-transform duration-700"></span>
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                className="relative z-10"
+              >
+                <line x1="12" y1="5" x2="12" y2="19" />
+                <line x1="5" y1="12" x2="19" y2="12" />
+              </svg>
+              <span className="relative z-10">Create Project</span>
             </button>
           </form>
         </div>
@@ -834,27 +889,51 @@ export default function ProjectsPage() {
                     ? `/projects/${p.id}`
                     : "#"
                 }
-                className={`block p-6 rounded-2xl border-2 shadow-lg transition-all duration-300 ${
+                className={`block p-6 rounded-2xl border-2 transition-all duration-300 shimmer-effect relative overflow-hidden ${
                   user?.role === "manager" || acceptedProjectIds.has(p.id)
-                    ? "cursor-pointer hover:shadow-2xl hover:border-indigo-500 transform hover:scale-[1.02]"
+                    ? "cursor-pointer transform hover:scale-[1.03] hover:border-indigo-400"
                     : "cursor-default opacity-60"
                 } ${
                   darkMode
-                    ? "bg-slate-800/90 border-slate-700 backdrop-blur-sm"
-                    : "bg-white/90 border-gray-200 backdrop-blur-sm"
+                    ? "bg-gradient-to-br from-slate-800/90 via-slate-800/80 to-slate-900/90 border-slate-700/50 backdrop-blur-sm"
+                    : "bg-gradient-to-br from-white via-gray-50/50 to-white border-gray-300/50 backdrop-blur-sm"
                 }`}
+                style={{
+                  boxShadow: darkMode 
+                    ? '0 0 20px rgba(139, 92, 246, 0.2), 0 8px 30px rgba(0, 0, 0, 0.3)'
+                    : '0 0 15px rgba(99, 102, 241, 0.15), 0 8px 25px rgba(0, 0, 0, 0.08)'
+                }}
+                onMouseEnter={(e: React.MouseEvent<HTMLAnchorElement>) => {
+                  if (user?.role === "manager" || acceptedProjectIds.has(p.id)) {
+                    e.currentTarget.style.boxShadow = darkMode
+                      ? '0 0 35px rgba(139, 92, 246, 0.4), 0 12px 40px rgba(0, 0, 0, 0.4)'
+                      : '0 0 25px rgba(99, 102, 241, 0.3), 0 12px 35px rgba(0, 0, 0, 0.12)';
+                  }
+                }}
+                onMouseLeave={(e: React.MouseEvent<HTMLAnchorElement>) => {
+                  e.currentTarget.style.boxShadow = darkMode
+                    ? '0 0 20px rgba(139, 92, 246, 0.2), 0 8px 30px rgba(0, 0, 0, 0.3)'
+                    : '0 0 15px rgba(99, 102, 241, 0.15), 0 8px 25px rgba(0, 0, 0, 0.08)';
+                }}
               onClick={(e: React.MouseEvent) => {
                 if (user?.role !== "manager" && !acceptedProjectIds.has(p.id)) {
                   e.preventDefault();
                 }
               }}
             >
-              <div className="flex flex-col h-full">
+              <div className="flex flex-col h-full relative z-10">
                 <div className="flex items-start gap-3 mb-3">
                   <div
-                    className={`p-2 rounded-xl ${
-                      darkMode ? "bg-purple-900/30" : "bg-purple-100"
+                    className={`p-3 rounded-xl transition-all duration-300 ${
+                      darkMode 
+                        ? "bg-gradient-to-br from-purple-900/50 to-indigo-900/50 shadow-lg" 
+                        : "bg-gradient-to-br from-purple-100 to-indigo-100 shadow-md"
                     }`}
+                    style={{
+                      boxShadow: darkMode
+                        ? '0 0 15px rgba(168, 85, 247, 0.3)'
+                        : '0 0 10px rgba(139, 92, 246, 0.2)'
+                    }}
                   >
                     <svg
                       width="24"
@@ -862,7 +941,7 @@ export default function ProjectsPage() {
                       viewBox="0 0 24 24"
                       fill="none"
                       stroke={darkMode ? "#D78FEE" : "#7A1CAC"}
-                      strokeWidth="2"
+                      strokeWidth="2.5"
                     >
                       <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
                     </svg>
@@ -870,30 +949,42 @@ export default function ProjectsPage() {
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-2">
                       <h3
-                        className={`font-bold text-lg ${
-                          darkMode ? "text-[#D78FEE]" : "text-[#2E073F]"
+                        className={`font-bold text-lg tracking-tight ${
+                          darkMode 
+                            ? "text-transparent bg-clip-text bg-gradient-to-r from-purple-300 via-pink-300 to-purple-300" 
+                            : "text-transparent bg-clip-text bg-gradient-to-r from-purple-700 via-indigo-700 to-purple-700"
                         }`}
                       >
                         {p.details || p.id}
                       </h3>
                       {p.is_completed && (
                         <span
-                          className={`inline-flex items-center gap-1 px-2 py-0.5 text-xs font-bold rounded-full ${
+                          className={`inline-flex items-center gap-1 px-2.5 py-1 text-xs font-bold rounded-full transition-all ${
                             darkMode
-                              ? "bg-green-900/40 text-green-400"
-                              : "bg-green-100 text-green-700"
+                              ? "bg-gradient-to-r from-green-900/60 to-emerald-900/60 text-green-300 shadow-lg"
+                              : "bg-gradient-to-r from-green-100 to-emerald-100 text-green-700 shadow-md"
                           }`}
+                          style={{
+                            boxShadow: darkMode
+                              ? '0 0 10px rgba(74, 222, 128, 0.3)'
+                              : '0 0 8px rgba(34, 197, 94, 0.2)'
+                          }}
                         >
                           ✓ Complete
                         </span>
                       )}
                     </div>
                     <span
-                      className={`inline-block px-3 py-1 text-xs font-semibold rounded-full ${
+                      className={`inline-block px-3 py-1.5 text-xs font-semibold rounded-full transition-all ${
                         darkMode
-                          ? "bg-purple-900/40 text-[#D78FEE]"
-                          : "bg-purple-100 text-[#7A1CAC]"
+                          ? "bg-gradient-to-r from-purple-900/60 to-indigo-900/60 text-purple-300 shadow-lg"
+                          : "bg-gradient-to-r from-purple-100 to-indigo-100 text-purple-700 shadow-md"
                       }`}
+                      style={{
+                        boxShadow: darkMode
+                          ? '0 0 10px rgba(168, 85, 247, 0.3)'
+                          : '0 0 8px rgba(139, 92, 246, 0.2)'
+                      }}
                     >
                       {CATEGORIES.find((c) => c.value === p.category)?.label ||
                         p.category}
@@ -944,11 +1035,16 @@ export default function ProjectsPage() {
                                 projectName: p.details || p.id,
                               });
                             }}
-                            className={`flex-1 py-2 px-3 rounded-lg text-xs font-semibold transition-colors ${
+                            className={`flex-1 py-2.5 px-3 rounded-lg text-xs font-semibold transition-all duration-300 ${
                               darkMode
-                                ? "bg-blue-900/30 text-blue-400 hover:bg-blue-900/50"
-                                : "bg-blue-50 text-blue-600 hover:bg-blue-100"
+                                ? "bg-gradient-to-r from-blue-900/40 to-blue-800/40 text-blue-300 hover:from-blue-900/60 hover:to-blue-800/60 shadow-md hover:shadow-lg"
+                                : "bg-gradient-to-r from-blue-50 to-blue-100 text-blue-600 hover:from-blue-100 hover:to-blue-200 shadow-sm hover:shadow-md"
                             }`}
+                            style={{
+                              boxShadow: darkMode
+                                ? '0 0 10px rgba(59, 130, 246, 0.2)'
+                                : '0 0 8px rgba(59, 130, 246, 0.15)'
+                            }}
                           >
                             ↻ Reopen
                           </button>
@@ -963,15 +1059,20 @@ export default function ProjectsPage() {
                               });
                             }}
                             disabled={completingId === p.id}
-                            className={`flex-1 py-2 px-3 rounded-lg text-xs font-semibold transition-colors ${
+                            className={`flex-1 py-2.5 px-3 rounded-lg text-xs font-semibold transition-all duration-300 ${
                               completingId === p.id
                                 ? "opacity-50 cursor-not-allowed"
                                 : ""
                             } ${
                               darkMode
-                                ? "bg-green-900/30 text-green-400 hover:bg-green-900/50"
-                                : "bg-green-50 text-green-600 hover:bg-green-100"
+                                ? "bg-gradient-to-r from-green-900/40 to-emerald-900/40 text-green-300 hover:from-green-900/60 hover:to-emerald-900/60 shadow-md hover:shadow-lg"
+                                : "bg-gradient-to-r from-green-50 to-emerald-100 text-green-600 hover:from-green-100 hover:to-emerald-200 shadow-sm hover:shadow-md"
                             }`}
+                            style={{
+                              boxShadow: darkMode
+                                ? '0 0 10px rgba(74, 222, 128, 0.2)'
+                                : '0 0 8px rgba(34, 197, 94, 0.15)'
+                            }}
                           >
                             {completingId === p.id ? "..." : "✓ Mark Complete"}
                           </button>
@@ -986,15 +1087,20 @@ export default function ProjectsPage() {
                             });
                           }}
                           disabled={deletingId === p.id}
-                          className={`py-2 px-3 rounded-lg text-xs font-semibold transition-colors ${
+                          className={`py-2.5 px-3 rounded-lg text-xs font-semibold transition-all duration-300 ${
                             deletingId === p.id
                               ? "opacity-50 cursor-not-allowed"
                               : ""
                           } ${
                             darkMode
-                              ? "bg-red-900/30 text-red-400 hover:bg-red-900/50"
-                              : "bg-red-50 text-red-600 hover:bg-red-100"
+                              ? "bg-gradient-to-r from-red-900/40 to-red-800/40 text-red-300 hover:from-red-900/60 hover:to-red-800/60 shadow-md hover:shadow-lg"
+                              : "bg-gradient-to-r from-red-50 to-red-100 text-red-600 hover:from-red-100 hover:to-red-200 shadow-sm hover:shadow-md"
                           }`}
+                          style={{
+                            boxShadow: darkMode
+                              ? '0 0 10px rgba(239, 68, 68, 0.2)'
+                              : '0 0 8px rgba(220, 38, 38, 0.15)'
+                          }}
                         >
                           {deletingId === p.id ? "..." : "🗑"}
                         </button>
