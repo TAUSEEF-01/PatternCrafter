@@ -1,6 +1,19 @@
 import { useEffect, useState } from "react";
 import { useTheme } from "@/components/NavBar";
 import { apiFetch } from "@/api/client";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+  AreaChart,
+  Area,
+  ReferenceLine,
+} from "recharts";
 
 interface AdminStats {
   total_managers: number;
@@ -893,124 +906,92 @@ export default function AdminDashboardPage() {
                 >
                   📝 Tasks Created Over Time
                 </h4>
-                <div
-                  style={{
-                    height: "200px",
-                    display: "flex",
-                    alignItems: "flex-end",
-                    gap: growthView === "daily" ? "2px" : "8px",
-                    padding: "0 0.5rem",
-                    position: "relative",
-                  }}
-                >
-                  {growthView === "daily"
-                    ? (() => {
-                        const data = growthData.daily_data;
-                        const maxValue = Math.max(
-                          ...data.map((d) => d.tasks_created),
-                          1
-                        );
-                        return data.map((day, index) => {
-                          const height =
-                            maxValue > 0
-                              ? Math.max(
-                                  (day.tasks_created / maxValue) * 100,
-                                  day.tasks_created > 0 ? 5 : 0
-                                )
-                              : 0;
-                          return (
-                            <div
-                              key={day.date}
-                              style={{
-                                flex: 1,
-                                height: `${height}%`,
-                                minHeight:
-                                  day.tasks_created > 0 ? "8px" : "2px",
-                                background:
-                                  day.tasks_created > 0
-                                    ? "linear-gradient(180deg, #3b82f6, #6366f1)"
-                                    : darkMode
-                                    ? "#334155"
-                                    : "#e2e8f0",
-                                borderRadius: "4px 4px 0 0",
-                                transition: "all 0.3s ease",
-                                cursor: "pointer",
-                                position: "relative",
-                              }}
-                              title={`${new Date(day.date).toLocaleDateString(
-                                "en-US",
-                                { month: "short", day: "numeric" }
-                              )}: ${day.tasks_created} task${
-                                day.tasks_created !== 1 ? "s" : ""
-                              }`}
-                            />
-                          );
-                        });
-                      })()
-                    : (() => {
-                        const data = growthData.weekly_data;
-                        const maxValue = Math.max(
-                          ...data.map((d) => d.tasks_created),
-                          1
-                        );
-                        return data.map((week) => {
-                          const height =
-                            maxValue > 0
-                              ? Math.max(
-                                  (week.tasks_created / maxValue) * 100,
-                                  week.tasks_created > 0 ? 5 : 0
-                                )
-                              : 0;
-                          return (
-                            <div
-                              key={week.week_label}
-                              style={{
-                                flex: 1,
-                                display: "flex",
-                                flexDirection: "column",
-                                alignItems: "center",
-                              }}
-                            >
-                              <div
-                                style={{
-                                  width: "100%",
-                                  height: `${height}%`,
-                                  minHeight:
-                                    week.tasks_created > 0 ? "8px" : "2px",
-                                  background:
-                                    week.tasks_created > 0
-                                      ? "linear-gradient(180deg, #3b82f6, #6366f1)"
-                                      : darkMode
-                                      ? "#334155"
-                                      : "#e2e8f0",
-                                  borderRadius: "4px 4px 0 0",
-                                  transition: "all 0.3s ease",
-                                  cursor: "pointer",
-                                }}
-                                title={`${week.week_label}: ${
-                                  week.tasks_created
-                                } task${week.tasks_created !== 1 ? "s" : ""}`}
-                              />
-                            </div>
-                          );
-                        });
-                      })()}
-                </div>
-                <div
-                  className="flex justify-between mt-2 text-xs"
-                  style={{ color: darkMode ? "#64748b" : "#94a3b8" }}
-                >
-                  {growthView === "daily" ? (
-                    <>
-                      <span>30 days ago</span>
-                      <span>Today</span>
-                    </>
-                  ) : (
-                    <>
-                      <span>12 weeks ago</span>
-                      <span>This week</span>
-                    </>
-                  )}
+                <div style={{ height: "300px", width: "100%" }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart
+                      data={
+                        growthView === "daily"
+                          ? growthData.daily_data
+                          : growthData.weekly_data
+                      }
+                      margin={{ top: 20, right: 30, left: 0, bottom: 5 }}
+                    >
+                      <defs>
+                        <linearGradient
+                          id="tasksGradient"
+                          x1="0"
+                          y1="0"
+                          x2="0"
+                          y2="1"
+                        >
+                          <stop
+                            offset="5%"
+                            stopColor="#3b82f6"
+                            stopOpacity={0.8}
+                          />
+                          <stop
+                            offset="95%"
+                            stopColor="#6366f1"
+                            stopOpacity={0.8}
+                          />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid
+                        strokeDasharray="3 3"
+                        stroke={darkMode ? "#334155" : "#e2e8f0"}
+                        vertical={false}
+                      />
+                      <XAxis
+                        dataKey={
+                          growthView === "daily" ? "date" : "week_label"
+                        }
+                        stroke={darkMode ? "#94a3b8" : "#64748b"}
+                        tickFormatter={(value) => {
+                          if (growthView === "weekly") return value;
+                          return new Date(value).toLocaleDateString("en-US", {
+                            month: "short",
+                            day: "numeric",
+                          });
+                        }}
+                        fontSize={12}
+                        tickLine={false}
+                        axisLine={false}
+                      />
+                      <YAxis
+                        stroke={darkMode ? "#94a3b8" : "#64748b"}
+                        fontSize={12}
+                        tickLine={false}
+                        axisLine={false}
+                      />
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: darkMode ? "#1e293b" : "#ffffff",
+                          borderColor: darkMode ? "#334155" : "#e2e8f0",
+                          borderRadius: "0.5rem",
+                          color: darkMode ? "#e2e8f0" : "#1e293b",
+                        }}
+                        itemStyle={{
+                          color: darkMode ? "#e2e8f0" : "#1e293b",
+                        }}
+                        labelFormatter={(value) => {
+                           if (growthView === "weekly") return value;
+                           return new Date(value).toLocaleDateString("en-US", {
+                             weekday: "long",
+                             year: "numeric",
+                             month: "long",
+                             day: "numeric",
+                           });
+                        }}
+                      />
+                      <Bar
+                        dataKey="tasks_created"
+                        name="Tasks Created"
+                        fill="url(#tasksGradient)"
+                        radius={[4, 4, 0, 0]}
+                        animationDuration={1500}
+                      />
+                    </BarChart>
+                  </ResponsiveContainer>
                 </div>
               </div>
 
@@ -1024,117 +1005,71 @@ export default function AdminDashboardPage() {
                   >
                     👔 Managers Registered Over Time
                   </h4>
-                  <div
-                    style={{
-                      height: "160px",
-                      display: "flex",
-                      alignItems: "flex-end",
-                      gap: growthView === "daily" ? "2px" : "8px",
-                      padding: "0 0.5rem",
-                    }}
-                  >
-                    {growthView === "daily"
-                      ? (() => {
-                          const data = growthData.daily_data;
-                          const maxValue = Math.max(
-                            ...data.map((d) => d.managers_registered),
-                            1
-                          );
-                          return data.map((day) => {
-                            const height =
-                              maxValue > 0
-                                ? Math.max(
-                                    (day.managers_registered / maxValue) * 100,
-                                    day.managers_registered > 0 ? 5 : 0
-                                  )
-                                : 0;
-                            return (
-                              <div
-                                key={day.date}
-                                style={{
-                                  flex: 1,
-                                  height: `${height}%`,
-                                  minHeight:
-                                    day.managers_registered > 0 ? "8px" : "2px",
-                                  background:
-                                    day.managers_registered > 0
-                                      ? "linear-gradient(180deg, #6366f1, #8b5cf6)"
-                                      : darkMode
-                                      ? "#334155"
-                                      : "#e2e8f0",
-                                  borderRadius: "4px 4px 0 0",
-                                  transition: "all 0.3s ease",
-                                  cursor: "pointer",
-                                }}
-                                title={`${new Date(day.date).toLocaleDateString(
-                                  "en-US",
-                                  { month: "short", day: "numeric" }
-                                )}: ${day.managers_registered} manager${
-                                  day.managers_registered !== 1 ? "s" : ""
-                                }`}
-                              />
-                            );
-                          });
-                        })()
-                      : (() => {
-                          const data = growthData.weekly_data;
-                          const maxValue = Math.max(
-                            ...data.map((d) => d.managers_registered),
-                            1
-                          );
-                          return data.map((week) => {
-                            const height =
-                              maxValue > 0
-                                ? Math.max(
-                                    (week.managers_registered / maxValue) * 100,
-                                    week.managers_registered > 0 ? 5 : 0
-                                  )
-                                : 0;
-                            return (
-                              <div
-                                key={week.week_label}
-                                style={{
-                                  flex: 1,
-                                  height: `${height}%`,
-                                  minHeight:
-                                    week.managers_registered > 0
-                                      ? "8px"
-                                      : "2px",
-                                  background:
-                                    week.managers_registered > 0
-                                      ? "linear-gradient(180deg, #6366f1, #8b5cf6)"
-                                      : darkMode
-                                      ? "#334155"
-                                      : "#e2e8f0",
-                                  borderRadius: "4px 4px 0 0",
-                                  transition: "all 0.3s ease",
-                                  cursor: "pointer",
-                                }}
-                                title={`${week.week_label}: ${
-                                  week.managers_registered
-                                } manager${
-                                  week.managers_registered !== 1 ? "s" : ""
-                                }`}
-                              />
-                            );
-                          });
-                        })()}
-                  </div>
-                  <div
-                    className="flex justify-between mt-2 text-xs"
-                    style={{ color: darkMode ? "#64748b" : "#94a3b8" }}
-                  >
-                    {growthView === "daily" ? (
-                      <>
-                        <span>30 days ago</span>
-                        <span>Today</span>
-                      </>
-                    ) : (
-                      <>
-                        <span>12 weeks ago</span>
-                        <span>This week</span>
-                      </>
-                    )}
+                  <div style={{ height: "200px", width: "100%" }}>
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart
+                        data={
+                          growthView === "daily"
+                            ? growthData.daily_data
+                            : growthData.weekly_data
+                        }
+                        margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
+                      >
+                        <defs>
+                          <linearGradient
+                            id="managersGradient"
+                            x1="0"
+                            y1="0"
+                            x2="0"
+                            y2="1"
+                          >
+                            <stop
+                              offset="5%"
+                              stopColor="#6366f1"
+                              stopOpacity={0.8}
+                            />
+                            <stop
+                              offset="95%"
+                              stopColor="#8b5cf6"
+                              stopOpacity={0.8}
+                            />
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid
+                          strokeDasharray="3 3"
+                          stroke={darkMode ? "#334155" : "#e2e8f0"}
+                          vertical={false}
+                        />
+                        <XAxis
+                          dataKey={
+                            growthView === "daily" ? "date" : "week_label"
+                          }
+                          hide
+                        />
+                        <YAxis
+                          stroke={darkMode ? "#94a3b8" : "#64748b"}
+                          fontSize={10}
+                          tickLine={false}
+                          axisLine={false}
+                        />
+                        <Tooltip
+                          contentStyle={{
+                            backgroundColor: darkMode ? "#1e293b" : "#ffffff",
+                            borderColor: darkMode ? "#334155" : "#e2e8f0",
+                            borderRadius: "0.5rem",
+                            color: darkMode ? "#e2e8f0" : "#1e293b",
+                            fontSize: "12px",
+                          }}
+                        />
+                        <Bar
+                          dataKey="managers_registered"
+                          name="Managers"
+                          fill="url(#managersGradient)"
+                          radius={[4, 4, 0, 0]}
+                          animationDuration={1500}
+                        />
+                      </BarChart>
+                    </ResponsiveContainer>
                   </div>
                   <div
                     className="mt-3 text-center text-sm"
@@ -1159,121 +1094,71 @@ export default function AdminDashboardPage() {
                   >
                     ✍️ Annotators Registered Over Time
                   </h4>
-                  <div
-                    style={{
-                      height: "160px",
-                      display: "flex",
-                      alignItems: "flex-end",
-                      gap: growthView === "daily" ? "2px" : "8px",
-                      padding: "0 0.5rem",
-                    }}
-                  >
-                    {growthView === "daily"
-                      ? (() => {
-                          const data = growthData.daily_data;
-                          const maxValue = Math.max(
-                            ...data.map((d) => d.annotators_registered),
-                            1
-                          );
-                          return data.map((day) => {
-                            const height =
-                              maxValue > 0
-                                ? Math.max(
-                                    (day.annotators_registered / maxValue) *
-                                      100,
-                                    day.annotators_registered > 0 ? 5 : 0
-                                  )
-                                : 0;
-                            return (
-                              <div
-                                key={day.date}
-                                style={{
-                                  flex: 1,
-                                  height: `${height}%`,
-                                  minHeight:
-                                    day.annotators_registered > 0
-                                      ? "8px"
-                                      : "2px",
-                                  background:
-                                    day.annotators_registered > 0
-                                      ? "linear-gradient(180deg, #10b981, #14b8a6)"
-                                      : darkMode
-                                      ? "#334155"
-                                      : "#e2e8f0",
-                                  borderRadius: "4px 4px 0 0",
-                                  transition: "all 0.3s ease",
-                                  cursor: "pointer",
-                                }}
-                                title={`${new Date(day.date).toLocaleDateString(
-                                  "en-US",
-                                  { month: "short", day: "numeric" }
-                                )}: ${day.annotators_registered} annotator${
-                                  day.annotators_registered !== 1 ? "s" : ""
-                                }`}
-                              />
-                            );
-                          });
-                        })()
-                      : (() => {
-                          const data = growthData.weekly_data;
-                          const maxValue = Math.max(
-                            ...data.map((d) => d.annotators_registered),
-                            1
-                          );
-                          return data.map((week) => {
-                            const height =
-                              maxValue > 0
-                                ? Math.max(
-                                    (week.annotators_registered / maxValue) *
-                                      100,
-                                    week.annotators_registered > 0 ? 5 : 0
-                                  )
-                                : 0;
-                            return (
-                              <div
-                                key={week.week_label}
-                                style={{
-                                  flex: 1,
-                                  height: `${height}%`,
-                                  minHeight:
-                                    week.annotators_registered > 0
-                                      ? "8px"
-                                      : "2px",
-                                  background:
-                                    week.annotators_registered > 0
-                                      ? "linear-gradient(180deg, #10b981, #14b8a6)"
-                                      : darkMode
-                                      ? "#334155"
-                                      : "#e2e8f0",
-                                  borderRadius: "4px 4px 0 0",
-                                  transition: "all 0.3s ease",
-                                  cursor: "pointer",
-                                }}
-                                title={`${week.week_label}: ${
-                                  week.annotators_registered
-                                } annotator${
-                                  week.annotators_registered !== 1 ? "s" : ""
-                                }`}
-                              />
-                            );
-                          });
-                        })()}
-                  </div>
-                  <div
-                    className="flex justify-between mt-2 text-xs"
-                    style={{ color: darkMode ? "#64748b" : "#94a3b8" }}
-                  >
-                    {growthView === "daily" ? (
-                      <>
-                        <span>30 days ago</span>
-                        <span>Today</span>
-                      </>
-                    ) : (
-                      <>
-                        <span>12 weeks ago</span>
-                        <span>This week</span>
-                      </>
-                    )}
+                  <div style={{ height: "200px", width: "100%" }}>
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart
+                        data={
+                          growthView === "daily"
+                            ? growthData.daily_data
+                            : growthData.weekly_data
+                        }
+                        margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
+                      >
+                        <defs>
+                          <linearGradient
+                            id="annotatorsGradient"
+                            x1="0"
+                            y1="0"
+                            x2="0"
+                            y2="1"
+                          >
+                            <stop
+                              offset="5%"
+                              stopColor="#10b981"
+                              stopOpacity={0.8}
+                            />
+                            <stop
+                              offset="95%"
+                              stopColor="#14b8a6"
+                              stopOpacity={0.8}
+                            />
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid
+                          strokeDasharray="3 3"
+                          stroke={darkMode ? "#334155" : "#e2e8f0"}
+                          vertical={false}
+                        />
+                        <XAxis
+                          dataKey={
+                            growthView === "daily" ? "date" : "week_label"
+                          }
+                          hide
+                        />
+                        <YAxis
+                          stroke={darkMode ? "#94a3b8" : "#64748b"}
+                          fontSize={10}
+                          tickLine={false}
+                          axisLine={false}
+                        />
+                        <Tooltip
+                          contentStyle={{
+                            backgroundColor: darkMode ? "#1e293b" : "#ffffff",
+                            borderColor: darkMode ? "#334155" : "#e2e8f0",
+                            borderRadius: "0.5rem",
+                            color: darkMode ? "#e2e8f0" : "#1e293b",
+                            fontSize: "12px",
+                          }}
+                        />
+                        <Bar
+                          dataKey="annotators_registered"
+                          name="Annotators"
+                          fill="url(#annotatorsGradient)"
+                          radius={[4, 4, 0, 0]}
+                          animationDuration={1500}
+                        />
+                      </BarChart>
+                    </ResponsiveContainer>
                   </div>
                   <div
                     className="mt-3 text-center text-sm"
@@ -1301,191 +1186,121 @@ export default function AdminDashboardPage() {
                 </h4>
                 <div
                   style={{
-                    height: "200px",
-                    position: "relative",
-                    padding: "0 1rem",
+                    height: "300px",
+                    width: "100%",
                   }}
                 >
-                  {/* Simple area chart visualization */}
-                  <svg
-                    width="100%"
-                    height="100%"
-                    viewBox="0 0 300 180"
-                    preserveAspectRatio="none"
-                  >
-                    {(() => {
-                      const data = growthData.daily_data;
-                      const maxTasks = Math.max(
-                        ...data.map((d) => d.cumulative_tasks),
-                        1
-                      );
-                      const maxManagers = Math.max(
-                        ...data.map((d) => d.cumulative_managers),
-                        1
-                      );
-                      const maxAnnotators = Math.max(
-                        ...data.map((d) => d.cumulative_annotators),
-                        1
-                      );
-                      const overallMax = Math.max(
-                        maxTasks,
-                        maxManagers,
-                        maxAnnotators
-                      );
-
-                      const getY = (value: number) =>
-                        170 - (value / overallMax) * 160;
-                      const getX = (index: number) =>
-                        (index / (data.length - 1)) * 290 + 5;
-
-                      // Generate paths for each line
-                      const tasksPath = data
-                        .map(
-                          (d, i) =>
-                            `${i === 0 ? "M" : "L"} ${getX(i)} ${getY(
-                              d.cumulative_tasks
-                            )}`
-                        )
-                        .join(" ");
-
-                      const managersPath = data
-                        .map(
-                          (d, i) =>
-                            `${i === 0 ? "M" : "L"} ${getX(i)} ${getY(
-                              d.cumulative_managers
-                            )}`
-                        )
-                        .join(" ");
-
-                      const annotatorsPath = data
-                        .map(
-                          (d, i) =>
-                            `${i === 0 ? "M" : "L"} ${getX(i)} ${getY(
-                              d.cumulative_annotators
-                            )}`
-                        )
-                        .join(" ");
-
-                      return (
-                        <>
-                          {/* Grid lines */}
-                          <line
-                            x1="5"
-                            y1="10"
-                            x2="5"
-                            y2="170"
-                            stroke={darkMode ? "#334155" : "#e2e8f0"}
-                            strokeWidth="1"
-                          />
-                          <line
-                            x1="5"
-                            y1="170"
-                            x2="295"
-                            y2="170"
-                            stroke={darkMode ? "#334155" : "#e2e8f0"}
-                            strokeWidth="1"
-                          />
-                          <line
-                            x1="5"
-                            y1="90"
-                            x2="295"
-                            y2="90"
-                            stroke={darkMode ? "#334155" : "#e2e8f0"}
-                            strokeWidth="0.5"
-                            strokeDasharray="4"
-                          />
-
-                          {/* Tasks line (blue) */}
-                          <path
-                            d={tasksPath}
-                            fill="none"
-                            stroke="#3b82f6"
-                            strokeWidth="2.5"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          />
-
-                          {/* Managers line (purple) */}
-                          <path
-                            d={managersPath}
-                            fill="none"
-                            stroke="#8b5cf6"
-                            strokeWidth="2.5"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          />
-
-                          {/* Annotators line (green) */}
-                          <path
-                            d={annotatorsPath}
-                            fill="none"
-                            stroke="#10b981"
-                            strokeWidth="2.5"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          />
-                        </>
-                      );
-                    })()}
-                  </svg>
-                </div>
-
-                {/* Legend */}
-                <div className="flex justify-center gap-6 mt-4">
-                  <div className="flex items-center gap-2">
-                    <div
-                      style={{
-                        width: "16px",
-                        height: "4px",
-                        backgroundColor: "#3b82f6",
-                        borderRadius: "2px",
-                      }}
-                    ></div>
-                    <span
-                      style={{
-                        color: darkMode ? "#94a3b8" : "#64748b",
-                        fontSize: "0.875rem",
-                      }}
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart
+                      data={growthData.daily_data}
+                      margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
                     >
-                      Tasks ({growthData.totals.tasks})
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div
-                      style={{
-                        width: "16px",
-                        height: "4px",
-                        backgroundColor: "#8b5cf6",
-                        borderRadius: "2px",
-                      }}
-                    ></div>
-                    <span
-                      style={{
-                        color: darkMode ? "#94a3b8" : "#64748b",
-                        fontSize: "0.875rem",
-                      }}
-                    >
-                      Managers ({growthData.totals.managers})
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div
-                      style={{
-                        width: "16px",
-                        height: "4px",
-                        backgroundColor: "#10b981",
-                        borderRadius: "2px",
-                      }}
-                    ></div>
-                    <span
-                      style={{
-                        color: darkMode ? "#94a3b8" : "#64748b",
-                        fontSize: "0.875rem",
-                      }}
-                    >
-                      Annotators ({growthData.totals.annotators})
-                    </span>
-                  </div>
+                      <defs>
+                        <linearGradient
+                          id="colorTasks"
+                          x1="0"
+                          y1="0"
+                          x2="0"
+                          y2="1"
+                        >
+                          <stop
+                            offset="5%"
+                            stopColor="#3b82f6"
+                            stopOpacity={0.8}
+                          />
+                          <stop
+                            offset="95%"
+                            stopColor="#3b82f6"
+                            stopOpacity={0}
+                          />
+                        </linearGradient>
+                        <linearGradient
+                          id="colorManagers"
+                          x1="0"
+                          y1="0"
+                          x2="0"
+                          y2="1"
+                        >
+                          <stop
+                            offset="5%"
+                            stopColor="#8b5cf6"
+                            stopOpacity={0.8}
+                          />
+                          <stop
+                            offset="95%"
+                            stopColor="#8b5cf6"
+                            stopOpacity={0}
+                          />
+                        </linearGradient>
+                        <linearGradient
+                          id="colorAnnotators"
+                          x1="0"
+                          y1="0"
+                          x2="0"
+                          y2="1"
+                        >
+                          <stop
+                            offset="5%"
+                            stopColor="#10b981"
+                            stopOpacity={0.8}
+                          />
+                          <stop
+                            offset="95%"
+                            stopColor="#10b981"
+                            stopOpacity={0}
+                          />
+                        </linearGradient>
+                      </defs>
+                      <XAxis
+                        dataKey="date"
+                        stroke={darkMode ? "#94a3b8" : "#64748b"}
+                        tickFormatter={(value) =>
+                          new Date(value).toLocaleDateString("en-US", {
+                            month: "short",
+                            day: "numeric",
+                          })
+                        }
+                      />
+                      <YAxis stroke={darkMode ? "#94a3b8" : "#64748b"} />
+                      <CartesianGrid
+                        strokeDasharray="3 3"
+                        stroke={darkMode ? "#334155" : "#e2e8f0"}
+                      />
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: darkMode ? "#1e293b" : "#ffffff",
+                          borderColor: darkMode ? "#334155" : "#e2e8f0",
+                          borderRadius: "0.5rem",
+                          color: darkMode ? "#e2e8f0" : "#1e293b",
+                        }}
+                      />
+                      <Area
+                        type="monotone"
+                        dataKey="cumulative_tasks"
+                        name="Tasks"
+                        stroke="#3b82f6"
+                        fillOpacity={1}
+                        fill="url(#colorTasks)"
+                      />
+                      <Area
+                        type="monotone"
+                        dataKey="cumulative_managers"
+                        name="Managers"
+                        stroke="#8b5cf6"
+                        fillOpacity={1}
+                        fill="url(#colorManagers)"
+                      />
+                      <Area
+                        type="monotone"
+                        dataKey="cumulative_annotators"
+                        name="Annotators"
+                        stroke="#10b981"
+                        fillOpacity={1}
+                        fill="url(#colorAnnotators)"
+                      />
+                      <Legend />
+                    </AreaChart>
+                  </ResponsiveContainer>
                 </div>
               </div>
             </div>

@@ -1,0 +1,5 @@
+﻿src/pages/AdminDashboardPage.tsx(547,6): error TS17008: JSX element 'div' has no corresponding closing tag.
+src/pages/AdminDashboardPage.tsx(1306,12): error TS1381: Unexpected token. Did you mean `{'}'}` or `&rbrace;`?
+src/pages/AdminDashboardPage.tsx(1909,4): error TS1005: '}' expected.
+src/pages/AdminDashboardPage.tsx(1910,1): error TS1381: Unexpected token. Did you mean `{'}'}` or `&rbrace;`?
+src/pages/AdminDashboardPage.tsx(1911,1): error TS1005: '</' expected.
