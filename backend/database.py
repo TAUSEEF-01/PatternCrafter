@@ -2,6 +2,7 @@ from motor.motor_asyncio import AsyncIOMotorClient
 from motor.motor_asyncio import AsyncIOMotorDatabase
 import os
 from dotenv import load_dotenv
+from datetime import datetime
 
 load_dotenv()
 
@@ -51,6 +52,9 @@ async def connect_to_mongo():
     await create_indexes()
     print("Indexes created successfully!")
 
+    # Seed default admin user
+    await seed_admin_user()
+
 
 async def close_mongo_connection():
     """Close database connection"""
@@ -83,6 +87,31 @@ async def create_indexes():
     await notifications_collection.create_index("recipient_id")
     await notifications_collection.create_index([("recipient_id", 1), ("is_read", 1)])
     await notifications_collection.create_index("created_at")
+
+
+async def seed_admin_user():
+    """Create default admin user if it doesn't exist"""
+    from auth import get_password_hash
+
+    # Check if admin user already exists
+    existing_admin = await users_collection.find_one({"email": "admin@admin.com"})
+    if existing_admin:
+        print("Default admin user already exists.")
+        return
+
+    # Create default admin user
+    admin_user = {
+        "name": "admin",
+        "email": "admin@admin.com",
+        "role": "admin",
+        "hashed_password": get_password_hash("admin"),
+        "created_at": datetime.utcnow(),
+    }
+
+    await users_collection.insert_one(admin_user)
+    print("Default admin user created successfully!")
+    print("  Email: admin@admin.com")
+    print("  Password: admin")
 
 
 def get_database() -> AsyncIOMotorDatabase:

@@ -32,6 +32,7 @@ import AnnotationTasksPage from "@/pages/AnnotationTasksPage";
 import QAPendingTasksPage from "@/pages/QAPendingTasksPage";
 import QACompletedTasksPage from "@/pages/QACompletedTasksPage";
 import ReturnedTasksPage from "@/pages/ReturnedTasksPage";
+import AdminDashboardPage from "@/pages/AdminDashboardPage";
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -43,6 +44,12 @@ function RequireAuth({ children }: { children: React.ReactNode }) {
 function RequireNonAnnotator({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
   if (user?.role === "annotator") return <Navigate to="/projects" replace />;
+  return <>{children}</>;
+}
+
+function RequireAdmin({ children }: { children: React.ReactNode }) {
+  const { user } = useAuth();
+  if (user?.role !== "admin") return <Navigate to="/projects" replace />;
   return <>{children}</>;
 }
 
@@ -81,6 +88,16 @@ function AppContent() {
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/" element={<WelcomePage />} />
+          <Route
+            path="/admin"
+            element={
+              <RequireAuth>
+                <RequireAdmin>
+                  <AdminDashboardPage />
+                </RequireAdmin>
+              </RequireAuth>
+            }
+          />
           <Route
             path="/projects"
             element={
