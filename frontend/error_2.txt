@@ -1,0 +1,4 @@
+﻿src/pages/AdminDashboardPage.tsx(1307,13): error TS1005: ')' expected.
+src/pages/AdminDashboardPage.tsx(1910,5): error TS1128: Declaration or statement expected.
+src/pages/AdminDashboardPage.tsx(1911,3): error TS1109: Expression expected.
+src/pages/AdminDashboardPage.tsx(1912,1): error TS1128: Declaration or statement expected.

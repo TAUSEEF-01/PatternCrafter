@@ -265,6 +265,22 @@ export default function NavBar({ isAuthPage = false }: NavBarProps) {
               >
                 Projects
               </NavLink>
+              {user.role === "admin" && (
+                <NavLink
+                  className={({ isActive }: any) =>
+                    `text-sm font-medium px-3 py-2 rounded-lg transition-all duration-200 ${
+                      isActive
+                        ? "bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md"
+                        : darkMode
+                        ? "text-indigo-200 hover:text-white hover:bg-indigo-800/50"
+                        : "text-indigo-700 hover:text-indigo-900 hover:bg-indigo-100"
+                    }`
+                  }
+                  to="/admin"
+                >
+                  Admin Dashboard
+                </NavLink>
+              )}
               {user.role === "annotator" && (
                 <NavLink
                   className={({ isActive }: any) =>
