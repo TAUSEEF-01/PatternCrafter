@@ -33,7 +33,7 @@ if (!(Test-Path ".env")) {
 
 # Start the server
 Write-Host "Starting FastAPI server..." -ForegroundColor Green
-Write-Host "API Documentation will be available at: http://localhost:8000/docs" -ForegroundColor Cyan
+Write-Host "API Documentation will be available at: https://patterncrafter.onrender.com/docs" -ForegroundColor Cyan
 Write-Host "Press Ctrl+C to stop the server" -ForegroundColor Yellow
 
 python run.py
