@@ -80,9 +80,9 @@ A FastAPI backend for the PatternCrafter application with MongoDB integration.
 
 Once the server is running, you can access:
 
-- **API Documentation (Swagger UI)**: http://localhost:8000/docs
-- **Alternative API Documentation (ReDoc)**: http://localhost:8000/redoc
-- **Health Check**: http://localhost:8000/health
+- **API Documentation (Swagger UI)**: https://patterncrafter.onrender.com/docs
+- **Alternative API Documentation (ReDoc)**: https://patterncrafter.onrender.com/redoc
+- **Health Check**: https://patterncrafter.onrender.com/health
 
 ## API Endpoints
 
@@ -163,7 +163,7 @@ Authorization: Bearer <your_jwt_token>
 ### Register a new user
 
 ```bash
-curl -X POST "http://localhost:8000/api/v1/auth/register" \
+curl -X POST "https://patterncrafter.onrender.com/api/v1/auth/register" \
      -H "Content-Type: application/json" \
      -d '{
        "name": "John Doe",
@@ -176,7 +176,7 @@ curl -X POST "http://localhost:8000/api/v1/auth/register" \
 ### Login
 
 ```bash
-curl -X POST "http://localhost:8000/api/v1/auth/login" \
+curl -X POST "https://patterncrafter.onrender.com/api/v1/auth/login" \
      -H "Content-Type: application/json" \
      -d '{
        "email": "john@example.com",
@@ -187,7 +187,7 @@ curl -X POST "http://localhost:8000/api/v1/auth/login" \
 ### Create a project (with JWT token)
 
 ```bash
-curl -X POST "http://localhost:8000/api/v1/projects" \
+curl -X POST "https://patterncrafter.onrender.com/api/v1/projects" \
      -H "Content-Type: application/json" \
      -H "Authorization: Bearer <your_jwt_token>" \
      -d '{

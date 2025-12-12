@@ -138,7 +138,7 @@ ALLOWED_ORIGINS=http://localhost:5176,http://localhost:3000
 python main.py
 ```
 
-The backend API will be available at `http://localhost:8000`
+The backend API will be available at `https://patterncrafter.onrender.com`
 
 #### 3. Frontend Setup
 
@@ -152,7 +152,7 @@ npm install
 
 # (Optional) Configure API endpoint
 # Create .env.development file:
-echo "VITE_API_URL=http://localhost:8000/api/v1" > .env.development
+echo "VITE_API_URL=https://patterncrafter.onrender.com/api/v1" > .env.development
 
 # Start the development server
 npm run dev
@@ -209,9 +209,9 @@ The frontend will be available at `http://localhost:5176`
 
 Once the backend is running, you can access comprehensive API documentation:
 
-- **Swagger UI**: http://localhost:8000/docs
-- **ReDoc**: http://localhost:8000/redoc
-- **Health Check**: http://localhost:8000/health
+- **Swagger UI**: https://patterncrafter.onrender.com/docs
+- **ReDoc**: https://patterncrafter.onrender.com/redoc
+- **Health Check**: https://patterncrafter.onrender.com/health
 
 ### Key API Endpoints
 

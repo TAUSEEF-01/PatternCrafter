@@ -11,11 +11,11 @@ cd "D:\Downloads\DUCSE Documents\MyGithub_Projects\3-2 project\PatternCrafter\ap
 npm install
 ```
 
-2. (Optional) Configure API base (defaults to http://localhost:8000/api/v1)
+2. (Optional) Configure API base (defaults to https://patterncrafter.onrender.com/api/v1)
 
 ```powershell
 @"
-VITE_API_URL=http://localhost:8000/api/v1
+VITE_API_URL=https://patterncrafter.onrender.com/api/v1
 "@ | Out-File -Encoding utf8 .env.development
 ```
 

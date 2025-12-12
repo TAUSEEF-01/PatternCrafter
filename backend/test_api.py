@@ -7,7 +7,7 @@ import requests
 import json
 from typing import Dict, Any
 
-BASE_URL = "http://localhost:8000/api/v1"
+BASE_URL = "https://patterncrafter.onrender.com/api/v1"
 TEST_USERS = {
     "admin": {
         "name": "Test Admin",
@@ -228,7 +228,7 @@ class APITester:
 
         # Test server health
         try:
-            response = requests.get("http://localhost:8000/health")
+            response = requests.get("https://patterncrafter.onrender.com/health")
             if response.status_code == 200:
                 print("✅ Server is healthy")
             else:
