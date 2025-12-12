@@ -1322,6 +1322,73 @@ async def unassign_task(
     return {"message": "Task unassigned successfully"}
 
 
+@router.put("/tasks/{task_id}/skip")
+async def skip_task(
+    task_id: str, current_user: UserInDB = Depends(get_current_user)
+):
+    """Allow an annotator to skip/unassign themselves from a task they haven't completed yet"""
+    if current_user.role != "annotator":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only annotators can skip tasks",
+        )
+
+    if not ObjectId.is_valid(task_id):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid task ID"
+        )
+
+    task = await database.tasks_collection.find_one({"_id": ObjectId(task_id)})
+    if not task:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Task not found"
+        )
+
+    # Verify the user is the assigned annotator
+    if task.get("assigned_annotator_id") != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You are not assigned to this task",
+        )
+
+    # Cannot skip a completed task
+    if task.get("completed_status", {}).get("annotator_part"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot skip a task that has already been completed. Contact your manager to unassign.",
+        )
+
+    # Update the task - clear annotator assignment but preserve QA assignment if any
+    update = {
+        "assigned_annotator_id": None,
+        "annotation": None,
+        "completed_status.annotator_part": False,
+        "is_returned": False,
+        "annotator_started_at": None,
+        "annotator_completed_at": None,
+        "accumulated_time": None,
+    }
+
+    await database.tasks_collection.update_one(
+        {"_id": ObjectId(task_id)}, {"$set": update}
+    )
+
+    # Remove task from project_working assignments for this annotator
+    await database.project_working_collection.update_one(
+        {
+            "project_id": task["project_id"],
+            "annotator_assignments.annotator_id": current_user.id,
+        },
+        {"$pull": {"annotator_assignments.$.task_ids": ObjectId(task_id)}},
+    )
+
+    # Delete related annotator_tasks records for this annotator
+    await database.annotator_tasks_collection.delete_many(
+        {"task_id": ObjectId(task_id), "annotator_id": current_user.id}
+    )
+
+    return {"message": "Task skipped successfully"}
+
 @router.get("/annotators/my-task-history")
 async def get_my_task_history(
     project_id: str = None,

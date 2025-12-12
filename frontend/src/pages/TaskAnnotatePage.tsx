@@ -103,6 +103,8 @@ export default function TaskAnnotatePage() {
   const [task, setTask] = useState<Task | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [skipModalOpen, setSkipModalOpen] = useState(false);
+  const [skipping, setSkipping] = useState(false);
   const hasReturnRemark = task?.remarks?.some(
     (r) => r.remark_type === "qa_return"
   );
@@ -459,6 +461,26 @@ export default function TaskAnnotatePage() {
     }
   };
 
+  const handleSkipTask = async () => {
+    if (!taskId || !task) return;
+    setSkipping(true);
+    try {
+      await apiFetch(`/tasks/${taskId}/skip`, { method: "PUT" });
+      setSkipModalOpen(false);
+      // Navigate back to project page
+      if (task.project_id) {
+        navigate(`/projects/${task.project_id}`);
+      } else {
+        navigate("/projects");
+      }
+    } catch (e: any) {
+      setError(e?.message || "Failed to skip task");
+      setSkipModalOpen(false);
+    } finally {
+      setSkipping(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div>
@@ -522,6 +544,16 @@ export default function TaskAnnotatePage() {
                     <span className="text-xs text-gray-500">Completed</span>
                   )}
                 </div>
+                {/* Skip Task Button - only show if task is not completed */}
+                {!task.completed_status?.annotator_part && (
+                  <button
+                    type="button"
+                    onClick={() => setSkipModalOpen(true)}
+                    className="mt-2 px-3 py-1.5 text-xs font-medium bg-orange-100 text-orange-700 border border-orange-300 rounded-md hover:bg-orange-200 transition-colors"
+                  >
+                    ⏭️ Skip Task
+                  </button>
+                )}
               </div>
             </div>
             <div>
@@ -2666,6 +2698,96 @@ export default function TaskAnnotatePage() {
           </form>
         </div>
       </div>
+
+      {/* Skip Task Confirmation Modal */}
+      {skipModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          {/* Backdrop */}
+          <div
+            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+            onClick={() => !skipping && setSkipModalOpen(false)}
+          />
+          {/* Modal */}
+          <div className="relative bg-white dark:bg-slate-800 rounded-2xl shadow-2xl p-6 max-w-md w-full mx-4 transform animate-in fade-in zoom-in duration-200">
+            {/* Warning Icon */}
+            <div className="flex justify-center mb-4">
+              <div className="w-16 h-16 bg-orange-100 dark:bg-orange-900/30 rounded-full flex items-center justify-center">
+                <svg
+                  width="32"
+                  height="32"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  className="text-orange-500"
+                >
+                  <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                  <line x1="12" y1="9" x2="12" y2="13" />
+                  <line x1="12" y1="17" x2="12.01" y2="17" />
+                </svg>
+              </div>
+            </div>
+
+            {/* Title */}
+            <h3 className="text-2xl font-bold text-center mb-2 text-orange-600 dark:text-orange-400">
+              Skip This Task?
+            </h3>
+
+            {/* Message */}
+            <p className="text-center mb-2 text-gray-700 dark:text-gray-300">
+              You're about to skip this task and unassign yourself.
+            </p>
+            <p className="text-sm text-center mb-6 text-gray-600 dark:text-gray-400">
+              <strong>⚠️ Warning:</strong> Any progress you've made on this task will be lost. The task will become available for reassignment by your manager.
+            </p>
+
+            {/* Buttons */}
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => setSkipModalOpen(false)}
+                disabled={skipping}
+                className="flex-1 px-4 py-2.5 rounded-lg font-medium border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleSkipTask}
+                disabled={skipping}
+                className="flex-1 px-4 py-2.5 rounded-lg font-medium bg-orange-500 text-white hover:bg-orange-600 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {skipping ? (
+                  <>
+                    <svg
+                      className="animate-spin h-4 w-4"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                    >
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                      />
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                      />
+                    </svg>
+                    Skipping...
+                  </>
+                ) : (
+                  <>⏭️ Skip Task</>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
