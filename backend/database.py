@@ -53,7 +53,7 @@ async def connect_to_mongo():
     print("Indexes created successfully!")
 
     # Seed default admin user
-    await seed_admin_user()
+    # await seed_admin_user()
 
 
 async def close_mongo_connection():
