@@ -291,6 +291,7 @@ if __name__ == "__main__":
 
     command = sys.argv[1]
 
+    # Execute the appropriate function based on command line argument
     if command == "create_admin":
         asyncio.run(create_admin_user())
     elif command == "create_sample":

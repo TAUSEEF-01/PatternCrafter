@@ -908,6 +908,23 @@ export default function ProjectDetailPage() {
           </LinkFix>
 
           <LinkFix
+            to={`/projects/${projectId}/roles`}
+            className="card hover:shadow-xl transition-shadow border-l-4 border-indigo-500"
+          >
+            <div className="card-body">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-lg font-semibold">👥 Manage Roles</h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                    Assign annotators and QA reviewers
+                  </p>
+                </div>
+                <div className="text-3xl">→</div>
+              </div>
+            </div>
+          </LinkFix>
+
+          <LinkFix
             to={`/projects/${projectId}/tasks/create`}
             state={{ category: project?.category }}
             className="card hover:shadow-xl transition-shadow border-l-4 border-purple-500"
@@ -989,22 +1006,7 @@ export default function ProjectDetailPage() {
             </div>
           </LinkFix>
 
-          <LinkFix
-            to={`/projects/${projectId}/roles`}
-            className="card hover:shadow-xl transition-shadow border-l-4 border-indigo-500"
-          >
-            <div className="card-body">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-lg font-semibold">👥 Manage Roles</h3>
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                    Assign annotators and QA reviewers
-                  </p>
-                </div>
-                <div className="text-3xl">→</div>
-              </div>
-            </div>
-          </LinkFix>
+          
         </div>
       )}
 
